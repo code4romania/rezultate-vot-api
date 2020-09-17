@@ -1,0 +1,38 @@
+on:
+  push:
+    branches:
+      - master
+
+name: build
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKER_HUB_ORGANIZATION || 'code4romania' }}/rezultate-vot-api
+
+jobs:
+  build-parser:
+    name: Build API container
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkoout
+        uses: actions/checkout@v2
+
+      - name: Build Docker image
+        run: |
+          cd src
+          docker build . \
+            --tag $IMAGE_NAME:$GITHUB_SHA \
+            --file ElectionResults.API/Dockerfile
+      - name: Upload Docker image
+        run: |
+          echo ${{ secrets.DOCKER_HUB_PASSWORD }} | \
+          docker login \
+            -u ${{ secrets.DOCKER_HUB_USERNAME }} \
+            --password-stdin
+          docker push $IMAGE_NAME:$GITHUB_SHA
+      - name: Tag Latest
+        run: |
+          docker tag \
+            $IMAGE_NAME:$GITHUB_SHA \
+            $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:latest
