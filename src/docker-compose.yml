@@ -1,0 +1,14 @@
+﻿version: '3.4'
+
+services:
+  rezultatevot.api:
+    image: rezultatevot
+    build:
+      context: .
+      dockerfile: ./ElectionResults.API/Dockerfile
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_ENVIRONMENT=Staging
+    ports:
+      - 80:80
+      - 443:443
