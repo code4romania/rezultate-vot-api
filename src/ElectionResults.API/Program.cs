@@ -15,7 +15,6 @@ namespace ElectionResults.API
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
-                    webBuilder.UseUrls("http://*80;https://*:443");
                 });
     }
 }
