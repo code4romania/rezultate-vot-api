@@ -21,6 +21,7 @@ namespace ElectionResults.Core.Elections
         {
             _serviceProvider = serviceProvider;
         }
+
         public async Task<Result<List<ElectionMeta>>> GetAllBallots()
         {
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
@@ -53,6 +54,7 @@ namespace ElectionResults.Core.Elections
                     .FirstOrDefault(e => e.BallotId == query.BallotId);
                 if (ballot == null)
                     throw new Exception($"No results found for ballot id {query.BallotId}");
+                var electionResponse = new ElectionResponse();
 
                 var results = new ElectionResultsResponse();
 
@@ -104,8 +106,8 @@ namespace ElectionResults.Core.Elections
                     }).OrderByDescending(c => c.Votes).ToList();
                 }
 
-                var electionResponse = new ElectionResponse();
                 electionResponse.Results = results;
+                electionResponse.Observation =  await dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
                 electionResponse.Turnout = new ElectionTurnout
                 {
                     TotalVotes = divisionTurnout.TotalVotes,

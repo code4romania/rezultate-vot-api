@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using ElectionResults.Core.Entities;
 
 namespace ElectionResults.Core.Endpoints.Response
 {
@@ -14,7 +15,7 @@ namespace ElectionResults.Core.Endpoints.Response
 
         public ElectionResultsResponse Results { get; set; }
 
-        public ElectionObservation Observation { get; set; }
+        public Observation Observation { get; set; }
         
         public List<ArticleResponse> ElectionNews { get; set; }
     }
