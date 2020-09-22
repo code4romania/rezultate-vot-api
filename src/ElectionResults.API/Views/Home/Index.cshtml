@@ -1,0 +1,44 @@
+﻿@model IEnumerable<ElectionResults.Core.Entities.Article>
+
+@{
+    ViewData["Title"] = "News Feed admin";
+}
+
+<h4 class="text-center text-uppercase">List of news</h4>
+
+<p>
+    <a asp-action="New" class="btn btn-sm btn-primary rounded-0 text-uppercase"><i class="fas fa-plus-circle"></i> Add New</a>
+</p>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>@Html.DisplayNameFor(model => model.Election.Name)</th>
+            <th>@Html.DisplayNameFor(model => model.Ballot.Name)</th>
+            <th>@Html.DisplayNameFor(model => model.Title)</th>
+            <th>@Html.DisplayNameFor(model => model.Timestamp)</th>
+            <th>@Html.DisplayNameFor(model => model.Author)</th>
+            <th></th>
+            
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var news in Model)
+        {
+            <tr>
+                <td>@news.Election.Name</td>
+                <td>@news.Ballot.Name</td>
+                <td>@news.Title</td>
+                <td>@news.Timestamp.ToString("yyyy MMMM dd")</td>
+                <td>@news.Author.Name</td>
+                <td>
+                    <form asp-action="Edit" asp-route-id="@news.Id">
+                        <input type="submit" value="Edit" class="btn btn-info" /> 
+                    </form>
+                    <form asp-action="Delete" asp-route-id="@news.Id">
+                        <input type="submit" value="Delete" class="btn btn-danger" /> 
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

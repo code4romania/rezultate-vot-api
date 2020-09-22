@@ -1,0 +1,114 @@
+﻿@model ElectionResults.API.ViewModels.NewsViewModel
+
+@{ ViewData["Title"] = "New"; }
+
+<div class="col-md-10 mx-auto py-4">
+    <div class="card">
+        <div class="card-header bg-primary text-uppercase text-white">
+            <h4>Add News </h4>
+        </div>
+        <div class="card-body">
+            <form enctype="multipart/form-data" asp-action="New">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            @Html.HiddenFor(m => m.NewsId)
+                            <label asp-for="SelectedElectionId" class="control-label"></label>
+                            <span asp-validation-for="SelectedElectionId" class="text-danger"></span>
+                            <select asp-for="SelectedElectionId" asp-items="Model.Elections">
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="SelectedAuthorId" class="control-label"></label>
+                            <span asp-validation-for="SelectedAuthorId" class="text-danger"></span>
+                            <select asp-for="SelectedAuthorId" asp-items="Model.Authors">
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Title" class="control-label"></label>
+                            <input asp-for="Title" class="form-control" />
+                            <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div>
+                            <label asp-for="Body" class="control-label"></label>
+                        </div>
+                        <div class="form-group">
+                            @Html.TextAreaFor(x => x.Body, 10, 40, null)
+                            <span asp-validation-for="Body" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Date" class="control-label"></label>
+                            <input asp-for="Date" class="form-control" />
+                            <span asp-validation-for="Date" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Link" class="control-label"></label>
+                            <input asp-for="Link" class="form-control" />
+                            <span asp-validation-for="Link" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="Pictures" class="control-label"></label>
+                            <div class="custom-file">
+                                <input asp-for="Pictures" class="custom-file-input" id="customFile">
+                                <label class="custom-file-label" for="customFile">Choose file</label>
+                            </div>
+                            <span asp-validation-for="Pictures" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    @if (Model.UploadedPictures != null)
+                    {
+                        @foreach (var picture in Model.UploadedPictures)
+                        {
+                        <div class="news-picture">
+                            <img src="@picture.Url" class="news-picture" />
+                        </div>
+                        }
+                    }
+
+                </div>
+                <div class="form-group">
+                    <input type="submit" value="submit" class="btn btn-sm btn-primary rounded-0 text-uppercase" />
+                    <a asp-action="Index" class="btn btn-sm btn-primary rounded-0 text-uppercase"><i class="fas fa-fast-backward"></i> Back to List</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script type="text/javascript">
+        // Add the following code if you want the name of the file appear on select
+        $(".custom-file-input").on("change", function () {
+            console.log($(this).val());
+            var fileName = $(this).val().split("\\").pop();
+            $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
+        });
+    </script>
+}
+

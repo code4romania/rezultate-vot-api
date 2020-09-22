@@ -28,7 +28,7 @@ bld/
 # Visual Studio 2015 cache/options directory
 .vs/
 # Uncomment if you have tasks that create the project's static files in wwwroot
-#wwwroot/
+upload/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
@@ -264,3 +264,6 @@ __pycache__/
 *.pyc
 src/ElectionResults.WebApi/ClientApp/package-lock.json
 .vscode
+src/ElectionResults.API/bin/
+
+src/ElectionResults.API/wwwroot/lib/

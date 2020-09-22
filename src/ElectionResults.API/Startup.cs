@@ -6,6 +6,7 @@ using ElectionResults.Core.Repositories;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -26,7 +27,11 @@ namespace ElectionResults.API
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers();
+            services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false)
+                .AddEntityFrameworkStores<ApplicationDbContext>();
+            services.AddControllersWithViews();
+            services.AddRazorPages();
+
             services
                 .AddMvc()
                 .SetCompatibilityVersion(CompatibilityVersion.Latest)
@@ -63,6 +68,10 @@ namespace ElectionResults.API
         private static void RegisterDependencies(IServiceCollection services)
         {
             services.AddTransient<IResultsAggregator, ResultsAggregator>();
+            services.AddTransient<IArticleRepository, ArticleRepository>();
+            services.AddTransient<IElectionRepository, ElectionRepository>();
+            services.AddTransient<IPicturesRepository, PicturesRepository>();
+            services.AddTransient<IAuthorsRepository, AuthorsRepository>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context)
@@ -71,12 +80,13 @@ namespace ElectionResults.API
             {
                 app.UseDeveloperExceptionPage();
             }
-            //MigrateDatabase(context);
+            MigrateDatabase(context);
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Rezultate Vot API V1");
             });
             app.UseHttpsRedirection();
+            app.UseStaticFiles();
 
             app.UseRouting();
 
@@ -85,7 +95,10 @@ namespace ElectionResults.API
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+                endpoints.MapRazorPages();
             });
         }
 
