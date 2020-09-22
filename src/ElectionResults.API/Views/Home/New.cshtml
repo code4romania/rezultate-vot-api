@@ -1,5 +1,14 @@
-﻿@model ElectionResults.API.ViewModels.NewsViewModel
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
 
+@model ElectionResults.API.ViewModels.NewsViewModel
+
+
+@if (!SignInManager.IsSignedIn(User))
+{
+    return;
+}
 @{ ViewData["Title"] = "New"; }
 
 <div class="col-md-10 mx-auto py-4">
@@ -93,9 +102,9 @@
                     {
                         @foreach (var picture in Model.UploadedPictures)
                         {
-                        <div class="news-picture">
-                            <img src="@picture.Url" class="news-picture" />
-                        </div>
+                            <div class="news-picture">
+                                <img src="@picture.Url" class="news-picture" />
+                            </div>
                         }
                     }
 

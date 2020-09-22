@@ -1,5 +1,14 @@
-﻿@model IEnumerable<ElectionResults.Core.Entities.Article>
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
 
+@model IEnumerable<ElectionResults.Core.Entities.Article>
+
+
+@if (!SignInManager.IsSignedIn(User))
+{
+    return;
+}
 @{
     ViewData["Title"] = "News Feed admin";
 }

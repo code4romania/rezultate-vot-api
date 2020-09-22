@@ -1,11 +1,9 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -29,8 +27,12 @@ namespace ElectionResults.API
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false)
+            services.AddDefaultIdentity<IdentityUser>(options =>
+                {
+                    options.SignIn.RequireConfirmedAccount = false;
+                })
                 .AddEntityFrameworkStores<ApplicationDbContext>();
+
             services.AddControllersWithViews();
             services.AddRazorPages();
 
@@ -46,15 +48,14 @@ namespace ElectionResults.API
             RegisterDependencies(services);
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Rezultate Vot API", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Rezultate Vot API", Version = "v2" });
             });
             services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseMySQL(Configuration["ConnectionStrings:DefaultConnection"]);
             });
 
-            services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-                .AddCookie(o => o.LoginPath = "/web/login");
+          
             services.AddLazyCache();
             services.AddCors(options =>
             {
@@ -84,7 +85,7 @@ namespace ElectionResults.API
             MigrateDatabase(context);
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Rezultate Vot API V1");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Rezultate Vot API V2");
             });
             app.UseHttpsRedirection();
             app.UseStaticFiles();
@@ -101,6 +102,11 @@ namespace ElectionResults.API
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapRazorPages();
+                if (env.IsProduction())
+                {
+                    endpoints.MapGet("/Identity/Account/Register", context => Task.Factory.StartNew(() => context.Response.Redirect("/Identity/Account/Login", true)));
+                    endpoints.MapPost("/Identity/Account/Register", context => Task.Factory.StartNew(() => context.Response.Redirect("/Identity/Account/Login", true)));
+                }
             });
         }
 
