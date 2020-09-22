@@ -13,5 +13,7 @@
         public ElectionResultsResponse Results { get; set; }
 
         public ElectionObservation Observation { get; set; }
+        
+        public bool IsLiveElection { get; set; }
     }
 }

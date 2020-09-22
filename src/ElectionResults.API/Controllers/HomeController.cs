@@ -100,6 +100,7 @@ namespace ElectionResults.API.Controllers
                 newsFeedViewModel.Date = news.Timestamp;
                 newsFeedViewModel.Title = news.Title;
                 newsFeedViewModel.Link = news.Link;
+                newsFeedViewModel.Embed = news.Embed;
                 newsFeedViewModel.UploadedPictures = news.Pictures;
                 return View("New", newsFeedViewModel);
             }
@@ -141,6 +142,7 @@ namespace ElectionResults.API.Controllers
                     var newsFeed = new Article
                     {
                         Link = model.Link,
+                        Embed = model.Embed,
                         Title = model.Title,
                         Body = model.Body,
                         BallotId = selectedBallot.BallotId,

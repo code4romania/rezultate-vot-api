@@ -46,5 +46,7 @@ namespace ElectionResults.API.ViewModels
         public List<ArticlePicture> UploadedPictures { get; set; }
 
         public int NewsId { get; set; }
+
+        public string Embed { get; set; }
     }
 }

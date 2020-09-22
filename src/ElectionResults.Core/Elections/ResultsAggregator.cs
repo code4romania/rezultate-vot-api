@@ -43,7 +43,7 @@ namespace ElectionResults.Core.Elections
             }
         }
 
-        public async Task<Result<ElectionResponse>> GetOldResults(ElectionResultsQuery query)
+        public async Task<Result<ElectionResponse>> GetBallotResults(ElectionResultsQuery query)
         {
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {

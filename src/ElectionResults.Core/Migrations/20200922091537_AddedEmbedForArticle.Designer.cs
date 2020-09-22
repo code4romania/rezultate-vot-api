@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ElectionResults.Core.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20200922084623_AddedNewsFeed")]
-    partial class AddedNewsFeed
+    [Migration("20200922091537_AddedEmbedForArticle")]
+    partial class AddedEmbedForArticle
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -36,6 +36,9 @@ namespace ElectionResults.Core.Migrations
 
                     b.Property<int>("ElectionId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Embed")
+                        .HasColumnType("text");
 
                     b.Property<string>("Link")
                         .HasColumnType("text");
@@ -162,7 +165,7 @@ namespace ElectionResults.Core.Migrations
                     b.Property<bool>("OverElectoralThreshold")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Party")
+                    b.Property<string>("PartyName")
                         .HasColumnType("text");
 
                     b.Property<int>("Seats1")

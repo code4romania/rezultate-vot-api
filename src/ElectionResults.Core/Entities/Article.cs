@@ -31,6 +31,9 @@ namespace ElectionResults.Core.Entities
         public string Body { get; set; }
 
         public string Link { get; set; }
+
+        public string Embed { get; set; }
+
         public List<ArticlePicture> Pictures { get; set; }
     }
 

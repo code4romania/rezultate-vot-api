@@ -35,6 +35,9 @@ namespace ElectionResults.Core.Migrations
                     b.Property<int>("ElectionId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Embed")
+                        .HasColumnType("text");
+
                     b.Property<string>("Link")
                         .HasColumnType("text");
 
@@ -160,7 +163,7 @@ namespace ElectionResults.Core.Migrations
                     b.Property<bool>("OverElectoralThreshold")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Party")
+                    b.Property<string>("PartyName")
                         .HasColumnType("text");
 
                     b.Property<int>("Seats1")

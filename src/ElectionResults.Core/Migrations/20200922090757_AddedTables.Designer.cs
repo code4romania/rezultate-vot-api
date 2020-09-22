@@ -9,15 +9,89 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ElectionResults.Core.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20200920070144_AddedElectionTables")]
-    partial class AddedElectionTables
+    [Migration("20200922090757_AddedTables")]
+    partial class AddedTables
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "3.1.7")
+                .HasAnnotation("ProductVersion", "3.1.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
+
+            modelBuilder.Entity("ElectionResults.Core.Entities.Article", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int>("AuthorId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BallotId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Body")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ElectionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Link")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("BallotId");
+
+                    b.HasIndex("ElectionId");
+
+                    b.ToTable("articles");
+                });
+
+            modelBuilder.Entity("ElectionResults.Core.Entities.ArticlePicture", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int>("ArticleId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Url")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArticleId");
+
+                    b.ToTable("articlepictures");
+                });
+
+            modelBuilder.Entity("ElectionResults.Core.Entities.Author", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("Avatar")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("authors");
+                });
 
             modelBuilder.Entity("ElectionResults.Core.Entities.Ballot", b =>
                 {
@@ -424,6 +498,36 @@ namespace ElectionResults.Core.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens");
+                });
+
+            modelBuilder.Entity("ElectionResults.Core.Entities.Article", b =>
+                {
+                    b.HasOne("ElectionResults.Core.Entities.Author", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ElectionResults.Core.Entities.Ballot", "Ballot")
+                        .WithMany()
+                        .HasForeignKey("BallotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ElectionResults.Core.Entities.Election", "Election")
+                        .WithMany()
+                        .HasForeignKey("ElectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ElectionResults.Core.Entities.ArticlePicture", b =>
+                {
+                    b.HasOne("ElectionResults.Core.Entities.Article", null)
+                        .WithMany("Pictures")
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ElectionResults.Core.Entities.Ballot", b =>

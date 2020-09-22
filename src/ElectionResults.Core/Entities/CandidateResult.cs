@@ -18,7 +18,7 @@ namespace ElectionResults.Core.Entities
 
         public string ShortName { get; set; }
 
-        public string Party { get; set; }
+        public string PartyName { get; set; }
 
         public int YesVotes { get; set; }
 
