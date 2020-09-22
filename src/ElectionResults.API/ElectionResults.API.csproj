@@ -29,8 +29,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ElectionResults.Core\ElectionResults.Core.csproj" />
   </ItemGroup>
-
   <ItemGroup>
-    <Folder Include="wwwroot\upload\" />
+    <None Include="wwwroot\*" />
   </ItemGroup>
 </Project>

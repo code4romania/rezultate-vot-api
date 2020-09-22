@@ -13,8 +13,6 @@ namespace ElectionResults.Core.Entities
 
         public string Name { get; set; }
 
-        public string Subtitle { get; set; }
-
         public BallotType BallotType { get; set; }
 
         [ForeignKey(nameof(Entities.Turnout))]
@@ -28,5 +26,6 @@ namespace ElectionResults.Core.Entities
         public Turnout Turnout { get; set; }
 
         public DateTime Date { get; set; }
+        public Election Election { get; set; }
     }
 }

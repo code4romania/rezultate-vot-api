@@ -13,6 +13,12 @@ a.navbar-brand {
 a {
   color: #0366d6;
 }
+.bg-primary {
+    background-color: #fc0!important;
+}
+.navbar-light {
+    background-color: #fc0 !important;
+}
 img {
     display: block;
     margin-left: auto;

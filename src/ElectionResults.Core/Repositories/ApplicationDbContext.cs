@@ -37,6 +37,12 @@ namespace ElectionResults.Core.Repositories
 
         public DbSet<ArticlePicture> ArticlePictures { get; set; }
 
+        public DbSet<Party> Parties { get; set; }
+
+        public DbSet<PartyResult> PartyResults { get; set; }
+
+        public DbSet<Observation> Observations { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

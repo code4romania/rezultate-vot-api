@@ -31,8 +31,8 @@ namespace ElectionResults.Core.Elections
                              select new ElectionMeta
                              {
                                  Date = electionBallot.Date,
-                                 Title = election.Name ?? election.Subtitle ?? electionBallot.Subtitle,
-                                 Ballot = electionBallot.Name ?? election.Subtitle ?? electionBallot.Subtitle,
+                                 Title = election.Name ?? election.Subtitle ?? electionBallot.Name,
+                                 Ballot = electionBallot.Name ?? election.Subtitle ?? electionBallot.Name,
                                  ElectionId = election.ElectionId,
                                  Type = electionBallot.BallotType,
                                  Subtitle = election.Subtitle,
@@ -47,26 +47,18 @@ namespace ElectionResults.Core.Elections
         {
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
-                var electionResponse = new ElectionResponse();
-                var ballot = dbContext.Ballots.FirstOrDefault(e => e.BallotId == query.BallotId);
+                var ballot = dbContext.Ballots
+                    .AsNoTracking()
+                    .Include(b => b.Election)
+                    .FirstOrDefault(e => e.BallotId == query.BallotId);
+                if (ballot == null)
+                    throw new Exception($"No results found for ballot id {query.BallotId}");
 
                 var results = new ElectionResultsResponse();
 
-                var resultsQuery = dbContext.CandidateResults.Where(er =>
-                        er.BallotId == ballot.BallotId &&
-                        er.Division == query.Division &&
-                        er.CountyId == query.CountyId &&
-                        er.LocalityId == query.LocalityId);
-
-                var candidates = await resultsQuery.ToListAsync();
-                var divisionTurnout = await dbContext.Turnouts
-                    .FirstOrDefaultAsync(t =>
-                        t.BallotId == ballot.BallotId &&
-                        t.CountyId == query.CountyId &&
-                        t.LocalityId == query.LocalityId);
-                var electionTurnout = await dbContext.Turnouts
-                    .FirstOrDefaultAsync(t =>
-                        t.BallotId == ballot.BallotId && t.CountyId == query.CountyId && t.LocalityId == query.LocalityId);
+                var candidates = await GetCandidates(query, ballot, dbContext);
+                var divisionTurnout = await GetDivisionTurnout(query, dbContext, ballot);
+                var electionTurnout = await GetElectionTurnout(query, dbContext, ballot);
                 if (electionTurnout == null)
                 {
                     var json = JsonConvert.SerializeObject(query, new JsonSerializerSettings
@@ -107,10 +99,12 @@ namespace ElectionResults.Core.Elections
                         ShortName = c.ShortName,
                         Name = c.Name,
                         Votes = c.Votes,
-                        PartyColor = c.Color,
-                        PartyLogo = c.Logo
+                        PartyColor = c.Party?.Color,
+                        PartyLogo = c.Party?.LogoUrl
                     }).OrderByDescending(c => c.Votes).ToList();
                 }
+
+                var electionResponse = new ElectionResponse();
                 electionResponse.Results = results;
                 electionResponse.Turnout = new ElectionTurnout
                 {
@@ -133,33 +127,77 @@ namespace ElectionResults.Core.Elections
                     City = dbContext.Localities.FirstOrDefault(l => l.LocalityId == query.LocalityId)?.Name,
                     County = dbContext.Counties.FirstOrDefault(l => l.CountyId == query.CountyId)?.Name
                 };
-                electionResponse.Meta = new ElectionMeta
-                {
-                    Date = ballot.Date,
-                    Type = ballot.BallotType,
-                    Title = ballot.Name,
-                    ElectionId = ballot.ElectionId,
-                    BallotId = ballot.BallotId
-                };
-                var ballotNews = await dbContext.Articles.Where(a => a.BallotId == ballot.BallotId).ToListAsync();
-                if (ballotNews == null || ballotNews.Any() == false)
-                {
-                    ballotNews = await dbContext.Articles.Where(a => a.ElectionId == ballot.ElectionId).ToListAsync();
-                }
-
-                electionResponse.ElectionNews = ballotNews.Select(b => new ArticleResponse
-                {
-                    Images = b.Pictures,
-                    Author = b.Author,
-                    Body = b.Body,
-                    Embed = b.Embed,
-                    Link = b.Link,
-                    Timestamp = b.Timestamp,
-                    Id = b.Id,
-                    Title = b.Title,
-                }).ToList();
+                electionResponse.Meta = CreateElectionMeta(ballot);
+                electionResponse.ElectionNews = await GetElectionNews(dbContext, ballot);
                 return electionResponse;
             }
+        }
+
+        private static async Task<List<ArticleResponse>> GetElectionNews(ApplicationDbContext dbContext, Ballot ballot)
+        {
+            var ballotNews = await dbContext.Articles.Where(a => a.BallotId == ballot.BallotId)
+                .Include(a => a.Author)
+                .Include(a => a.Pictures)
+                .ToListAsync();
+            if (ballotNews == null || ballotNews.Any() == false)
+            {
+                ballotNews = await dbContext.Articles.Where(a => a.ElectionId == ballot.ElectionId).ToListAsync();
+            }
+
+            var electionNews = ballotNews.Select(b => new ArticleResponse
+            {
+                Images = b.Pictures,
+                Author = b.Author,
+                Body = b.Body,
+                Embed = b.Embed,
+                Link = b.Link,
+                Timestamp = b.Timestamp,
+                Id = b.Id,
+                Title = b.Title,
+            }).ToList();
+            return electionNews;
+        }
+
+        private static async Task<Turnout> GetElectionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
+        {
+            return await dbContext.Turnouts
+                .FirstOrDefaultAsync(t =>
+                    t.BallotId == ballot.BallotId && t.CountyId == query.CountyId && t.LocalityId == query.LocalityId);
+        }
+
+        private static async Task<Turnout> GetDivisionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
+        {
+            return await dbContext.Turnouts
+                .FirstOrDefaultAsync(t =>
+                    t.BallotId == ballot.BallotId &&
+                    t.CountyId == query.CountyId &&
+                    t.LocalityId == query.LocalityId);
+        }
+
+        private async Task<List<CandidateResult>> GetCandidates(ElectionResultsQuery query, Ballot ballot,
+            ApplicationDbContext dbContext)
+        {
+            var resultsQuery = dbContext.CandidateResults
+                .Include(c => c.Party)
+                .Where(er =>
+                er.BallotId == ballot.BallotId &&
+                er.Division == query.Division &&
+                er.CountyId == query.CountyId &&
+                er.LocalityId == query.LocalityId);
+            return await resultsQuery.ToListAsync();
+        }
+
+        private static ElectionMeta CreateElectionMeta(Ballot ballot)
+        {
+            return new ElectionMeta
+            {
+                Date = ballot.Date,
+                Type = ballot.BallotType,
+                Ballot = ballot.Name,
+                Title = ballot.Election.Name,
+                ElectionId = ballot.ElectionId,
+                BallotId = ballot.BallotId
+            };
         }
 
 

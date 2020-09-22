@@ -19,6 +19,11 @@ namespace ElectionResults.Core.Entities
         public string ShortName { get; set; }
 
         public string PartyName { get; set; }
+        
+        public Party Party { get; set; }
+
+        [ForeignKey(nameof(Entities.Party))]
+        public int? PartyId { get; set; }
 
         public int YesVotes { get; set; }
 

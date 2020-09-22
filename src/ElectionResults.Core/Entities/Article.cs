@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using ElectionResults.Core.Extensions;
 
 namespace ElectionResults.Core.Entities
 {
@@ -35,26 +36,5 @@ namespace ElectionResults.Core.Entities
         public string Embed { get; set; }
 
         public List<ArticlePicture> Pictures { get; set; }
-    }
-
-    [Table("authors")]
-    public class Author
-    {
-        public int Id { get; set; }
-
-        public string Name { get; set; }
-
-        public string Avatar { get; set; }
-    }
-
-    [Table("articlepictures")]
-    public class ArticlePicture
-    {
-        public int Id { get; set; }
-
-        [ForeignKey(nameof(Article))]
-        public int ArticleId { get; set; }
-        
-        public string Url { get; set; }
     }
 }

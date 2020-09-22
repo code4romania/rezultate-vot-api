@@ -17,6 +17,9 @@ namespace ElectionResults.Core.Endpoints.Response
         public int ElectionId { get; set; }
 
         public int BallotId { get; set; }
+
+        public bool Live { get; set; }
+
         public int? Round { get; set; }
     }
 }

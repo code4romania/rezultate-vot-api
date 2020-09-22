@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ElectionResults.Core.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20200922091537_AddedEmbedForArticle")]
-    partial class AddedEmbedForArticle
+    [Migration("20200922195232_AddedParties")]
+    partial class AddedParties
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -165,6 +165,9 @@ namespace ElectionResults.Core.Migrations
                     b.Property<bool>("OverElectoralThreshold")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("PartyId")
+                        .HasColumnType("int");
+
                     b.Property<string>("PartyName")
                         .HasColumnType("text");
 
@@ -187,6 +190,8 @@ namespace ElectionResults.Core.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PartyId");
 
                     b.ToTable("candidateresults");
                 });
@@ -245,6 +250,78 @@ namespace ElectionResults.Core.Migrations
                     b.HasIndex("CountyId");
 
                     b.ToTable("localities");
+                });
+
+            modelBuilder.Entity("ElectionResults.Core.Entities.Observation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int>("BallotId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CoveredCounties")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CoveredPollingPlaces")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IssueCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MessageCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ObserverCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("observations");
+                });
+
+            modelBuilder.Entity("ElectionResults.Core.Entities.Party", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("Color")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ShortName")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("parties");
+                });
+
+            modelBuilder.Entity("ElectionResults.Core.Entities.PartyResult", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int>("BallotId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PartyId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Votes")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("partyresults");
                 });
 
             modelBuilder.Entity("ElectionResults.Core.Entities.Turnout", b =>
@@ -544,6 +621,13 @@ namespace ElectionResults.Core.Migrations
                     b.HasOne("ElectionResults.Core.Entities.Turnout", "Turnout")
                         .WithMany()
                         .HasForeignKey("TurnoutId");
+                });
+
+            modelBuilder.Entity("ElectionResults.Core.Entities.CandidateResult", b =>
+                {
+                    b.HasOne("ElectionResults.Core.Entities.Party", "Party")
+                        .WithMany()
+                        .HasForeignKey("PartyId");
                 });
 
             modelBuilder.Entity("ElectionResults.Core.Entities.Locality", b =>
