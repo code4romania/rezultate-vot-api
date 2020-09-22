@@ -29,6 +29,8 @@ namespace ElectionResults.Core.Entities
 
         public int NoVotes { get; set; }
 
+        public int SeatsGained { get; set; }
+
         public ElectionDivision Division { get; set; }
 
         [ForeignKey(nameof(County))]

@@ -6,6 +6,7 @@ using CSharpFunctionalExtensions;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
+using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -99,10 +100,12 @@ namespace ElectionResults.Core.Elections
                     results.Candidates = candidates.Select(c => new CandidateResponse
                     {
                         ShortName = c.ShortName,
-                        Name = c.Name,
+                        Name = c.Party?.Name.Or(c.PartyName).Or(c.Name) ?? c.Name.Or(c.PartyName),
                         Votes = c.Votes,
                         PartyColor = c.Party?.Color,
-                        PartyLogo = c.Party?.LogoUrl
+                        PartyLogo = c.Party?.LogoUrl,
+                        Seats = c.TotalSeats,
+                        SeatsGained = c.SeatsGained
                     }).OrderByDescending(c => c.Votes).ToList();
                 }
 

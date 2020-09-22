@@ -21,6 +21,13 @@ namespace ElectionResults.Core.Extensions
             }
         }
 
+        public static string Or(this string first, string second)
+        {
+            if (first.IsEmpty() == false)
+                return first;
+            return second;
+        }
+
         public static bool EqualsIgnoringAccent(this string first, string second)
         {
             return string.Compare(first?.ToLower(), second?.ToLower(), CultureInfo.CurrentCulture, CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreCase) == 0;
