@@ -1,4 +1,8 @@
-﻿namespace ElectionResults.Core.Endpoints.Response
+﻿using System.Collections.Generic;
+using ElectionResults.Core.Elections;
+using ElectionResults.Core.Entities;
+
+namespace ElectionResults.Core.Endpoints.Response
 {
     public class ElectionResponse
     {
@@ -15,5 +19,7 @@
         public ElectionObservation Observation { get; set; }
         
         public bool IsLiveElection { get; set; }
+
+        public List<ArticleResponse> ElectionNews { get; set; }
     }
 }

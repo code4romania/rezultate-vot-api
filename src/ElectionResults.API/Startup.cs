@@ -54,15 +54,6 @@ namespace ElectionResults.API
             services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(o => o.LoginPath = "/web/login");
             services.AddLazyCache();
-
-            services.AddCors(options =>
-            {
-                options.AddPolicy("origins",
-                    builder =>
-                    {
-                        builder.WithOrigins("*");
-                    });
-            });
         }
 
         private static void RegisterDependencies(IServiceCollection services)

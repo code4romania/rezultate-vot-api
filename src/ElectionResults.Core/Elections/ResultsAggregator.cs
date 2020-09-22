@@ -27,18 +27,18 @@ namespace ElectionResults.Core.Elections
             {
                 var elections = await dbContext.Elections.Include(e => e.Ballots).ToListAsync();
                 var metas = (from election in elections.OrderByDescending(e => e.Date)
-                from electionBallot in election.Ballots
-                select new ElectionMeta
-                {
-                    Date = electionBallot.Date,
-                    Title = election.Name ?? election.Subtitle ?? electionBallot.Subtitle,
-                    Ballot = electionBallot.Name ?? election.Subtitle ?? electionBallot.Subtitle,
-                    ElectionId = election.ElectionId,
-                    Type = electionBallot.BallotType,
-                    Subtitle = election.Subtitle,
-                    BallotId = electionBallot.BallotId,
-                    Round = electionBallot.Round == 0 ? null : electionBallot.Round
-                }).ToList();
+                             from electionBallot in election.Ballots
+                             select new ElectionMeta
+                             {
+                                 Date = electionBallot.Date,
+                                 Title = election.Name ?? election.Subtitle ?? electionBallot.Subtitle,
+                                 Ballot = electionBallot.Name ?? election.Subtitle ?? electionBallot.Subtitle,
+                                 ElectionId = election.ElectionId,
+                                 Type = electionBallot.BallotType,
+                                 Subtitle = election.Subtitle,
+                                 BallotId = electionBallot.BallotId,
+                                 Round = electionBallot.Round == 0 ? null : electionBallot.Round
+                             }).ToList();
                 return Result.Success(metas);
             }
         }
@@ -141,12 +141,29 @@ namespace ElectionResults.Core.Elections
                     ElectionId = ballot.ElectionId,
                     BallotId = ballot.BallotId
                 };
+                var ballotNews = await dbContext.Articles.Where(a => a.BallotId == ballot.BallotId).ToListAsync();
+                if (ballotNews == null || ballotNews.Any() == false)
+                {
+                    ballotNews = await dbContext.Articles.Where(a => a.ElectionId == ballot.ElectionId).ToListAsync();
+                }
+
+                electionResponse.ElectionNews = ballotNews.Select(b => new ArticleResponse
+                {
+                    Images = b.Pictures,
+                    Author = b.Author,
+                    Body = b.Body,
+                    Embed = b.Embed,
+                    Link = b.Link,
+                    Timestamp = b.Timestamp,
+                    Id = b.Id,
+                    Title = b.Title,
+                }).ToList();
                 return electionResponse;
             }
         }
 
 
-        public async Task<Result<List<Entities.County>>> GetCounties()
+        public async Task<Result<List<County>>> GetCounties()
         {
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
