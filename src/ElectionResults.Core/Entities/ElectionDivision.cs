@@ -6,6 +6,6 @@
         Diaspora,
         County,
         Locality,
-        DiasporaCountry
+        Diaspora_Country
     }
 }

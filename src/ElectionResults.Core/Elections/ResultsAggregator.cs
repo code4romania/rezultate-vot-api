@@ -79,6 +79,10 @@ namespace ElectionResults.Core.Elections
                 results.VotesByMail = electionTurnout.VotesByMail != 0 ? electionTurnout.VotesByMail : (int?)null;
                 if (ballot.BallotType == BallotType.Referendum)
                 {
+                    if (results.ValidVotes == 0)
+                    {
+                        results.ValidVotes = results.TotalVotes - results.ValidVotes;
+                    }
                     results.Candidates = new List<CandidateResponse>
                     {
                         new CandidateResponse
@@ -146,7 +150,10 @@ namespace ElectionResults.Core.Elections
                 .ToListAsync();
             if (ballotNews == null || ballotNews.Any() == false)
             {
-                ballotNews = await dbContext.Articles.Where(a => a.ElectionId == ballot.ElectionId).ToListAsync();
+                ballotNews = await dbContext.Articles
+                    .Include(a => a.Author)
+                    .Include(a => a.Pictures)
+                    .Where(a => a.ElectionId == ballot.ElectionId).ToListAsync();
             }
 
             var electionNews = ballotNews.Select(b => new ArticleResponse
@@ -199,6 +206,7 @@ namespace ElectionResults.Core.Elections
                 Date = ballot.Date,
                 Type = ballot.BallotType,
                 Ballot = ballot.Name,
+                Subtitle = ballot.Election.Subtitle,
                 Title = ballot.Election.Name,
                 ElectionId = ballot.ElectionId,
                 BallotId = ballot.BallotId
