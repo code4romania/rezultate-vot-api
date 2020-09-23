@@ -5,8 +5,11 @@ namespace ElectionResults.Core.Endpoints.Response
     public class ElectionScope
     {
         public ElectionDivision Type { get; set; }
-        public string County { get; set; }
-        public string City { get; set; }
+
+        public string CountyName { get; set; }
+        public string CountryName { get; set; }
+
+        public string LocalityName { get; set; }
 
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -133,8 +133,9 @@ namespace ElectionResults.Core.Elections
                 electionResponse.Scope = new ElectionScope
                 {
                     Type = query.Division,
-                    City = dbContext.Localities.FirstOrDefault(l => l.LocalityId == query.LocalityId)?.Name,
-                    County = dbContext.Counties.FirstOrDefault(l => l.CountyId == query.CountyId)?.Name
+                    LocalityName = dbContext.Localities.FirstOrDefault(l => l.LocalityId == query.LocalityId)?.Name,
+                    CountyName = dbContext.Counties.FirstOrDefault(l => l.CountyId == query.CountyId)?.Name,
+                    CountryName = dbContext.Localities.FirstOrDefault(l => l.LocalityId == query.LocalityId)?.Name
                 };
                 electionResponse.Meta = CreateElectionMeta(ballot);
                 electionResponse.ElectionNews = await GetElectionNews(dbContext, ballot);
