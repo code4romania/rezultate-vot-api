@@ -215,11 +215,14 @@ namespace ElectionResults.Core.Elections
             }
         }
 
-        public async Task<Result<List<Locality>>> GetLocalities()
+        public async Task<Result<List<Locality>>> GetLocalities(int? countyId)
         {
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
-                var localities = await dbContext.Localities.ToListAsync();
+                IQueryable<Locality> dbSet = dbContext.Localities;
+                if (countyId.HasValue)
+                    dbSet = dbSet.Where(l => l.CountyId == countyId.Value);
+                var localities = await dbSet.ToListAsync();
                 return Result.Success(localities);
             }
         }

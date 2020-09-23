@@ -78,11 +78,11 @@ namespace ElectionResults.API.Controllers
         }
 
         [HttpGet("localities")]
-        public async Task<ActionResult<List<LocationData>>> GetLocalities()
+        public async Task<ActionResult<List<LocationData>>> GetLocalities([FromQuery] int? countyId)
         {
             try
             {
-                var result = await _resultsAggregator.GetLocalities();
+                var result = await _resultsAggregator.GetLocalities(countyId);
                 if (result.IsSuccess)
                 {
                     return result.Value.Select(c => new LocationData
