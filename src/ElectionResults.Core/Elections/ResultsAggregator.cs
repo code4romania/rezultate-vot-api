@@ -64,83 +64,121 @@ namespace ElectionResults.Core.Elections
                 var electionTurnout = await GetElectionTurnout(query, dbContext, ballot);
                 if (electionTurnout == null)
                 {
-                    var json = JsonConvert.SerializeObject(query, new JsonSerializerSettings
-                    {
-                        NullValueHandling = NullValueHandling.Ignore,
-                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-                    });
-                    throw new Exception($"No turnout found for this query: {json}");
-                }
-                results.NullVotes = electionTurnout.NullVotes;
-                results.TotalVotes = electionTurnout.TotalVotes;
-                results.ValidVotes = electionTurnout.ValidVotes;
-                results.EligibleVoters = electionTurnout.EligibleVoters;
-                results.TotalSeats = electionTurnout.TotalSeats;
-                results.VotesByMail = electionTurnout.VotesByMail != 0 ? electionTurnout.VotesByMail : (int?)null;
-                if (ballot.BallotType == BallotType.Referendum)
-                {
-                    if (results.ValidVotes == 0)
-                    {
-                        results.ValidVotes = results.TotalVotes - results.ValidVotes;
-                    }
-                    results.Candidates = new List<CandidateResponse>
-                    {
-                        new CandidateResponse
-                        {
-                            Name = "DA",
-                            ShortName = "DA",
-                            Votes = candidates.FirstOrDefault().YesVotes,
-                        },
-                        new CandidateResponse
-                        {
-                            Name = "NU",
-                            ShortName = "NU",
-                            Votes = candidates.FirstOrDefault().NoVotes,
-                        }
-                    };
+                    results = null;
                 }
                 else
                 {
-                    results.Candidates = candidates.Select(c => new CandidateResponse
-                    {
-                        ShortName = c.ShortName,
-                        Name = c.Party?.Name.Or(c.PartyName).Or(c.Name) ?? c.Name.Or(c.PartyName),
-                        Votes = c.Votes,
-                        PartyColor = c.Party?.Color,
-                        PartyLogo = c.Party?.LogoUrl,
-                        Seats = c.TotalSeats,
-                        SeatsGained = c.SeatsGained
-                    }).OrderByDescending(c => c.Votes).ToList();
+                    results = GetResults(electionTurnout, ballot, candidates);
                 }
 
+
                 electionResponse.Results = results;
-                electionResponse.Observation =  await dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
-                electionResponse.Turnout = new ElectionTurnout
+                electionResponse.Observation = await dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
+                if (divisionTurnout != null)
                 {
-                    TotalVotes = divisionTurnout.TotalVotes,
-                    EligibleVoters = divisionTurnout.EligibleVoters,
-                    /*Breakdown = new ElectionTurnoutBreakdown
+                    electionResponse.Turnout = new ElectionTurnout
                     {
-                        Categories = new List<TurnoutCategory>
+                        TotalVotes = divisionTurnout.TotalVotes,
+                        EligibleVoters = divisionTurnout.EligibleVoters,
+                        /*Breakdown = new ElectionTurnoutBreakdown
                         {
-                            new TurnoutCategory
+                            Categories = new List<TurnoutCategory>
                             {
-                                Type = VoteType.PermanentLists
+                                new TurnoutCategory
+                                {
+                                    Type = VoteType.PermanentLists
+                                }
                             }
-                        }
-                    }*/
-                };
-                electionResponse.Scope = new ElectionScope
-                {
-                    Type = query.Division,
-                    LocalityName = dbContext.Localities.FirstOrDefault(l => l.LocalityId == query.LocalityId)?.Name,
-                    CountyName = dbContext.Counties.FirstOrDefault(l => l.CountyId == query.CountyId)?.Name,
-                    CountryName = dbContext.Localities.FirstOrDefault(l => l.LocalityId == query.LocalityId)?.Name
-                };
+                        }*/
+                    };
+                }
+                
+                electionResponse.Scope = await CreateElectionScope(dbContext, query);
                 electionResponse.Meta = CreateElectionMeta(ballot);
                 electionResponse.ElectionNews = await GetElectionNews(dbContext, ballot);
                 return electionResponse;
             }
+        }
+
+        private async Task<ElectionScope> CreateElectionScope(ApplicationDbContext dbContext, ElectionResultsQuery query)
+        {
+            var electionScope = new ElectionScope
+            {
+                Type = query.Division
+            };
+            if (query.Division == ElectionDivision.County)
+            {
+                electionScope.CountyId = query.CountyId;
+                var county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
+                electionScope.CountyName = county?.Name;
+            }
+            else 
+            {
+                var locality = await dbContext.Localities.FirstOrDefaultAsync(c => c.LocalityId == query.LocalityId);
+                if (query.Division == ElectionDivision.Locality)
+                {
+                    electionScope.LocalityId = query.LocalityId;
+                    electionScope.LocalityName = locality?.Name;
+
+                }
+                else if (query.Division == ElectionDivision.Diaspora_Country)
+                {
+
+                    electionScope.CountryId = query.LocalityId;
+                    electionScope.CountryName = locality?.Name;
+                }
+            }
+
+            return electionScope;
+        }
+
+        private static ElectionResultsResponse GetResults(Turnout electionTurnout, Ballot ballot, List<CandidateResult> candidates)
+        {
+            ElectionResultsResponse results = new ElectionResultsResponse();
+            results.NullVotes = electionTurnout.NullVotes;
+            results.TotalVotes = electionTurnout.TotalVotes;
+            results.ValidVotes = electionTurnout.ValidVotes;
+            results.EligibleVoters = electionTurnout.EligibleVoters;
+            results.TotalSeats = electionTurnout.TotalSeats;
+            results.VotesByMail = electionTurnout.VotesByMail != 0 ? electionTurnout.VotesByMail : (int?)null;
+            if (ballot.BallotType == BallotType.Referendum)
+            {
+                if (results.ValidVotes == 0)
+                {
+                    results.ValidVotes = results.TotalVotes - results.ValidVotes;
+                }
+
+                results.Candidates = new List<CandidateResponse>
+                {
+                    new CandidateResponse
+                    {
+                        Name = "DA",
+                        ShortName = "DA",
+                        Votes = candidates.FirstOrDefault().YesVotes,
+                    },
+                    new CandidateResponse
+                    {
+                        Name = "NU",
+                        ShortName = "NU",
+                        Votes = candidates.FirstOrDefault().NoVotes,
+                    }
+                };
+            }
+            else
+            {
+                results.Candidates = candidates.Select(c => new CandidateResponse
+                {
+                    ShortName = c.ShortName,
+                    Name = c.Party?.Name.Or(c.PartyName).Or(c.Name) ?? c.Name.Or(c.PartyName),
+                    Votes = c.Votes,
+                    PartyColor = c.Party?.Color,
+                    PartyLogo = c.Party?.LogoUrl,
+                    Seats = c.TotalSeats,
+                    SeatsGained = c.SeatsGained
+                }).OrderByDescending(c => c.Votes).ToList();
+            }
+
+            return results;
         }
 
         private static async Task<List<ArticleResponse>> GetElectionNews(ApplicationDbContext dbContext, Ballot ballot)
