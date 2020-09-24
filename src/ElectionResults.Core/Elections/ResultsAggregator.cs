@@ -92,7 +92,7 @@ namespace ElectionResults.Core.Elections
                         }*/
                     };
                 }
-                
+
                 electionResponse.Scope = await CreateElectionScope(dbContext, query);
                 electionResponse.Meta = CreateElectionMeta(ballot);
                 electionResponse.ElectionNews = await GetElectionNews(dbContext, ballot);
@@ -106,20 +106,23 @@ namespace ElectionResults.Core.Elections
             {
                 Type = query.Division
             };
+            County county;
             if (query.Division == ElectionDivision.County)
             {
+                county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
                 electionScope.CountyId = query.CountyId;
-                var county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
                 electionScope.CountyName = county?.Name;
             }
-            else 
+            else
             {
                 var locality = await dbContext.Localities.FirstOrDefaultAsync(c => c.LocalityId == query.LocalityId);
                 if (query.Division == ElectionDivision.Locality)
                 {
                     electionScope.LocalityId = query.LocalityId;
                     electionScope.LocalityName = locality?.Name;
-
+                    electionScope.CountyId = locality?.CountyId;
+                    county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
+                    electionScope.CountyName = county.Name;
                 }
                 else if (query.Division == ElectionDivision.Diaspora_Country)
                 {
