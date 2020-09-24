@@ -111,7 +111,7 @@ namespace ElectionResults.API.Controllers
                 {
                     return result.Value.Select(c => new LocationData
                     {
-                        Id = c.LocalityId,
+                        Id = c.Id,
                         Name = c.Name
                     }).ToList();
                 }

@@ -4,12 +4,12 @@ using MySql.Data.EntityFrameworkCore.Metadata;
 
 namespace ElectionResults.Core.Migrations
 {
-    public partial class AddedParties : Migration
+    public partial class AddedElectionTables : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "AspNetRoles",
+                name: "aspnetroles",
                 columns: table => new
                 {
                     Id = table.Column<string>(maxLength: 127, nullable: false),
@@ -23,7 +23,7 @@ namespace ElectionResults.Core.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "AspNetUsers",
+                name: "aspnetusers",
                 columns: table => new
                 {
                     Id = table.Column<string>(nullable: false),
@@ -72,6 +72,19 @@ namespace ElectionResults.Core.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_counties", x => x.CountyId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "countries",
+                columns: table => new
+                {
+                    Id = table.Column<int>(nullable: false)
+                        .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
+                    Name = table.Column<string>(nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_countries", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -159,7 +172,12 @@ namespace ElectionResults.Core.Migrations
                     Circumscription = table.Column<int>(nullable: false),
                     MinVotes = table.Column<int>(nullable: false),
                     Division = table.Column<int>(nullable: false),
-                    Mandates = table.Column<int>(nullable: false)
+                    Mandates = table.Column<int>(nullable: false),
+                    CorrespondenceVotes = table.Column<int>(nullable: false),
+                    PermanentListsVotes = table.Column<int>(nullable: false),
+                    SpecialListsVotes = table.Column<int>(nullable: false),
+                    SuplimentaryVotes = table.Column<int>(nullable: false),
+                    CountryId = table.Column<int>(nullable: true)
                 },
                 constraints: table =>
                 {
@@ -279,7 +297,9 @@ namespace ElectionResults.Core.Migrations
                     LocalityId = table.Column<int>(nullable: false)
                         .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
                     CountyId = table.Column<int>(nullable: false),
-                    Name = table.Column<string>(nullable: true)
+                    Name = table.Column<string>(nullable: true),
+                    IsCountry = table.Column<bool>(nullable: false),
+                    CountryId = table.Column<int>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -293,48 +313,12 @@ namespace ElectionResults.Core.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "candidateresults",
-                columns: table => new
-                {
-                    Id = table.Column<int>(nullable: false)
-                        .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
-                    Votes = table.Column<int>(nullable: false),
-                    BallotId = table.Column<int>(nullable: false),
-                    Name = table.Column<string>(nullable: true),
-                    ShortName = table.Column<string>(nullable: true),
-                    PartyName = table.Column<string>(nullable: true),
-                    PartyId = table.Column<int>(nullable: true),
-                    YesVotes = table.Column<int>(nullable: false),
-                    NoVotes = table.Column<int>(nullable: false),
-                    Division = table.Column<int>(nullable: false),
-                    CountyId = table.Column<int>(nullable: true),
-                    LocalityId = table.Column<int>(nullable: true),
-                    Color = table.Column<string>(nullable: true),
-                    Logo = table.Column<string>(nullable: true),
-                    TotalSeats = table.Column<int>(nullable: false),
-                    Seats1 = table.Column<int>(nullable: false),
-                    Seats2 = table.Column<int>(nullable: false),
-                    OverElectoralThreshold = table.Column<bool>(nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_candidateresults", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_candidateresults_parties_PartyId",
-                        column: x => x.PartyId,
-                        principalTable: "parties",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "ballots",
                 columns: table => new
                 {
                     BallotId = table.Column<int>(nullable: false)
                         .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
                     Name = table.Column<string>(nullable: true),
-                    Subtitle = table.Column<string>(nullable: true),
                     BallotType = table.Column<int>(nullable: false),
                     TurnoutId = table.Column<int>(nullable: true),
                     ElectionId = table.Column<int>(nullable: false),
@@ -394,6 +378,59 @@ namespace ElectionResults.Core.Migrations
                         principalTable: "elections",
                         principalColumn: "ElectionId",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "candidateresults",
+                columns: table => new
+                {
+                    Id = table.Column<int>(nullable: false)
+                        .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
+                    Votes = table.Column<int>(nullable: false),
+                    BallotId = table.Column<int>(nullable: false),
+                    Name = table.Column<string>(nullable: true),
+                    ShortName = table.Column<string>(nullable: true),
+                    PartyName = table.Column<string>(nullable: true),
+                    PartyId = table.Column<int>(nullable: true),
+                    YesVotes = table.Column<int>(nullable: false),
+                    NoVotes = table.Column<int>(nullable: false),
+                    SeatsGained = table.Column<int>(nullable: false),
+                    Division = table.Column<int>(nullable: false),
+                    CountyId = table.Column<int>(nullable: true),
+                    LocalityId = table.Column<int>(nullable: true),
+                    TotalSeats = table.Column<int>(nullable: false),
+                    Seats1 = table.Column<int>(nullable: false),
+                    Seats2 = table.Column<int>(nullable: false),
+                    OverElectoralThreshold = table.Column<bool>(nullable: false),
+                    CountryId = table.Column<int>(nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_candidateresults", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_candidateresults_ballots_BallotId",
+                        column: x => x.BallotId,
+                        principalTable: "ballots",
+                        principalColumn: "BallotId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_candidateresults_counties_CountyId",
+                        column: x => x.CountyId,
+                        principalTable: "counties",
+                        principalColumn: "CountyId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_candidateresults_localities_LocalityId",
+                        column: x => x.LocalityId,
+                        principalTable: "localities",
+                        principalColumn: "LocalityId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_candidateresults_parties_PartyId",
+                        column: x => x.PartyId,
+                        principalTable: "parties",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -484,6 +521,21 @@ namespace ElectionResults.Core.Migrations
                 column: "TurnoutId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_candidateresults_BallotId",
+                table: "candidateresults",
+                column: "BallotId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_candidateresults_CountyId",
+                table: "candidateresults",
+                column: "CountyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_candidateresults_LocalityId",
+                table: "candidateresults",
+                column: "LocalityId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_candidateresults_PartyId",
                 table: "candidateresults",
                 column: "PartyId");
@@ -518,7 +570,7 @@ namespace ElectionResults.Core.Migrations
                 name: "candidateresults");
 
             migrationBuilder.DropTable(
-                name: "localities");
+                name: "countries");
 
             migrationBuilder.DropTable(
                 name: "observations");
@@ -536,16 +588,19 @@ namespace ElectionResults.Core.Migrations
                 name: "AspNetUsers");
 
             migrationBuilder.DropTable(
-                name: "parties");
+                name: "localities");
 
             migrationBuilder.DropTable(
-                name: "counties");
+                name: "parties");
 
             migrationBuilder.DropTable(
                 name: "authors");
 
             migrationBuilder.DropTable(
                 name: "ballots");
+
+            migrationBuilder.DropTable(
+                name: "counties");
 
             migrationBuilder.DropTable(
                 name: "elections");

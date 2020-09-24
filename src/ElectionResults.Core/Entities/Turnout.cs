@@ -41,5 +41,13 @@ namespace ElectionResults.Core.Entities
         public ElectionDivision Division { get; set; }
 
         public int Mandates { get; set; }
+
+        public int CorrespondenceVotes { get; set; }
+        public int PermanentListsVotes { get; set; }
+        public int SpecialListsVotes { get; set; }
+        public int SuplimentaryVotes { get; set; }
+        
+        [ForeignKey(nameof(Country))]
+        public int? CountryId { get; set; }
     }
 }

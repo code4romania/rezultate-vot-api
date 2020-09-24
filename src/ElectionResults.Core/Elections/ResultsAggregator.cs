@@ -10,7 +10,6 @@ using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 
 namespace ElectionResults.Core.Elections
 {
@@ -57,29 +56,28 @@ namespace ElectionResults.Core.Elections
                     throw new Exception($"No results found for ballot id {query.BallotId}");
                 var electionResponse = new ElectionResponse();
 
-                var results = new ElectionResultsResponse();
-
                 var candidates = await GetCandidates(query, ballot, dbContext);
-                var divisionTurnout = await GetDivisionTurnout(query, dbContext, ballot);
-                var electionTurnout = await GetElectionTurnout(query, dbContext, ballot);
-                if (electionTurnout == null)
+                var divisionTurnout= await GetDivisionTurnout(query, dbContext, ballot);
+                var electionTurnout = await GetElectionTurnout(dbContext, ballot);
+
+                ElectionResultsResponse results;
+                if (divisionTurnout == null)
                 {
                     results = null;
                 }
                 else
                 {
-                    results = GetResults(electionTurnout, ballot, candidates);
+                    results = GetResults(divisionTurnout, ballot, candidates);
                 }
-
 
                 electionResponse.Results = results;
                 electionResponse.Observation = await dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
-                if (divisionTurnout != null)
+                if (electionTurnout != null)
                 {
                     electionResponse.Turnout = new ElectionTurnout
                     {
-                        TotalVotes = divisionTurnout.TotalVotes,
-                        EligibleVoters = divisionTurnout.EligibleVoters,
+                        TotalVotes = electionTurnout.TotalVotes,
+                        EligibleVoters = electionTurnout.EligibleVoters,
                         /*Breakdown = new ElectionTurnoutBreakdown
                         {
                             Categories = new List<TurnoutCategory>
@@ -172,9 +170,9 @@ namespace ElectionResults.Core.Elections
                 results.Candidates = candidates.Select(c => new CandidateResponse
                 {
                     ShortName = c.ShortName,
-                    Name = c.Party?.Name.Or(c.PartyName).Or(c.Name) ?? c.Name.Or(c.PartyName),
+                    Name = GetCandidateName(c),
                     Votes = c.Votes,
-                    PartyColor = c.Party?.Color,
+                    PartyColor = GetPartyColor(c),
                     PartyLogo = c.Party?.LogoUrl,
                     Seats = c.TotalSeats,
                     SeatsGained = c.SeatsGained
@@ -182,6 +180,20 @@ namespace ElectionResults.Core.Elections
             }
 
             return results;
+        }
+
+        private static string GetPartyColor(CandidateResult c)
+        {
+            if (c.Party != null && c.Party.Name.ToLower() == "independent")
+                return null;
+            return c.Party?.Color;
+        }
+
+        private static string GetCandidateName(CandidateResult c)
+        {
+            if (c.Party != null && c.Party.Name.ToLower() == "independent")
+                return c.Name;
+            return c.Party?.Name.Or(c.PartyName).Or(c.Name) ?? c.Name.Or(c.PartyName);
         }
 
         private static async Task<List<ArticleResponse>> GetElectionNews(ApplicationDbContext dbContext, Ballot ballot)
@@ -212,31 +224,46 @@ namespace ElectionResults.Core.Elections
             return electionNews;
         }
 
-        private static async Task<Turnout> GetElectionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
-        {
-            return await dbContext.Turnouts
-                .FirstOrDefaultAsync(t =>
-                    t.BallotId == ballot.BallotId && t.CountyId == query.CountyId && t.LocalityId == query.LocalityId);
-        }
-
-        private static async Task<Turnout> GetDivisionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
+        private static async Task<Turnout> GetElectionTurnout(ApplicationDbContext dbContext, Ballot ballot)
         {
             return await dbContext.Turnouts
                 .FirstOrDefaultAsync(t =>
                     t.BallotId == ballot.BallotId &&
+                    t.Division == ElectionDivision.National);
+        }
+
+        private static async Task<Turnout> GetDivisionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
+        {
+            if (query.Division == ElectionDivision.Diaspora_Country)
+            {
+                query.CountryId = query.LocalityId;
+                query.LocalityId = null;
+                //query.CountyId = 16820;
+            }
+            return await dbContext.Turnouts
+                .FirstOrDefaultAsync(t =>
+                    t.BallotId == ballot.BallotId &&
                     t.CountyId == query.CountyId &&
+                    t.CountryId == query.CountryId &&
                     t.LocalityId == query.LocalityId);
         }
 
         private async Task<List<CandidateResult>> GetCandidates(ElectionResultsQuery query, Ballot ballot,
             ApplicationDbContext dbContext)
         {
+            if (query.Division == ElectionDivision.Diaspora_Country)
+            {
+                query.CountryId = query.LocalityId;
+                query.LocalityId = null;
+                //query.CountyId = 16820;
+            }
             var resultsQuery = dbContext.CandidateResults
                 .Include(c => c.Party)
                 .Where(er =>
                 er.BallotId == ballot.BallotId &&
                 er.Division == query.Division &&
                 er.CountyId == query.CountyId &&
+                er.CountryId == query.CountryId &&
                 er.LocalityId == query.LocalityId);
             return await resultsQuery.ToListAsync();
         }
@@ -277,11 +304,11 @@ namespace ElectionResults.Core.Elections
             }
         }
 
-        public async Task<Result<List<Locality>>> GetCountries()
+        public async Task<Result<List<Country>>> GetCountries()
         {
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
-                var countries = await dbContext.Localities.Where(l => l.CountyId == 16820).ToListAsync();
+                var countries = await dbContext.Countries.ToListAsync();
                 return Result.Success(countries);
             }
         }

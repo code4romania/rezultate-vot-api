@@ -23,6 +23,7 @@ namespace ElectionResults.Core.Repositories
         public DbSet<Locality> Localities{ get; set; }
         
         public DbSet<County> Counties{ get; set; }
+        public DbSet<Country> Countries{ get; set; }
         
         public DbSet<Election> Elections{ get; set; }
         

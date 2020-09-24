@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
-using ElectionResults.Core.Extensions;
 
 namespace ElectionResults.Core.Entities
 {

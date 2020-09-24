@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ElectionResults.Core.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20200922220523_AddedSeatsGained")]
-    partial class AddedSeatsGained
+    [Migration("20200924201346_AddedElectionTables")]
+    partial class AddedElectionTables
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -138,8 +138,8 @@ namespace ElectionResults.Core.Migrations
                     b.Property<int>("BallotId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Color")
-                        .HasColumnType("text");
+                    b.Property<int?>("CountryId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("CountyId")
                         .HasColumnType("int");
@@ -149,9 +149,6 @@ namespace ElectionResults.Core.Migrations
 
                     b.Property<int?>("LocalityId")
                         .HasColumnType("int");
-
-                    b.Property<string>("Logo")
-                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .HasColumnType("text");
@@ -191,9 +188,29 @@ namespace ElectionResults.Core.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BallotId");
+
+                    b.HasIndex("CountyId");
+
+                    b.HasIndex("LocalityId");
+
                     b.HasIndex("PartyId");
 
                     b.ToTable("candidateresults");
+                });
+
+            modelBuilder.Entity("ElectionResults.Core.Entities.Country", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("countries");
                 });
 
             modelBuilder.Entity("ElectionResults.Core.Entities.County", b =>
@@ -239,8 +256,14 @@ namespace ElectionResults.Core.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
+                    b.Property<int>("CountryId")
+                        .HasColumnType("int");
+
                     b.Property<int>("CountyId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsCountry")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .HasColumnType("text");
@@ -339,6 +362,12 @@ namespace ElectionResults.Core.Migrations
                     b.Property<int>("Coefficient")
                         .HasColumnType("int");
 
+                    b.Property<int>("CorrespondenceVotes")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CountryId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("CountyId")
                         .HasColumnType("int");
 
@@ -358,6 +387,15 @@ namespace ElectionResults.Core.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("NullVotes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PermanentListsVotes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SpecialListsVotes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SuplimentaryVotes")
                         .HasColumnType("int");
 
                     b.Property<int>("Threshold")
@@ -625,6 +663,20 @@ namespace ElectionResults.Core.Migrations
 
             modelBuilder.Entity("ElectionResults.Core.Entities.CandidateResult", b =>
                 {
+                    b.HasOne("ElectionResults.Core.Entities.Ballot", "Ballot")
+                        .WithMany()
+                        .HasForeignKey("BallotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ElectionResults.Core.Entities.County", "County")
+                        .WithMany()
+                        .HasForeignKey("CountyId");
+
+                    b.HasOne("ElectionResults.Core.Entities.Locality", "Locality")
+                        .WithMany()
+                        .HasForeignKey("LocalityId");
+
                     b.HasOne("ElectionResults.Core.Entities.Party", "Party")
                         .WithMany()
                         .HasForeignKey("PartyId");

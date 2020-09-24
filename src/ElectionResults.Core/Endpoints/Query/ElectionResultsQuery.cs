@@ -13,5 +13,6 @@ namespace ElectionResults.Core.Endpoints.Query
         public int? LocalityId { get; set; }
 
         public int? Round { get; set; }
+        public int? CountryId { get; set; }
     }
 }

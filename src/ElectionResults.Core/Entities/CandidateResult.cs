@@ -14,6 +14,8 @@ namespace ElectionResults.Core.Entities
         [ForeignKey(nameof(Ballot))]
         public int BallotId { get; set; }
 
+        public Ballot Ballot { get; set; }
+
         public string Name { get; set; }
 
         public string ShortName { get; set; }
@@ -39,10 +41,6 @@ namespace ElectionResults.Core.Entities
         [ForeignKey(nameof(Locality))]
         public int? LocalityId { get; set; }
 
-        public string Color { get; set; }
-
-        public string Logo { get; set; }
-
         public int TotalSeats { get; set; }
 
         public int Seats1 { get; set; }
@@ -50,5 +48,12 @@ namespace ElectionResults.Core.Entities
         public int Seats2 { get; set; }
 
         public bool OverElectoralThreshold { get; set; }
+
+        public Locality Locality { get; set; }
+
+        public County County { get; set; }
+        
+        [ForeignKey(nameof(Country))]
+        public int? CountryId { get; set; }
     }
 }
