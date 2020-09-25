@@ -16,8 +16,6 @@ namespace ElectionResults.Core.Entities
 
         public County County { get; set; }
 
-        public bool IsCountry { get; set; }
-
         public int CountryId { get; set; }
     }
 }

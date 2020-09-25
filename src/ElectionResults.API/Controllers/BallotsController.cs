@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
+using ElectionResults.Core.Entities;
 using ElectionResults.Core.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -54,6 +55,7 @@ namespace ElectionResults.API.Controllers
             }
         }
 
+      
         [HttpGet("counties")]
         public async Task<ActionResult<List<LocationData>>> GetCounties()
         {

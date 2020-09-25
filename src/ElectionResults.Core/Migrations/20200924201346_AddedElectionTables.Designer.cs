@@ -262,9 +262,6 @@ namespace ElectionResults.Core.Migrations
                     b.Property<int>("CountyId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("IsCountry")
-                        .HasColumnType("bit");
-
                     b.Property<string>("Name")
                         .HasColumnType("text");
 

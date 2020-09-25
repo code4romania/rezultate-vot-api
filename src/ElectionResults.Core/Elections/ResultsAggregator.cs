@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
@@ -10,6 +11,7 @@ using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
 namespace ElectionResults.Core.Elections
 {
@@ -57,7 +59,7 @@ namespace ElectionResults.Core.Elections
                 var electionResponse = new ElectionResponse();
 
                 var candidates = await GetCandidates(query, ballot, dbContext);
-                var divisionTurnout= await GetDivisionTurnout(query, dbContext, ballot);
+                var divisionTurnout = await GetDivisionTurnout(query, dbContext, ballot);
                 var electionTurnout = await GetElectionTurnout(dbContext, ballot);
 
                 ElectionResultsResponse results;
@@ -299,6 +301,132 @@ namespace ElectionResults.Core.Elections
                 var countries = await dbContext.Countries.OrderBy(c => c.Name).ToListAsync();
                 return Result.Success(countries);
             }
+        }
+
+        public async Task<Result<List<ElectionMapWinner>>> GetCountyWinners(int ballotId)
+        {
+            var winners = new List<ElectionMapWinner>();
+            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+            {
+                var counties = await dbContext.Counties.ToListAsync();
+                var ballot = await dbContext.Ballots.FirstOrDefaultAsync(b => b.BallotId == ballotId);
+                foreach (var county in counties)
+                {
+
+                    var countyWinner = await dbContext.CandidateResults
+                        .Include(b => b.Party)
+                        .Where(c => c.BallotId == ballotId && c.CountyId == county.CountyId && c.Division == ElectionDivision.County)
+                        .OrderByDescending(c => c.Votes)
+                        .FirstOrDefaultAsync();
+                    var turnoutForCountry = await dbContext.Turnouts
+                        .Where(c => c.BallotId == ballotId && c.CountyId == county.CountyId && c.Division == ElectionDivision.County)
+                        .FirstOrDefaultAsync();
+                    if (countyWinner == null || turnoutForCountry == null)
+                        continue;
+                    var electionMapWinner = CreateElectionMapWinner(county.CountyId, ballot, countyWinner, turnoutForCountry);
+                    winners.Add(electionMapWinner);
+                }
+            }
+
+            return Result.Success(winners);
+        }
+
+        public async Task<Result<List<ElectionMapWinner>>> GetLocalityWinners(int ballotId, int countyId)
+        {
+            var winners = new List<ElectionMapWinner>();
+            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+            {
+                var localities = await dbContext.Localities.Where(l => l.CountyId == countyId).ToListAsync();
+                var ballot = await dbContext.Ballots.FirstOrDefaultAsync(b => b.BallotId == ballotId);
+                foreach (var locality in localities)
+                {
+                    var localityWinner = await dbContext.CandidateResults
+                        .Include(b => b.Party)
+                        .Where(c => c.BallotId == ballotId &&
+                                    c.LocalityId == locality.LocalityId &&
+                                    c.Division == ElectionDivision.Locality)
+                        .OrderByDescending(c => c.Votes)
+                        .FirstOrDefaultAsync();
+                    var turnoutForCountry = await dbContext.Turnouts
+                        .Where(c => c.BallotId == ballotId &&
+                                    c.LocalityId == locality.LocalityId &&
+                                    c.Division == ElectionDivision.Locality)
+                        .FirstOrDefaultAsync();
+                    if (localityWinner == null || turnoutForCountry == null)
+                        continue;
+                    var electionMapWinner = CreateElectionMapWinner(locality.CountyId, ballot, localityWinner, turnoutForCountry);
+                    winners.Add(electionMapWinner);
+                }
+            }
+
+            return Result.Success(winners);
+        }
+
+
+        public async Task<Result<List<ElectionMapWinner>>> GetCountryWinners(int ballotId)
+        {
+            var winners = new List<ElectionMapWinner>();
+            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+            {
+                var countries = await dbContext.Countries.ToListAsync();
+                var ballot = await dbContext.Ballots.FirstOrDefaultAsync(b => b.BallotId == ballotId);
+                foreach (var country in countries)
+                {
+                    if(country.Name == "Albania")
+                        Console.WriteLine("found it");
+                    var countryWinner = await dbContext.CandidateResults
+                        .Include(b => b.Party)
+                        .Where(c => c.BallotId == ballotId && c.CountryId == country.Id && c.Division == ElectionDivision.Diaspora_Country)
+                        .OrderByDescending(c => c.Votes)
+                        .FirstOrDefaultAsync();
+                    var turnoutForCountry = await dbContext.Turnouts
+                        .Where(c => c.BallotId == ballotId && c.CountryId == country.Id && c.Division == ElectionDivision.Diaspora_Country)
+                        .FirstOrDefaultAsync();
+                    if (countryWinner == null || turnoutForCountry == null)
+                        continue;
+
+                    var electionMapWinner = CreateElectionMapWinner(country.Id, ballot, countryWinner, turnoutForCountry);
+                    
+                    winners.Add(electionMapWinner);
+                }
+            }
+
+            return Result.Success(winners);
+        }
+
+        private static ElectionMapWinner CreateElectionMapWinner(int id, Ballot ballot, CandidateResult winner,
+            Turnout turnoutForCountry)
+        {
+            var electionMapWinner = new ElectionMapWinner
+            {
+                Id = id,
+                Winner = new Winner()
+            };
+            if (ballot.BallotType != BallotType.Referendum)
+            {
+                electionMapWinner.Winner.Name = winner.Name;
+                electionMapWinner.Winner.ShortName = winner.ShortName;
+                electionMapWinner.Winner.Votes = winner.Votes;
+                electionMapWinner.Winner.PartyColor = winner.Party?.Color;
+            }
+            else
+            {
+                if (winner.ShortName == "DA")
+                {
+                    electionMapWinner.Winner.Name = "DA";
+                    electionMapWinner.Winner.ShortName = "DA";
+                    electionMapWinner.Winner.Votes = winner.YesVotes;
+                }
+                else
+                {
+                    electionMapWinner.Winner.Name = "NU";
+                    electionMapWinner.Winner.ShortName = "NU";
+                    electionMapWinner.Winner.Votes = winner.NoVotes;
+                }
+            }
+
+            electionMapWinner.ValidVotes = turnoutForCountry.ValidVotes;
+            return electionMapWinner;
         }
     }
 }

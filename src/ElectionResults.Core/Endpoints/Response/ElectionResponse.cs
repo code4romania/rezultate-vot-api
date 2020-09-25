@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using ElectionResults.Core.Elections;
 using ElectionResults.Core.Entities;
 
 namespace ElectionResults.Core.Endpoints.Response

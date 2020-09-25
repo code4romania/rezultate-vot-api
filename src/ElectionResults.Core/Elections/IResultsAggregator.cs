@@ -18,5 +18,11 @@ namespace ElectionResults.Core.Elections
         Task<Result<List<Locality>>> GetLocalities(int? countyId);
 
         Task<Result<List<Country>>> GetCountries();
+
+        Task<Result<List<ElectionMapWinner>>> GetCountryWinners(int ballotId);
+
+        Task<Result<List<ElectionMapWinner>>> GetCountyWinners(int ballotId);
+
+        Task<Result<List<ElectionMapWinner>>> GetLocalityWinners(int ballotId, int countyId);
     }
 }

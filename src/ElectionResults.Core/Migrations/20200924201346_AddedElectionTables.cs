@@ -298,7 +298,6 @@ namespace ElectionResults.Core.Migrations
                         .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
                     CountyId = table.Column<int>(nullable: false),
                     Name = table.Column<string>(nullable: true),
-                    IsCountry = table.Column<bool>(nullable: false),
                     CountryId = table.Column<int>(nullable: false)
                 },
                 constraints: table =>

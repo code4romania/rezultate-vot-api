@@ -20,7 +20,20 @@ namespace ElectionResults.Core.Extensions
                 return Convert.ToBase64String(hash);
             }
         }
-
+        public static bool IsParty(this string partyName)
+        {
+            if (partyName.IsEmpty())
+                return false;
+            partyName = partyName?.ToLower();
+            return partyName != null && partyName.StartsWith("partidul ") || partyName.StartsWith("conventia ")
+                                                                          || partyName.StartsWith("uniunea ")
+                                                                          || partyName.StartsWith("asociatia ")
+                                                                          || partyName.StartsWith("blocul ")
+                                                                          || partyName.StartsWith("federatia ")
+                                                                          || partyName.StartsWith("forumul ")
+                                                                          || partyName.StartsWith("comunitatea ")
+                                                                          || partyName.StartsWith("alianta ");
+        }
         public static string Or(this string first, string second)
         {
             if (first.IsEmpty() == false)
