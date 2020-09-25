@@ -200,7 +200,6 @@ namespace ElectionResults.API.Controllers
             {
                 using (var newMemoryStream = new MemoryStream())
                 {
-                    client.
                     file.CopyTo(newMemoryStream);
 
                     var uploadRequest = new TransferUtilityUploadRequest
