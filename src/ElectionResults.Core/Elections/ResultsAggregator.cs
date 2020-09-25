@@ -56,11 +56,6 @@ namespace ElectionResults.Core.Elections
                     throw new Exception($"No results found for ballot id {query.BallotId}");
                 var electionResponse = new ElectionResponse();
 
-                if (query.Division == ElectionDivision.Diaspora_Country)
-                {
-                    query.CountryId = query.LocalityId;
-                    query.LocalityId = null;
-                }
                 var candidates = await GetCandidates(query, ballot, dbContext);
                 var divisionTurnout= await GetDivisionTurnout(query, dbContext, ballot);
                 var electionTurnout = await GetElectionTurnout(dbContext, ballot);
@@ -280,7 +275,7 @@ namespace ElectionResults.Core.Elections
         {
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
-                var counties = await dbContext.Counties.ToListAsync();
+                var counties = await dbContext.Counties.OrderBy(c => c.Name).ToListAsync();
                 return Result.Success(counties);
             }
         }
@@ -292,7 +287,7 @@ namespace ElectionResults.Core.Elections
                 IQueryable<Locality> dbSet = dbContext.Localities;
                 if (countyId.HasValue)
                     dbSet = dbSet.Where(l => l.CountyId == countyId.Value);
-                var localities = await dbSet.ToListAsync();
+                var localities = await dbSet.OrderBy(l => l.Name).ToListAsync();
                 return Result.Success(localities);
             }
         }
@@ -301,7 +296,7 @@ namespace ElectionResults.Core.Elections
         {
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
-                var countries = await dbContext.Countries.ToListAsync();
+                var countries = await dbContext.Countries.OrderBy(c => c.Name).ToListAsync();
                 return Result.Success(countries);
             }
         }
