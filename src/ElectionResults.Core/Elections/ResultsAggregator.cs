@@ -56,6 +56,11 @@ namespace ElectionResults.Core.Elections
                     throw new Exception($"No results found for ballot id {query.BallotId}");
                 var electionResponse = new ElectionResponse();
 
+                if (query.Division == ElectionDivision.Diaspora_Country)
+                {
+                    query.CountryId = query.LocalityId;
+                    query.LocalityId = null;
+                }
                 var candidates = await GetCandidates(query, ballot, dbContext);
                 var divisionTurnout= await GetDivisionTurnout(query, dbContext, ballot);
                 var electionTurnout = await GetElectionTurnout(dbContext, ballot);
@@ -124,9 +129,9 @@ namespace ElectionResults.Core.Elections
                 }
                 else if (query.Division == ElectionDivision.Diaspora_Country)
                 {
-
-                    electionScope.CountryId = query.LocalityId;
-                    electionScope.CountryName = locality?.Name;
+                    var country = await dbContext.Countries.FirstOrDefaultAsync(c => c.Id == query.CountryId);
+                    electionScope.CountryId = query.CountryId;
+                    electionScope.CountryName = country?.Name;
                 }
             }
 
@@ -234,12 +239,6 @@ namespace ElectionResults.Core.Elections
 
         private static async Task<Turnout> GetDivisionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
         {
-            if (query.Division == ElectionDivision.Diaspora_Country)
-            {
-                query.CountryId = query.LocalityId;
-                query.LocalityId = null;
-                //query.CountyId = 16820;
-            }
             return await dbContext.Turnouts
                 .FirstOrDefaultAsync(t =>
                     t.BallotId == ballot.BallotId &&
@@ -251,12 +250,6 @@ namespace ElectionResults.Core.Elections
         private async Task<List<CandidateResult>> GetCandidates(ElectionResultsQuery query, Ballot ballot,
             ApplicationDbContext dbContext)
         {
-            if (query.Division == ElectionDivision.Diaspora_Country)
-            {
-                query.CountryId = query.LocalityId;
-                query.LocalityId = null;
-                //query.CountyId = 16820;
-            }
             var resultsQuery = dbContext.CandidateResults
                 .Include(c => c.Party)
                 .Where(er =>

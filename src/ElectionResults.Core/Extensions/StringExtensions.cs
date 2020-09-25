@@ -91,7 +91,8 @@ namespace ElectionResults.Core.Extensions
         }
         public static string ToSnakeCase(this string str)
         {
-            return string.Concat(str.Select((x, i) => i > 0 && char.IsUpper(x) ? "_" + x.ToString() : x.ToString())).ToLower();
+            var enumerable = str.Select((x, i) => i > 0 && char.IsUpper(x) && str.IndexOf(x) > 0 && str[str.IndexOf(x)-1] != '_' ? "_" + x : x.ToString());
+            return string.Concat(enumerable).ToLower();
         }
 
         public static string ConvertEnumToString(this Enum type)
