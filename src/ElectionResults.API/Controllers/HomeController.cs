@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Options;
 
 namespace ElectionResults.API.Controllers
 {
@@ -23,19 +24,22 @@ namespace ElectionResults.API.Controllers
         private readonly IElectionRepository _electionRepository;
         private readonly IAuthorsRepository _authorsRepository;
         private readonly IPicturesRepository _picturesRepository;
+        private readonly IOptions<AWSS3Settings> _awsS3Settings;
 
         public HomeController(
             IWebHostEnvironment hostEnvironment,
             IArticleRepository articleRepository,
             IElectionRepository electionRepository,
             IAuthorsRepository authorsRepository,
-            IPicturesRepository picturesRepository)
+            IPicturesRepository picturesRepository,
+            IOptions<AWSS3Settings> aws3Settings)
         {
             webHostEnvironment = hostEnvironment;
             _articleRepository = articleRepository;
             _electionRepository = electionRepository;
             _authorsRepository = authorsRepository;
             _picturesRepository = picturesRepository;
+            _awsS3Settings = aws3Settings;
         }
 
         public async Task<IActionResult> Index()
@@ -192,7 +196,7 @@ namespace ElectionResults.API.Controllers
 
         public async Task UploadFileToS3(IFormFile file, string filename)
         {
-            using (var client = new AmazonS3Client("yourAwsAccessKeyId", "yourAwsSecretAccessKey", RegionEndpoint.EUWest1))
+            using (var client = new AmazonS3Client(_awsS3Settings.Value.AccessKeyId, _awsS3Settings.Value.AccessKeySecret, RegionEndpoint.EUWest1))
             {
                 using (var newMemoryStream = new MemoryStream())
                 {
@@ -202,7 +206,7 @@ namespace ElectionResults.API.Controllers
                     {
                         InputStream = newMemoryStream,
                         Key = file.FileName,
-                        BucketName = "yourBucketName",
+                        BucketName = _awsS3Settings.Value.BucketName,
                         CannedACL = S3CannedACL.PublicRead
                     };
 
