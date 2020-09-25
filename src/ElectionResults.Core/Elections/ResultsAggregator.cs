@@ -70,6 +70,28 @@ namespace ElectionResults.Core.Elections
                 else
                 {
                     results = GetResults(divisionTurnout, ballot, candidates);
+                    if (ballot.BallotType != BallotType.Referendum)
+                    {
+                        var parties = await dbContext.Parties.ToListAsync();
+                        foreach (var candidate in results.Candidates)
+                        {
+                            if (candidate.PartyColor.IsEmpty())
+                            {
+                                var matchingParty = parties.FirstOrDefault(p =>
+                                    candidate.ShortName.ContainsString(p.ShortName + "-")
+                                    || candidate.ShortName.ContainsString(p.ShortName + "+")
+                                    || candidate.ShortName.ContainsString(p.ShortName + " +")
+                                    || candidate.ShortName.ContainsString("+" + p.ShortName)
+                                    || candidate.ShortName.ContainsString("+ " + p.ShortName)
+                                    || candidate.ShortName.ContainsString(" " + p.ShortName)
+                                    || candidate.ShortName.ContainsString(p.ShortName + " "));
+                                if (matchingParty != null)
+                                {
+                                    candidate.PartyColor = matchingParty.Color;
+                                }
+                            }
+                        }
+                    }
                 }
 
                 electionResponse.Results = results;
