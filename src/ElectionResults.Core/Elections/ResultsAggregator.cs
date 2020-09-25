@@ -212,13 +212,21 @@ namespace ElectionResults.Core.Elections
 
         private string GetCandidateShortName(CandidateResult c, Ballot ballot)
         {
-            if (ballot.BallotType == BallotType.EuropeanParliament || ballot.BallotType == BallotType.Senate ||
-                ballot.BallotType == BallotType.House)
+            try
+            {
+                if (ballot.BallotType == BallotType.EuropeanParliament || ballot.BallotType == BallotType.Senate ||
+                    ballot.BallotType == BallotType.House)
+                    return c.ShortName;
+                if (c.Name.IsParty() || c.Name.IsEmpty()) //some things I observed are common with party names or initials
+                    return c.ShortName;
+                var processedName = ParseShortName(c.Name);
+                return processedName;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
                 return c.ShortName;
-            if (c.Name.IsParty()) //some things I observed are common with party names or initials
-                return c.ShortName;
-            var processedName = ParseShortName(c.Name);
-            return processedName;
+            }
         }
 
         private string ParseShortName(string shortName)
@@ -424,7 +432,7 @@ namespace ElectionResults.Core.Elections
                 var ballot = await dbContext.Ballots.FirstOrDefaultAsync(b => b.BallotId == ballotId);
                 foreach (var country in countries)
                 {
-                    if(country.Name == "Albania")
+                    if (country.Name == "Albania")
                         Console.WriteLine("found it");
                     var countryWinner = await dbContext.CandidateResults
                         .Include(b => b.Party)
@@ -438,7 +446,7 @@ namespace ElectionResults.Core.Elections
                         continue;
 
                     var electionMapWinner = CreateElectionMapWinner(country.Id, ballot, countryWinner, turnoutForCountry);
-                    
+
                     winners.Add(electionMapWinner);
                 }
             }
