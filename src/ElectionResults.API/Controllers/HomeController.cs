@@ -187,7 +187,7 @@ namespace ElectionResults.API.Controllers
                     
                     await UploadFileToS3(picture, uniqueFileName);
 
-                    filenames.Add(new Uri(new Uri("https://rezultatevot-images-upload.s3.amazonaws.com/"), uniqueFileName).ToString());
+                    filenames.Add(new Uri(new Uri($"https://{_awsS3Settings.Value.BucketName}.s3.amazonaws.com/"), uniqueFileName).ToString());
                 }
                 return filenames;
             }
@@ -200,6 +200,7 @@ namespace ElectionResults.API.Controllers
             {
                 using (var newMemoryStream = new MemoryStream())
                 {
+                    client.
                     file.CopyTo(newMemoryStream);
 
                     var uploadRequest = new TransferUtilityUploadRequest
