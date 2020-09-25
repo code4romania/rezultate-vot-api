@@ -3,10 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Amazon;
+using Amazon.S3;
+using Amazon.S3.Transfer;
 using ElectionResults.API.ViewModels;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Repositories;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -128,7 +132,7 @@ namespace ElectionResults.API.Controllers
                     var pictures = new List<ArticlePicture>();
                     if (model.Pictures != null && model.Pictures.Count > 0)
                     {
-                        var uniqueFileNames = UploadedFiles(model);
+                        var uniqueFileNames = await UploadedFiles(model);
                         foreach (var fileName in uniqueFileNames)
                         {
                             pictures.Add(new ArticlePicture
@@ -165,25 +169,47 @@ namespace ElectionResults.API.Controllers
             return View(newsFeedViewModel);
         }
 
-        private List<string> UploadedFiles(NewsViewModel model)
+        private async Task<List<string>> UploadedFiles(NewsViewModel model)
         {
             var filenames = new List<string>();
-            if (model.Pictures != null && model.Pictures.Count == 2)
+            var noPictures = model.Pictures == null || (model.Pictures != null && model.Pictures.Count == 0);
+            var lessThanTwoPictures = model.Pictures != null && model.Pictures.Count > 0 && model.Pictures.Count < 3;
+
+            if (noPictures || lessThanTwoPictures)
             {
                 foreach (var picture in model.Pictures)
                 {
-                    string uploadsFolder = Path.Combine(webHostEnvironment.WebRootPath, "upload");
                     var uniqueFileName = Guid.NewGuid() + "_" + picture.FileName;
-                    string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
-                    {
-                        picture.CopyTo(fileStream);
-                    }
+                    
+                    await UploadFileToS3(picture, uniqueFileName);
+
                     filenames.Add(uniqueFileName);
                 }
                 return filenames;
             }
             throw new ArgumentException("Wrong number of pictures uploaded");
         }
+
+        public async Task UploadFileToS3(IFormFile file, string filename)
+        {
+            using (var client = new AmazonS3Client("yourAwsAccessKeyId", "yourAwsSecretAccessKey", RegionEndpoint.EUWest1))
+            {
+                using (var newMemoryStream = new MemoryStream())
+                {
+                    file.CopyTo(newMemoryStream);
+
+                    var uploadRequest = new TransferUtilityUploadRequest
+                    {
+                        InputStream = newMemoryStream,
+                        Key = file.FileName,
+                        BucketName = "yourBucketName",
+                        CannedACL = S3CannedACL.PublicRead
+                    };
+
+                    var fileTransferUtility = new TransferUtility(client);
+                    await fileTransferUtility.UploadAsync(uploadRequest);
+                }
+            }
+}
     }
 }
