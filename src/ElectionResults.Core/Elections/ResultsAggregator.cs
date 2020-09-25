@@ -174,6 +174,24 @@ namespace ElectionResults.Core.Elections
             }
             else
             {
+                var colors = new List<string>();
+                foreach (var candidate in candidates)
+                {
+
+                    var matchingParty = parties.FirstOrDefault(p =>
+                        candidate.ShortName.ContainsString(p.ShortName + "-")
+                        || candidate.ShortName.ContainsString(p.ShortName + "+")
+                        || candidate.ShortName.ContainsString(p.ShortName + " +")
+                        || candidate.ShortName.ContainsString("+" + p.ShortName)
+                        || candidate.ShortName.ContainsString("+ " + p.ShortName)
+                        || candidate.ShortName.ContainsString(" " + p.ShortName)
+                        || candidate.ShortName.ContainsString(p.ShortName + " "));
+                    if (matchingParty != null)
+                    {
+                        colors.Add(matchingParty.Color);
+                    }
+                    else colors.Add(null);
+                }
                 results.Candidates = candidates.Select(c => new CandidateResponse
                 {
                     ShortName = GetCandidateShortName(c, ballot),
@@ -183,30 +201,18 @@ namespace ElectionResults.Core.Elections
                     PartyLogo = c.Party?.LogoUrl,
                     Seats = c.TotalSeats,
                     SeatsGained = c.SeatsGained
-                }).OrderByDescending(c => c.Votes).ToList();
-                if (ballot.BallotType != BallotType.Referendum)
+                }).ToList();
+                for (var i = 0; i < results.Candidates.Count; i++)
                 {
-                    foreach (var candidate in results.Candidates)
+                    var candidate = results.Candidates[i];
+                    if (candidate.PartyColor.IsEmpty())
                     {
-                        if (candidate.PartyColor.IsEmpty())
-                        {
-                            var matchingParty = parties.FirstOrDefault(p =>
-                                candidate.ShortName.ContainsString(p.ShortName + "-")
-                                || candidate.ShortName.ContainsString(p.ShortName + "+")
-                                || candidate.ShortName.ContainsString(p.ShortName + " +")
-                                || candidate.ShortName.ContainsString("+" + p.ShortName)
-                                || candidate.ShortName.ContainsString("+ " + p.ShortName)
-                                || candidate.ShortName.ContainsString(" " + p.ShortName)
-                                || candidate.ShortName.ContainsString(p.ShortName + " "));
-                            if (matchingParty != null)
-                            {
-                                candidate.PartyColor = matchingParty.Color;
-                            }
-                        }
+                        candidate.PartyColor = colors[i];
                     }
                 }
             }
 
+            results.Candidates = results.Candidates.OrderByDescending(c => c.Votes).ToList();
             return results;
         }
 
@@ -472,7 +478,7 @@ namespace ElectionResults.Core.Elections
             }
             else
             {
-                if (winner.ShortName == "DA")
+                if (winner.YesVotes > winner.NoVotes)
                 {
                     electionMapWinner.Winner.Name = "DA";
                     electionMapWinner.Winner.ShortName = "DA";

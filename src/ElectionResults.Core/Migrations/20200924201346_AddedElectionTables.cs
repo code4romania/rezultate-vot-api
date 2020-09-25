@@ -9,7 +9,7 @@ namespace ElectionResults.Core.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "aspnetroles",
+                name: "AspNetRoles",
                 columns: table => new
                 {
                     Id = table.Column<string>(maxLength: 127, nullable: false),
@@ -23,7 +23,7 @@ namespace ElectionResults.Core.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "aspnetusers",
+                name: "AspNetUsers",
                 columns: table => new
                 {
                     Id = table.Column<string>(nullable: false),
