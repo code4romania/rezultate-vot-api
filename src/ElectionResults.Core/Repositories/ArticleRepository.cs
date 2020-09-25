@@ -23,6 +23,7 @@ namespace ElectionResults.Core.Repositories
                 .Include(n => n.Election)
                 .Include(n => n.Ballot)
                 .Include(n => n.Author)
+                .OrderByDescending(n => n.Timestamp)
                 .ToListAsync();
             return Result.Success(feeds);
         }
