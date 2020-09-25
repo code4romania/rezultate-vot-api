@@ -37,7 +37,7 @@
                 <td>@news.Election.Name</td>
                 <td>@news.Ballot.Name</td>
                 <td>@news.Title</td>
-                <td>@news.Timestamp.ToString("yyyy MMMM dd")</td>
+                <td>@news.Timestamp.ToString("yyyy MMMM dd HH:mm:ss")</td>
                 <td>@news.Author.Name</td>
                 <td>
                     <form asp-action="Edit" asp-route-id="@news.Id">
