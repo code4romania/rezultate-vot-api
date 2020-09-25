@@ -177,7 +177,7 @@ namespace ElectionResults.Core.Elections
                 results.Candidates = candidates.Select(c => new CandidateResponse
                 {
                     ShortName = GetCandidateShortName(c, ballot),
-                    Name = GetCandidateName(c),
+                    Name = GetCandidateName(c, ballot),
                     Votes = c.Votes,
                     PartyColor = GetPartyColor(c),
                     PartyLogo = c.Party?.LogoUrl,
@@ -217,7 +217,7 @@ namespace ElectionResults.Core.Elections
                 if (ballot.BallotType == BallotType.EuropeanParliament || ballot.BallotType == BallotType.Senate ||
                     ballot.BallotType == BallotType.House)
                     return c.ShortName;
-                if (c.Name.IsParty() || c.Name.IsEmpty()) //some things I observed are common with party names or initials
+                if (c.Name.IsParty() || c.Name.IsEmpty())
                     return c.ShortName;
                 var processedName = ParseShortName(c.Name);
                 return processedName;
@@ -251,11 +251,12 @@ namespace ElectionResults.Core.Elections
             return c.Party?.Color;
         }
 
-        private static string GetCandidateName(CandidateResult c)
+        private static string GetCandidateName(CandidateResult c, Ballot ballot)
         {
-            if (c.Party != null && c.Party.Name.ToLower() == "independent")
-                return c.Name;
-            return c.Party?.Name.Or(c.PartyName).Or(c.Name) ?? c.Name.Or(c.PartyName);
+            if (ballot.BallotType == BallotType.EuropeanParliament || ballot.BallotType == BallotType.Senate ||
+                ballot.BallotType == BallotType.House)
+                return c.Party?.Name.Or(c.PartyName).Or(c.Name) ?? c.Name.Or(c.PartyName);
+            return c.Name;
         }
 
         private static async Task<List<ArticleResponse>> GetElectionNews(ApplicationDbContext dbContext, Ballot ballot)
