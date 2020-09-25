@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
@@ -11,7 +10,6 @@ using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 
 namespace ElectionResults.Core.Elections
 {
@@ -58,7 +56,7 @@ namespace ElectionResults.Core.Elections
                     throw new Exception($"No results found for ballot id {query.BallotId}");
                 var electionResponse = new ElectionResponse();
 
-                var candidates = await GetCandidates(query, ballot, dbContext);
+                var candidates = await GetCandidatesFromDb(query, ballot, dbContext);
                 var divisionTurnout = await GetDivisionTurnout(query, dbContext, ballot);
                 var electionTurnout = await GetElectionTurnout(dbContext, ballot);
 
@@ -69,7 +67,7 @@ namespace ElectionResults.Core.Elections
                 }
                 else
                 {
-                    results = GetResults(divisionTurnout, ballot, candidates);
+                    results = ProcessResults(divisionTurnout, ballot, candidates);
                     if (ballot.BallotType != BallotType.Referendum)
                     {
                         var parties = await dbContext.Parties.ToListAsync();
@@ -144,7 +142,7 @@ namespace ElectionResults.Core.Elections
                     electionScope.LocalityName = locality?.Name;
                     electionScope.CountyId = locality?.CountyId;
                     county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
-                    electionScope.CountyName = county.Name;
+                    electionScope.CountyName = county?.Name;
                 }
                 else if (query.Division == ElectionDivision.Diaspora_Country)
                 {
@@ -157,7 +155,7 @@ namespace ElectionResults.Core.Elections
             return electionScope;
         }
 
-        private static ElectionResultsResponse GetResults(Turnout electionTurnout, Ballot ballot, List<CandidateResult> candidates)
+        private ElectionResultsResponse ProcessResults(Turnout electionTurnout, Ballot ballot, List<CandidateResult> candidates)
         {
             ElectionResultsResponse results = new ElectionResultsResponse();
             results.NullVotes = electionTurnout.NullVotes;
@@ -193,7 +191,7 @@ namespace ElectionResults.Core.Elections
             {
                 results.Candidates = candidates.Select(c => new CandidateResponse
                 {
-                    ShortName = c.ShortName,
+                    ShortName = GetCandidateShortName(c, ballot),
                     Name = GetCandidateName(c),
                     Votes = c.Votes,
                     PartyColor = GetPartyColor(c),
@@ -204,6 +202,32 @@ namespace ElectionResults.Core.Elections
             }
 
             return results;
+        }
+
+        private string GetCandidateShortName(CandidateResult c, Ballot ballot)
+        {
+            if (ballot.BallotType == BallotType.EuropeanParliament || ballot.BallotType == BallotType.Senate ||
+                ballot.BallotType == BallotType.House)
+                return c.ShortName;
+            if (c.Name.IsParty()) //some things I observed are common with party names or initials
+                return c.ShortName;
+            var processedName = ParseShortName(c.Name);
+            return processedName;
+        }
+
+        private string ParseShortName(string shortName)
+        {
+            var fullName = shortName.Replace("CANDIDAT INDEPENDENT - ", "");
+            var firstInitial = fullName[0].ToString().ToUpper() + ". ";
+            string firstname = string.Empty;
+            if (fullName.Contains("-"))
+            {
+                firstname = fullName.Split("-")[0] + "-";
+            }
+            else firstname = fullName.Split(" ")[0] + " ";
+
+            var candidateName = firstInitial + fullName.Replace(firstname, "");
+            return candidateName;
         }
 
         private static string GetPartyColor(CandidateResult c)
@@ -266,7 +290,7 @@ namespace ElectionResults.Core.Elections
                     t.LocalityId == query.LocalityId);
         }
 
-        private async Task<List<CandidateResult>> GetCandidates(ElectionResultsQuery query, Ballot ballot,
+        private async Task<List<CandidateResult>> GetCandidatesFromDb(ElectionResultsQuery query, Ballot ballot,
             ApplicationDbContext dbContext)
         {
             var resultsQuery = dbContext.CandidateResults
