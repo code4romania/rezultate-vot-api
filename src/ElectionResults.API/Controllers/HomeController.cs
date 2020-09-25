@@ -183,11 +183,11 @@ namespace ElectionResults.API.Controllers
             {
                 foreach (var picture in model.Pictures)
                 {
-                    var uniqueFileName = Guid.NewGuid() + "_" + picture.FileName;
+                    var uniqueFileName = Guid.NewGuid() + "_" + Path.GetFileName(picture.FileName);
                     
                     await UploadFileToS3(picture, uniqueFileName);
 
-                    filenames.Add(uniqueFileName);
+                    filenames.Add(new Uri(new Uri($"https://{_awsS3Settings.Value.BucketName}.s3.amazonaws.com/"), uniqueFileName).ToString());
                 }
                 return filenames;
             }
@@ -200,12 +200,13 @@ namespace ElectionResults.API.Controllers
             {
                 using (var newMemoryStream = new MemoryStream())
                 {
+                    client.
                     file.CopyTo(newMemoryStream);
 
                     var uploadRequest = new TransferUtilityUploadRequest
                     {
                         InputStream = newMemoryStream,
-                        Key = file.FileName,
+                        Key = filename,
                         BucketName = _awsS3Settings.Value.BucketName,
                         CannedACL = S3CannedACL.PublicRead
                     };
