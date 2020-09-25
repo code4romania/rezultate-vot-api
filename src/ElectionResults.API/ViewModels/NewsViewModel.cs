@@ -14,7 +14,6 @@ namespace ElectionResults.API.ViewModels
         [Display(Name = "Title")]
         public string Title { get; set; }
 
-        [Required(ErrorMessage = "Please enter the link")]
         [Display(Name = "Link")]
         public string Link { get; set; }
 

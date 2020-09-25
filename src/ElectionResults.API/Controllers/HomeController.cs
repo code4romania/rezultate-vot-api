@@ -141,7 +141,7 @@ namespace ElectionResults.API.Controllers
                         {
                             pictures.Add(new ArticlePicture
                             {
-                                Url = $"/upload/{fileName}"
+                                Url = $"{fileName}"
                             });
                         }
                         await _picturesRepository.RemovePictures(model.NewsId);
