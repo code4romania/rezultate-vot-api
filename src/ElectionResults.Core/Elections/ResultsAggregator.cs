@@ -19,6 +19,8 @@ namespace ElectionResults.Core.Elections
         private readonly IServiceProvider _serviceProvider;
         private readonly IAppCache _appCache;
         private string _partiesKey = "parties";
+        private string _countriesKey = "countries";
+        private string _countiesKey = "counties";
 
         public ResultsAggregator(IServiceProvider serviceProvider, IAppCache appCache)
         {
@@ -375,11 +377,13 @@ namespace ElectionResults.Core.Elections
             var winners = new List<ElectionMapWinner>();
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
-                var counties = await dbContext.Counties.ToListAsync();
+
+                var counties = await _appCache.GetOrAddAsync(
+                    _countiesKey, () => dbContext.Counties.ToListAsync(),
+                    DateTimeOffset.Now.AddMinutes(60));
                 var ballot = await dbContext.Ballots.FirstOrDefaultAsync(b => b.BallotId == ballotId);
                 foreach (var county in counties)
                 {
-
                     var countyWinner = await dbContext.CandidateResults
                         .Include(b => b.Party)
                         .Where(c => c.BallotId == ballotId && c.CountyId == county.CountyId && c.Division == ElectionDivision.County)
@@ -421,7 +425,7 @@ namespace ElectionResults.Core.Elections
                         .FirstOrDefaultAsync();
                     if (localityWinner == null || turnoutForCountry == null)
                         continue;
-                    var electionMapWinner = CreateElectionMapWinner(locality.CountyId, ballot, localityWinner, turnoutForCountry);
+                    var electionMapWinner = CreateElectionMapWinner(locality.LocalityId, ballot, localityWinner, turnoutForCountry);
                     winners.Add(electionMapWinner);
                 }
             }
@@ -429,18 +433,17 @@ namespace ElectionResults.Core.Elections
             return Result.Success(winners);
         }
 
-
         public async Task<Result<List<ElectionMapWinner>>> GetCountryWinners(int ballotId)
         {
             var winners = new List<ElectionMapWinner>();
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
-                var countries = await dbContext.Countries.ToListAsync();
+                var countries = await _appCache.GetOrAddAsync(
+                    _countriesKey, () => dbContext.Countries.ToListAsync(),
+                    DateTimeOffset.Now.AddMinutes(60));
                 var ballot = await dbContext.Ballots.FirstOrDefaultAsync(b => b.BallotId == ballotId);
                 foreach (var country in countries)
                 {
-                    if (country.Name == "Albania")
-                        Console.WriteLine("found it");
                     var countryWinner = await dbContext.CandidateResults
                         .Include(b => b.Party)
                         .Where(c => c.BallotId == ballotId && c.CountryId == country.Id && c.Division == ElectionDivision.Diaspora_Country)
