@@ -45,6 +45,7 @@ namespace ElectionResults.API
                     options.JsonSerializerOptions.IgnoreNullValues = true;
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(new SnakeCaseNamingPolicy()));
                 }); ;
+            services.AddLazyCache();
             RegisterDependencies(services, Configuration);
             services.AddSwaggerGen(c =>
             {

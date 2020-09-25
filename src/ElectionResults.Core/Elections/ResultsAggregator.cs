@@ -8,6 +8,7 @@ using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
+using LazyCache;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,10 +17,13 @@ namespace ElectionResults.Core.Elections
     public class ResultsAggregator : IResultsAggregator
     {
         private readonly IServiceProvider _serviceProvider;
+        private readonly IAppCache _appCache;
+        private string _partiesKey = "parties";
 
-        public ResultsAggregator(IServiceProvider serviceProvider)
+        public ResultsAggregator(IServiceProvider serviceProvider, IAppCache appCache)
         {
             _serviceProvider = serviceProvider;
+            _appCache = appCache;
         }
 
         public async Task<Result<List<ElectionMeta>>> GetAllBallots()
@@ -67,29 +71,10 @@ namespace ElectionResults.Core.Elections
                 }
                 else
                 {
-                    results = ProcessResults(divisionTurnout, ballot, candidates);
-                    if (ballot.BallotType != BallotType.Referendum)
-                    {
-                        var parties = await dbContext.Parties.ToListAsync();
-                        foreach (var candidate in results.Candidates)
-                        {
-                            if (candidate.PartyColor.IsEmpty())
-                            {
-                                var matchingParty = parties.FirstOrDefault(p =>
-                                    candidate.ShortName.ContainsString(p.ShortName + "-")
-                                    || candidate.ShortName.ContainsString(p.ShortName + "+")
-                                    || candidate.ShortName.ContainsString(p.ShortName + " +")
-                                    || candidate.ShortName.ContainsString("+" + p.ShortName)
-                                    || candidate.ShortName.ContainsString("+ " + p.ShortName)
-                                    || candidate.ShortName.ContainsString(" " + p.ShortName)
-                                    || candidate.ShortName.ContainsString(p.ShortName + " "));
-                                if (matchingParty != null)
-                                {
-                                    candidate.PartyColor = matchingParty.Color;
-                                }
-                            }
-                        }
-                    }
+                    var parties = await _appCache.GetOrAddAsync(
+                        _partiesKey, () => dbContext.Parties.ToListAsync(),
+                        DateTimeOffset.Now.AddMinutes(5));
+                    results = ProcessResults(divisionTurnout, ballot, candidates, parties);
                 }
 
                 electionResponse.Results = results;
@@ -155,7 +140,7 @@ namespace ElectionResults.Core.Elections
             return electionScope;
         }
 
-        private ElectionResultsResponse ProcessResults(Turnout electionTurnout, Ballot ballot, List<CandidateResult> candidates)
+        private ElectionResultsResponse ProcessResults(Turnout electionTurnout, Ballot ballot, List<CandidateResult> candidates, List<Party> parties)
         {
             ElectionResultsResponse results = new ElectionResultsResponse();
             results.NullVotes = electionTurnout.NullVotes;
@@ -199,6 +184,27 @@ namespace ElectionResults.Core.Elections
                     Seats = c.TotalSeats,
                     SeatsGained = c.SeatsGained
                 }).OrderByDescending(c => c.Votes).ToList();
+                if (ballot.BallotType != BallotType.Referendum)
+                {
+                    foreach (var candidate in results.Candidates)
+                    {
+                        if (candidate.PartyColor.IsEmpty())
+                        {
+                            var matchingParty = parties.FirstOrDefault(p =>
+                                candidate.ShortName.ContainsString(p.ShortName + "-")
+                                || candidate.ShortName.ContainsString(p.ShortName + "+")
+                                || candidate.ShortName.ContainsString(p.ShortName + " +")
+                                || candidate.ShortName.ContainsString("+" + p.ShortName)
+                                || candidate.ShortName.ContainsString("+ " + p.ShortName)
+                                || candidate.ShortName.ContainsString(" " + p.ShortName)
+                                || candidate.ShortName.ContainsString(p.ShortName + " "));
+                            if (matchingParty != null)
+                            {
+                                candidate.PartyColor = matchingParty.Color;
+                            }
+                        }
+                    }
+                }
             }
 
             return results;
