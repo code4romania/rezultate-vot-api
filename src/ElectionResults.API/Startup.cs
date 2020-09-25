@@ -45,7 +45,7 @@ namespace ElectionResults.API
                     options.JsonSerializerOptions.IgnoreNullValues = true;
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(new SnakeCaseNamingPolicy()));
                 }); ;
-            RegisterDependencies(services);
+            RegisterDependencies(services, Configuration);
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Rezultate Vot API", Version = "v2" });
@@ -67,13 +67,15 @@ namespace ElectionResults.API
             });
         }
 
-        private static void RegisterDependencies(IServiceCollection services)
+        private static void RegisterDependencies(IServiceCollection services, IConfiguration configuration)
         {
             services.AddTransient<IResultsAggregator, ResultsAggregator>();
             services.AddTransient<IArticleRepository, ArticleRepository>();
             services.AddTransient<IElectionRepository, ElectionRepository>();
             services.AddTransient<IPicturesRepository, PicturesRepository>();
             services.AddTransient<IAuthorsRepository, AuthorsRepository>();
+
+            services.Configure<AWSS3Settings>(configuration.GetSection("S3Bucket"));
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context)
