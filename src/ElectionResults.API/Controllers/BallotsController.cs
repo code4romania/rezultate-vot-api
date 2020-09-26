@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
-using ElectionResults.Core.Entities;
 using ElectionResults.Core.Infrastructure;
+using LazyCache;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -18,17 +18,21 @@ namespace ElectionResults.API.Controllers
     {
         private readonly ILogger<BallotsController> _logger;
         private readonly IResultsAggregator _resultsAggregator;
+        private readonly IAppCache _appCache;
 
-        public BallotsController(ILogger<BallotsController> logger, IResultsAggregator resultsAggregator)
+        public BallotsController(ILogger<BallotsController> logger, IResultsAggregator resultsAggregator, IAppCache appCache)
         {
             _logger = logger;
             _resultsAggregator = resultsAggregator;
+            _appCache = appCache;
         }
 
         [HttpGet("ballots")]
         public async Task<ActionResult<List<ElectionMeta>>> GetBallots()
         {
-            var result = await _resultsAggregator.GetAllBallots();
+            var result = await _appCache.GetOrAddAsync(
+                "ballots", () => _resultsAggregator.GetAllBallots(),
+                DateTimeOffset.Now.AddMinutes(120));
             if (result.IsSuccess)
                 return result.Value;
             return StatusCode(500, result.Error);
@@ -45,7 +49,10 @@ namespace ElectionResults.API.Controllers
                     query.CountyId = null;
                 if (query.Round == 0)
                     query.Round = null;
-                var result = await _resultsAggregator.GetBallotResults(query);
+
+                var result = await _appCache.GetOrAddAsync(
+                    query.GetCacheKey(), () => _resultsAggregator.GetBallotResults(query),
+                    DateTimeOffset.Now.AddMinutes(query.GetCacheDurationInMinutes()));
                 return result.Value;
             }
             catch (Exception e)
@@ -55,7 +62,6 @@ namespace ElectionResults.API.Controllers
             }
         }
 
-      
         [HttpGet("counties")]
         public async Task<ActionResult<List<LocationData>>> GetCounties()
         {

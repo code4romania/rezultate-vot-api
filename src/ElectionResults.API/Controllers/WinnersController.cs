@@ -59,7 +59,7 @@ namespace ElectionResults.API.Controllers
         {
             try
             {
-                var result = await _resultsAggregator.GetLocalityWinners(ballotId, countyId);
+                var result = await _resultsAggregator.GetLocalityWinnersByCounty(ballotId, countyId);
                 if (result.IsSuccess)
                     return result.Value;
                 throw new Exception(result.Error);

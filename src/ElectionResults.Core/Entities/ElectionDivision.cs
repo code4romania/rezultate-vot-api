@@ -2,10 +2,10 @@
 {
     public enum ElectionDivision
     {
-        National,
-        Diaspora,
-        County,
-        Locality,
-        Diaspora_Country
+        National = 0,
+        Diaspora = 1,
+        County = 2,
+        Locality = 3,
+        Diaspora_Country = 4
     }
 }

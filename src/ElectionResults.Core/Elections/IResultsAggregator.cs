@@ -23,6 +23,6 @@ namespace ElectionResults.Core.Elections
 
         Task<Result<List<ElectionMapWinner>>> GetCountyWinners(int ballotId);
 
-        Task<Result<List<ElectionMapWinner>>> GetLocalityWinners(int ballotId, int countyId);
+        Task<Result<List<ElectionMapWinner>>> GetLocalityWinnersByCounty(int ballotId, int countyId);
     }
 }

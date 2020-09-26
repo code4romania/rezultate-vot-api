@@ -13,6 +13,17 @@ namespace ElectionResults.Core.Endpoints.Query
         public int? LocalityId { get; set; }
 
         public int? Round { get; set; }
+
         public int? CountryId { get; set; }
+
+        public string GetCacheKey()
+        {
+            return $"{BallotId}-{CountryId}-{LocalityId}-{CountyId}-{Division}";
+        }
+
+        public double GetCacheDurationInMinutes()
+        {
+            return 10;
+        }
     }
 }
