@@ -458,7 +458,10 @@ namespace ElectionResults.Core.Elections
                 var counties = await _appCache.GetOrAddAsync(
                     _countiesKey, () => dbContext.Counties.ToListAsync(),
                     DateTimeOffset.Now.AddMinutes(60));
-                var ballot = await dbContext.Ballots.FirstOrDefaultAsync(b => b.BallotId == ballotId);
+                var ballot = await dbContext.Ballots
+                    .AsNoTracking()
+                    .Include(b => b.Election)
+                    .FirstOrDefaultAsync(b => b.BallotId == ballotId);
 
                 foreach (var county in counties)
                 {
@@ -493,7 +496,10 @@ namespace ElectionResults.Core.Elections
                     _partiesKey, () => dbContext.Parties.ToListAsync(),
                     DateTimeOffset.Now.AddMinutes(5));
                 var localities = await dbContext.Localities.Where(l => l.CountyId == countyId).ToListAsync();
-                var ballot = await dbContext.Ballots.FirstOrDefaultAsync(b => b.BallotId == ballotId);
+                var ballot = await dbContext.Ballots
+                    .AsNoTracking()
+                    .Include(b => b.Election)
+                    .FirstOrDefaultAsync(b => b.BallotId == ballotId);
                 foreach (var locality in localities)
                 {
                     var localityWinner = await dbContext.CandidateResults
@@ -532,7 +538,10 @@ namespace ElectionResults.Core.Elections
                 var parties = await _appCache.GetOrAddAsync(
                     _partiesKey, () => dbContext.Parties.ToListAsync(),
                     DateTimeOffset.Now.AddMinutes(5));
-                var ballot = await dbContext.Ballots.FirstOrDefaultAsync(b => b.BallotId == ballotId);
+                var ballot = await dbContext.Ballots
+                    .AsNoTracking()
+                    .Include(b => b.Election)
+                    .FirstOrDefaultAsync(b => b.BallotId == ballotId);
                 foreach (var country in countries)
                 {
                     var countryWinner = await dbContext.CandidateResults
