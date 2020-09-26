@@ -1,4 +1,6 @@
-﻿namespace ElectionResults.Core.Endpoints.Response
+﻿using ElectionResults.Core.Entities;
+
+namespace ElectionResults.Core.Endpoints.Response
 {
     public class Winner
     {
@@ -9,5 +11,6 @@
         public string PartyColor { get; set; }
 
         public int Votes { get; set; }
+        public Party Party { get; set; }
     }
 }
