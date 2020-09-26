@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,6 +34,11 @@ namespace ElectionResults.API
                 })
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
+            services.AddResponseCompression(options =>
+            {
+                options.EnableForHttps = true;
+                options.Providers.Add<GzipCompressionProvider>();
+            });
             services.AddControllersWithViews();
             services.AddRazorPages();
 
@@ -85,6 +91,7 @@ namespace ElectionResults.API
             {
                 app.UseDeveloperExceptionPage();
             }
+            app.UseResponseCompression();
             MigrateDatabase(context);
             app.UseSwaggerUI(c =>
             {
