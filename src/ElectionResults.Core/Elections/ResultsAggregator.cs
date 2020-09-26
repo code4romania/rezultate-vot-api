@@ -402,7 +402,8 @@ namespace ElectionResults.Core.Elections
                     if (countyWinner == null || turnoutForCountry == null)
                         continue;
                     var electionMapWinner = CreateElectionMapWinner(county.CountyId, ballot, countyWinner, turnoutForCountry);
-                    electionMapWinner.Winner.PartyColor = GetMatchingParty(parties, countyWinner.ShortName)?.Color;
+                    if(electionMapWinner.Winner.PartyColor.IsEmpty())
+                        electionMapWinner.Winner.PartyColor = GetMatchingParty(parties, countyWinner.ShortName)?.Color;
                     winners.Add(electionMapWinner);
                 }
             }
@@ -437,7 +438,8 @@ namespace ElectionResults.Core.Elections
                     if (localityWinner == null || turnoutForCountry == null)
                         continue;
                     var electionMapWinner = CreateElectionMapWinner(locality.LocalityId, ballot, localityWinner, turnoutForCountry);
-                    electionMapWinner.Winner.PartyColor = GetMatchingParty(parties, localityWinner.ShortName)?.Color;
+                    if(electionMapWinner.Winner.PartyColor.IsEmpty())
+                        electionMapWinner.Winner.PartyColor = GetMatchingParty(parties, localityWinner.ShortName)?.Color;
                     winners.Add(electionMapWinner);
                 }
             }
@@ -472,7 +474,8 @@ namespace ElectionResults.Core.Elections
                         continue;
 
                     var electionMapWinner = CreateElectionMapWinner(country.Id, ballot, countryWinner, turnoutForCountry);
-                    electionMapWinner.Winner.PartyColor = GetMatchingParty(parties, countryWinner.ShortName)?.Color;
+                    if(electionMapWinner.Winner.PartyColor.IsEmpty())
+                        electionMapWinner.Winner.PartyColor = GetMatchingParty(parties, countryWinner.ShortName)?.Color;
                     winners.Add(electionMapWinner);
                 }
             }
