@@ -84,12 +84,12 @@ namespace ElectionResults.Core.Elections
 
                 electionResponse.Results = results;
                 electionResponse.Observation = await dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
-                if (electionTurnout != null)
+                if (divisionTurnout != null)
                 {
                     electionResponse.Turnout = new ElectionTurnout
                     {
-                        TotalVotes = electionTurnout.TotalVotes,
-                        EligibleVoters = electionTurnout.EligibleVoters,
+                        TotalVotes = divisionTurnout.TotalVotes,
+                        EligibleVoters = divisionTurnout.EligibleVoters,
                         /*Breakdown = new ElectionTurnoutBreakdown
                         {
                             Categories = new List<TurnoutCategory>
@@ -402,13 +402,13 @@ namespace ElectionResults.Core.Elections
                         .OrderByDescending(c => c.Votes)
                         .FirstOrDefaultAsync();
 
-                    var turnoutForCountry = await dbContext.Turnouts
+                    var turnoutForCounty = await dbContext.Turnouts
                         .Where(c => c.BallotId == ballotId && c.CountyId == county.CountyId && c.Division == ElectionDivision.County)
                         .FirstOrDefaultAsync();
 
-                    if (countyWinner == null || turnoutForCountry == null)
+                    if (countyWinner == null || turnoutForCounty == null)
                         continue;
-                    var electionMapWinner = CreateElectionMapWinner(county.CountyId, ballot, countyWinner, turnoutForCountry);
+                    var electionMapWinner = CreateElectionMapWinner(county.CountyId, ballot, countyWinner, turnoutForCounty);
                     if(electionMapWinner.Winner.PartyColor.IsEmpty())
                         electionMapWinner.Winner.PartyColor = GetMatchingParty(parties, countyWinner.ShortName)?.Color;
                     winners.Add(electionMapWinner);
