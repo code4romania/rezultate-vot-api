@@ -174,6 +174,12 @@ namespace ElectionResults.Core.Elections
                         Name = "NU",
                         ShortName = "NU",
                         Votes = candidates.FirstOrDefault().NoVotes,
+                    },
+                    new CandidateResponse
+                    {
+                        Name = "NU AU VOTAT",
+                        ShortName = "NU AU VOTAT",
+                        Votes = (results.EligibleVoters - results.TotalVotes).GetValueOrDefault(),
                     }
                 };
             }
