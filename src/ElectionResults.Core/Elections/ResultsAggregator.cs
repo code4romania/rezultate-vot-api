@@ -180,14 +180,7 @@ namespace ElectionResults.Core.Elections
                 foreach (var candidate in candidates)
                 {
 
-                    var matchingParty = parties.FirstOrDefault(p =>
-                        candidate.ShortName.ContainsString(p.ShortName + "-")
-                        || candidate.ShortName.ContainsString(p.ShortName + "+")
-                        || candidate.ShortName.ContainsString(p.ShortName + " +")
-                        || candidate.ShortName.ContainsString("+" + p.ShortName)
-                        || candidate.ShortName.ContainsString("+ " + p.ShortName)
-                        || candidate.ShortName.ContainsString(" " + p.ShortName)
-                        || candidate.ShortName.ContainsString(p.ShortName + " "));
+                    var matchingParty = GetMatchingParty(parties, candidate.ShortName);
                     if (matchingParty != null)
                     {
                         colors.Add(matchingParty.Color);
@@ -216,6 +209,18 @@ namespace ElectionResults.Core.Elections
 
             results.Candidates = results.Candidates.OrderByDescending(c => c.Votes).ToList();
             return results;
+        }
+
+        private static Party GetMatchingParty(List<Party> parties, string shortName)
+        {
+            return parties.FirstOrDefault(p =>
+                shortName.ContainsString(p.ShortName + "-")
+                || shortName.ContainsString(p.ShortName + "+")
+                || shortName.ContainsString(p.ShortName + " +")
+                || shortName.ContainsString("+" + p.ShortName)
+                || shortName.ContainsString("+ " + p.ShortName)
+                || shortName.ContainsString(" " + p.ShortName)
+                || shortName.ContainsString(p.ShortName + " "));
         }
 
         private string GetCandidateShortName(CandidateResult c, Ballot ballot)
@@ -377,7 +382,9 @@ namespace ElectionResults.Core.Elections
             var winners = new List<ElectionMapWinner>();
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
-
+                var parties = await _appCache.GetOrAddAsync(
+                    _partiesKey, () => dbContext.Parties.ToListAsync(),
+                    DateTimeOffset.Now.AddMinutes(5));
                 var counties = await _appCache.GetOrAddAsync(
                     _countiesKey, () => dbContext.Counties.ToListAsync(),
                     DateTimeOffset.Now.AddMinutes(60));
@@ -395,6 +402,7 @@ namespace ElectionResults.Core.Elections
                     if (countyWinner == null || turnoutForCountry == null)
                         continue;
                     var electionMapWinner = CreateElectionMapWinner(county.CountyId, ballot, countyWinner, turnoutForCountry);
+                    electionMapWinner.Winner.PartyColor = GetMatchingParty(parties, countyWinner.ShortName)?.Color;
                     winners.Add(electionMapWinner);
                 }
             }
@@ -407,6 +415,9 @@ namespace ElectionResults.Core.Elections
             var winners = new List<ElectionMapWinner>();
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
+                var parties = await _appCache.GetOrAddAsync(
+                    _partiesKey, () => dbContext.Parties.ToListAsync(),
+                    DateTimeOffset.Now.AddMinutes(5));
                 var localities = await dbContext.Localities.Where(l => l.CountyId == countyId).ToListAsync();
                 var ballot = await dbContext.Ballots.FirstOrDefaultAsync(b => b.BallotId == ballotId);
                 foreach (var locality in localities)
@@ -426,6 +437,7 @@ namespace ElectionResults.Core.Elections
                     if (localityWinner == null || turnoutForCountry == null)
                         continue;
                     var electionMapWinner = CreateElectionMapWinner(locality.LocalityId, ballot, localityWinner, turnoutForCountry);
+                    electionMapWinner.Winner.PartyColor = GetMatchingParty(parties, localityWinner.ShortName)?.Color;
                     winners.Add(electionMapWinner);
                 }
             }
@@ -441,6 +453,10 @@ namespace ElectionResults.Core.Elections
                 var countries = await _appCache.GetOrAddAsync(
                     _countriesKey, () => dbContext.Countries.ToListAsync(),
                     DateTimeOffset.Now.AddMinutes(60));
+
+                var parties = await _appCache.GetOrAddAsync(
+                    _partiesKey, () => dbContext.Parties.ToListAsync(),
+                    DateTimeOffset.Now.AddMinutes(5));
                 var ballot = await dbContext.Ballots.FirstOrDefaultAsync(b => b.BallotId == ballotId);
                 foreach (var country in countries)
                 {
@@ -456,7 +472,7 @@ namespace ElectionResults.Core.Elections
                         continue;
 
                     var electionMapWinner = CreateElectionMapWinner(country.Id, ballot, countryWinner, turnoutForCountry);
-
+                    electionMapWinner.Winner.PartyColor = GetMatchingParty(parties, countryWinner.ShortName)?.Color;
                     winners.Add(electionMapWinner);
                 }
             }
