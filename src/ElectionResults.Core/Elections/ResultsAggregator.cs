@@ -39,10 +39,11 @@ namespace ElectionResults.Core.Elections
                              {
                                  Date = electionBallot.Date,
                                  Title = election.Name ?? election.Subtitle ?? electionBallot.Name,
-                                 Ballot = electionBallot.Name ?? election.Subtitle ?? electionBallot.Name,
+                                 Ballot = electionBallot.Name ?? election.Subtitle ?? electionBallot.Name, 
                                  ElectionId = election.ElectionId,
                                  Type = electionBallot.BallotType,
                                  Subtitle = election.Subtitle,
+                                 Live = election.Live,
                                  BallotId = electionBallot.BallotId,
                                  Round = electionBallot.Round == 0 ? null : electionBallot.Round
                              }).ToList();
@@ -63,8 +64,10 @@ namespace ElectionResults.Core.Elections
                 var electionResponse = new ElectionResponse();
 
                 var candidates = await GetCandidatesFromDb(query, ballot, dbContext);
-                var divisionTurnout = await GetDivisionTurnout(query, dbContext, ballot);
-                var electionTurnout = await GetElectionTurnout(dbContext, ballot);
+                var divisionTurnout = 
+                    await GetDivisionTurnout(query, dbContext, ballot);
+                var electionTurnout = 
+                    await GetElectionTurnout(dbContext, ballot);
 
                 ElectionResultsResponse results;
                 if (divisionTurnout == null)
@@ -342,7 +345,8 @@ namespace ElectionResults.Core.Elections
                 Subtitle = ballot.Election.Subtitle,
                 Title = ballot.Election.Name,
                 ElectionId = ballot.ElectionId,
-                BallotId = ballot.BallotId
+                BallotId = ballot.BallotId,
+                Live = ballot.Election.Live
             };
         }
 
@@ -389,6 +393,7 @@ namespace ElectionResults.Core.Elections
                     _countiesKey, () => dbContext.Counties.ToListAsync(),
                     DateTimeOffset.Now.AddMinutes(60));
                 var ballot = await dbContext.Ballots.FirstOrDefaultAsync(b => b.BallotId == ballotId);
+
                 foreach (var county in counties)
                 {
                     var countyWinner = await dbContext.CandidateResults
@@ -396,9 +401,11 @@ namespace ElectionResults.Core.Elections
                         .Where(c => c.BallotId == ballotId && c.CountyId == county.CountyId && c.Division == ElectionDivision.County)
                         .OrderByDescending(c => c.Votes)
                         .FirstOrDefaultAsync();
+
                     var turnoutForCountry = await dbContext.Turnouts
                         .Where(c => c.BallotId == ballotId && c.CountyId == county.CountyId && c.Division == ElectionDivision.County)
                         .FirstOrDefaultAsync();
+
                     if (countyWinner == null || turnoutForCountry == null)
                         continue;
                     var electionMapWinner = CreateElectionMapWinner(county.CountyId, ballot, countyWinner, turnoutForCountry);

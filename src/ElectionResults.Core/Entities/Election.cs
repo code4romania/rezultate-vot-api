@@ -21,5 +21,7 @@ namespace ElectionResults.Core.Entities
         public List<Ballot> Ballots { get; set; }
 
         public DateTime Date { get; set; }
+        
+        public bool Live { get; set; }
     }
 }

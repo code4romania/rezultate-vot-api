@@ -26,6 +26,7 @@ namespace ElectionResults.Core.Entities
         public Turnout Turnout { get; set; }
 
         public DateTime Date { get; set; }
+
         public Election Election { get; set; }
     }
 }
