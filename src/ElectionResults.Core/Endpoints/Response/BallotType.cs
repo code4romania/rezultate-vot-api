@@ -14,6 +14,8 @@ namespace ElectionResults.Core.Endpoints.Response
         CountyCouncil,
         Mayor,
         [EnumMember(Value = "european_parliament")]
-        EuropeanParliament
+        EuropeanParliament,
+        [EnumMember(Value = "county_council_president")]
+        CountyCouncilPresident
     }
 }
