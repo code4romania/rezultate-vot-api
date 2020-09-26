@@ -225,6 +225,11 @@ namespace ElectionResults.Core.Elections
             }
 
             results.Candidates = results.Candidates.OrderByDescending(c => c.Votes).ToList();
+            if (ballot.BallotType == BallotType.Referendum)
+            {
+                results.Candidates = OrderForReferendum(results.Candidates, ballot.Election);
+            }
+
             return results;
         }
 
@@ -254,6 +259,34 @@ namespace ElectionResults.Core.Elections
                 || shortName.ContainsString("+ " + p.ShortName)
                 || shortName.ContainsString(" " + p.ShortName)
                 || shortName.ContainsString(p.ShortName + " "));
+        }
+
+        private static List<CandidateResponse> OrderForReferendum(List<CandidateResponse> candidates, Election election)
+        {
+            var yesCandidate = candidates.Find(c => c.Name == "DA");
+            var noCandidate = candidates.Find(c => c.Name == "NU");
+            var noneCandidate = candidates.Find(c => c.Name == "NU AU VOTAT");
+
+            if (string.Equals(election.Subtitle, "Validat"))
+            {
+                if(yesCandidate.Votes > noCandidate.Votes)
+                {
+                    candidates.RemoveAll(c => c.Name == "DA");
+                    candidates.Insert(0, yesCandidate);
+                }
+                else
+                {
+                    candidates.RemoveAll(c => c.Name == "NU");
+                    candidates.Insert(0, noCandidate);
+                }
+            }
+            else
+            {
+                candidates.RemoveAll(c => c.Name == "NU AU VOTAT");
+                candidates.Insert(0, noneCandidate);
+            }
+
+            return candidates;
         }
 
         private string GetCandidateShortName(CandidateResult c, Ballot ballot)
@@ -540,17 +573,26 @@ namespace ElectionResults.Core.Elections
             }
             else
             {
-                if (winner.YesVotes > winner.NoVotes)
+                if(string.Equals(ballot.Election.Subtitle, "Invalidat"))
                 {
-                    electionMapWinner.Winner.Name = "DA";
-                    electionMapWinner.Winner.ShortName = "DA";
-                    electionMapWinner.Winner.Votes = winner.YesVotes;
+                    electionMapWinner.Winner.Name = "NU AU VOTAT";
+                    electionMapWinner.Winner.ShortName = "NU AU VOTAT";
+                    electionMapWinner.Winner.Votes = turnoutForCountry.EligibleVoters - turnoutForCountry.TotalVotes;
                 }
                 else
                 {
-                    electionMapWinner.Winner.Name = "NU";
-                    electionMapWinner.Winner.ShortName = "NU";
-                    electionMapWinner.Winner.Votes = winner.NoVotes;
+                    if (winner.YesVotes > winner.NoVotes)
+                    {
+                        electionMapWinner.Winner.Name = "DA";
+                        electionMapWinner.Winner.ShortName = "DA";
+                        electionMapWinner.Winner.Votes = winner.YesVotes;
+                    }
+                    else
+                    {
+                        electionMapWinner.Winner.Name = "NU";
+                        electionMapWinner.Winner.ShortName = "NU";
+                        electionMapWinner.Winner.Votes = winner.NoVotes;
+                    }
                 }
             }
 
