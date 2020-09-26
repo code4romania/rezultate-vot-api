@@ -323,7 +323,10 @@ namespace ElectionResults.Core.Elections
                 Timestamp = b.Timestamp,
                 Id = b.Id,
                 Title = b.Title,
-            }).ToList();
+            })
+            .OrderByDescending(e => e.Timestamp)
+            .ToList();
+
             return electionNews;
         }
 

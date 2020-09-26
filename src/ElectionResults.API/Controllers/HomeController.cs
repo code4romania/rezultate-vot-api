@@ -70,7 +70,7 @@ namespace ElectionResults.API.Controllers
                     });
                 }
             }
-            newsFeedViewModel.Date = DateTime.Today;
+            newsFeedViewModel.Date = DateTime.Now;
 
             newsFeedViewModel.SelectedElectionId = null;
             var authors = await _authorsRepository.GetAuthors();
@@ -155,7 +155,7 @@ namespace ElectionResults.API.Controllers
                         Body = model.Body,
                         BallotId = selectedBallot.BallotId,
                         ElectionId = selectedBallot.ElectionId,
-                        Timestamp = model.Date,
+                        Timestamp = DateTime.Now,
                         AuthorId = model.SelectedAuthorId.GetValueOrDefault(),
                         Pictures = pictures
                     };

@@ -17,7 +17,7 @@ namespace ElectionResults.API.ViewModels
         [Display(Name = "Link")]
         public string Link { get; set; }
 
-        [Required(ErrorMessage = "Please enter the date")]
+        [Display(Name = "Date")]
         public DateTime Date { get; set; }
 
         public List<SelectListItem> Elections { get; set; }
