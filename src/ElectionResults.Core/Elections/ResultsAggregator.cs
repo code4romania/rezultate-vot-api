@@ -180,15 +180,19 @@ namespace ElectionResults.Core.Elections
             else
             {
                 var colors = new List<string>();
+                var logos = new List<string>();
                 foreach (var candidate in candidates)
                 {
-
                     var matchingParty = GetMatchingParty(parties, candidate.ShortName);
                     if (matchingParty != null)
                     {
                         colors.Add(matchingParty.Color);
+                        logos.Add(matchingParty.LogoUrl);
                     }
-                    else colors.Add(null);
+                    else {
+                        colors.Add(null);
+                        logos.Add(null);
+                    }
                 }
                 results.Candidates = candidates.Select(c => new CandidateResponse
                 {
@@ -207,6 +211,10 @@ namespace ElectionResults.Core.Elections
                     {
                         candidate.PartyColor = colors[i];
                     }
+                    if(candidate.PartyLogo.IsEmpty())
+                    {
+                        candidate.PartyLogo = logos[i];
+                    }
                 }
             }
 
@@ -216,6 +224,22 @@ namespace ElectionResults.Core.Elections
 
         private static Party GetMatchingParty(List<Party> parties, string shortName)
         {
+            if(shortName.ContainsString("-")){
+                    string[] members = shortName.Split("-");
+                    foreach (var member in members){
+                        return parties.FirstOrDefault(p => 
+                            string.Equals(p.ShortName, member.Trim()));
+                    }
+                }
+
+            if(shortName.ContainsString("+")){
+                    string[] members = shortName.Split("+");
+                    foreach (var member in members){
+                        return parties.FirstOrDefault(p => 
+                            string.Equals(p.ShortName, member.Trim()));
+                    }
+                }
+
             return parties.FirstOrDefault(p =>
                 shortName.ContainsString(p.ShortName + "-")
                 || shortName.ContainsString(p.ShortName + "+")
