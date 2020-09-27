@@ -21,11 +21,17 @@ namespace ElectionResults.Core.Elections
         private string _partiesKey = "parties";
         private string _countriesKey = "countries";
         private string _countiesKey = "counties";
+        private Dictionary<BallotType, List<ElectionDivision>> _ballotTypeMatchList;
 
         public ResultsAggregator(IServiceProvider serviceProvider, IAppCache appCache)
         {
             _serviceProvider = serviceProvider;
             _appCache = appCache;
+            _ballotTypeMatchList = new Dictionary<BallotType, List<ElectionDivision>>();
+            _ballotTypeMatchList[BallotType.Mayor] = new List<ElectionDivision> { ElectionDivision.Locality };
+            _ballotTypeMatchList[BallotType.LocalCouncil] = new List<ElectionDivision> { ElectionDivision.Locality };
+            _ballotTypeMatchList[BallotType.CountyCouncil] = new List<ElectionDivision> { ElectionDivision.Locality, ElectionDivision.County };
+            _ballotTypeMatchList[BallotType.CountyCouncilPresident] = new List<ElectionDivision> { ElectionDivision.Locality, ElectionDivision.County };
         }
 
         public async Task<Result<List<ElectionMeta>>> GetAllBallots()
@@ -364,16 +370,13 @@ namespace ElectionResults.Core.Elections
             return electionNews;
         }
 
-        private static async Task<Turnout> GetDivisionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
+        private async Task<Turnout> GetDivisionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
         {
-            if (ballot.BallotType == BallotType.Mayor && query.Division != ElectionDivision.Locality)
+            if (ballot.Election.Category == ElectionCategory.Local && _ballotTypeMatchList[ballot.BallotType].All(t => t != query.Division))
             {
                 return await RetrieveAggregatedTurnoutForCityHalls(query, ballot, dbContext);
             }
-            if (ballot.BallotType == BallotType.LocalCouncil && query.Division != ElectionDivision.Locality)
-            {
-                return await RetrieveAggregatedTurnoutForCityHalls(query, ballot, dbContext);
-            }
+
             return await dbContext.Turnouts
                 .FirstOrDefaultAsync(t =>
                     t.BallotId == ballot.BallotId &&
@@ -385,53 +388,37 @@ namespace ElectionResults.Core.Elections
         private static async Task<Turnout> RetrieveAggregatedTurnoutForCityHalls(ElectionResultsQuery query,
             Ballot ballot, ApplicationDbContext dbContext)
         {
-            if (ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.LocalCouncil)
-            {
-                if (query.Division == ElectionDivision.County)
-                {
-                    var turnout = new Turnout();
-                    var turnoutsForCounty = await dbContext.Turnouts
-                        .Where(t =>
-                            t.BallotId == ballot.BallotId &&
-                            t.CountyId == query.CountyId &&
-                            t.Division == ElectionDivision.Locality).ToListAsync();
-                    turnout.BallotId = ballot.BallotId;
-                    turnout.EligibleVoters = turnoutsForCounty.Sum(c => c.EligibleVoters);
-                    turnout.TotalVotes = turnoutsForCounty.Sum(c => c.TotalVotes);
-                    turnout.ValidVotes = turnoutsForCounty.Sum(c => c.ValidVotes);
-                    turnout.NullVotes = turnoutsForCounty.Sum(c => c.NullVotes);
-                    return turnout;
-                }
+            var turnout = new Turnout();
+            var queryable = dbContext.Turnouts
+                .Where(t =>
+                    t.BallotId == ballot.BallotId &&
+                    t.Division == ElectionDivision.Locality);
 
-                if (query.Division == ElectionDivision.National)
-                {
-                    var turnout = new Turnout();
-                    var turnoutsForCounty = await dbContext.Turnouts
-                        .Where(t =>
-                            t.BallotId == ballot.BallotId &&
-                            t.Division == ElectionDivision.Locality).ToListAsync();
-                    turnout.BallotId = ballot.BallotId;
-                    turnout.EligibleVoters = turnoutsForCounty.Sum(c => c.EligibleVoters);
-                    turnout.TotalVotes = turnoutsForCounty.Sum(c => c.TotalVotes);
-                    turnout.ValidVotes = turnoutsForCounty.Sum(c => c.ValidVotes);
-                    turnout.NullVotes = turnoutsForCounty.Sum(c => c.NullVotes);
-                    return turnout;
-                }
+            if (query.Division == ElectionDivision.County)
+            {
+                queryable = queryable.Where(t => t.CountyId == query.CountyId);
             }
-            throw new ArgumentOutOfRangeException(nameof(query));
+            var turnoutsForCounty = await queryable.ToListAsync();
+
+            turnout.BallotId = ballot.BallotId;
+            turnout.EligibleVoters = turnoutsForCounty.Sum(c => c.EligibleVoters);
+            turnout.TotalVotes = turnoutsForCounty.Sum(c => c.TotalVotes);
+            turnout.ValidVotes = turnoutsForCounty.Sum(c => c.ValidVotes);
+            turnout.NullVotes = turnoutsForCounty.Sum(c => c.NullVotes);
+            return turnout;
         }
 
         private async Task<List<CandidateResult>> GetCandidatesFromDb(ElectionResultsQuery query, Ballot ballot,
             ApplicationDbContext dbContext)
         {
-            if (ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.LocalCouncil)
+            if (ballot.Election.Category == ElectionCategory.Local && CountyIsNotBucharest(query))
             {
-                if (query.Division != ElectionDivision.Locality && query.CountyId != 12913)
+                if (_ballotTypeMatchList[ballot.BallotType].All(t => t != query.Division))
                 {
-                    return await RetrieveWonCityHalls(query, ballot);
+                    return await RetrieveAggregatedVotes(query, ballot);
                 }
             }
-          
+
             var resultsQuery = dbContext.CandidateResults
             .Include(c => c.Party)
             .Where(er =>
@@ -443,37 +430,17 @@ namespace ElectionResults.Core.Elections
             return await resultsQuery.ToListAsync();
         }
 
-        private async Task<Result<List<CandidateResult>>> GetAllLocalityCouncilWinners(int ballotId)
+        private static bool CountyIsNotBucharest(ElectionResultsQuery query)
         {
-            var winners = new List<CandidateResult>();
-            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
-            {
-                var allLocalities = await dbContext.Localities.ToListAsync(); // TODO: use app cache here
-
-                var resultsForElection = await dbContext.CandidateResults
-                    .Include(c => c.Party)
-                    .Where(c => c.BallotId == ballotId && c.Division == ElectionDivision.Locality)
-                    .ToListAsync();
-
-                var localitiesForThisElection = allLocalities
-                    .Where(l => resultsForElection.Any(r => r.LocalityId == l.LocalityId)).ToList();
-
-                foreach (var locality in localitiesForThisElection)
-                {
-                    var localityWinner = resultsForElection
-                        .Where(c => c.LocalityId == locality.LocalityId)
-                        .OrderByDescending(c => c.Votes)
-                        .FirstOrDefault();
-                    if (localityWinner == null)
-                        continue;
-                    winners.Add(localityWinner);
-                }
-            }
-
-            return Result.Success(winners);
+            return query.CountyId != 12913;
         }
 
-        private async Task<List<CandidateResult>> RetrieveWonCityHalls(ElectionResultsQuery query, Ballot ballot)
+        private bool BallotIsForLocality(Ballot ballot)
+        {
+            return ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.LocalCouncil;
+        }
+
+        private async Task<List<CandidateResult>> RetrieveAggregatedVotes(ElectionResultsQuery query, Ballot ballot)
         {
             switch (query.Division)
             {
@@ -493,7 +460,6 @@ namespace ElectionResults.Core.Elections
                         var result = await GetAllLocalityWinners(ballot.BallotId);
                         if (result.IsSuccess)
                         {
-
                             var candidateResults = RetrieveFirst10Winners(result.Value, ballot.BallotType);
                             return candidateResults;
                         }
