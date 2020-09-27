@@ -45,6 +45,7 @@ namespace ElectionResults.API.Controllers
         public async Task<IActionResult> Index()
         {
             var feeds = await _articleRepository.GetAllArticles();
+            ViewBag.Environment = webHostEnvironment.EnvironmentName;
             return View(feeds.Value);
         }
 

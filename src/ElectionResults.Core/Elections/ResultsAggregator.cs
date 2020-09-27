@@ -106,7 +106,7 @@ namespace ElectionResults.Core.Elections
 
                 electionResponse.Scope = await CreateElectionScope(dbContext, query);
                 electionResponse.Meta = CreateElectionMeta(ballot);
-                electionResponse.ElectionNews = await GetElectionNews(dbContext, ballot);
+                electionResponse.ElectionNews = await GetElectionNews(dbContext, ballot.BallotId, ballot.ElectionId);
                 return electionResponse;
             }
         }
@@ -346,9 +346,9 @@ namespace ElectionResults.Core.Elections
             return c.Name;
         }
 
-        private static async Task<List<ArticleResponse>> GetElectionNews(ApplicationDbContext dbContext, Ballot ballot)
+        private static async Task<List<ArticleResponse>> GetElectionNews(ApplicationDbContext dbContext, int ballotId, int electionId)
         {
-            var ballotNews = await dbContext.Articles.Where(a => a.BallotId == ballot.BallotId)
+            var ballotNews = await dbContext.Articles.Where(a => a.BallotId == ballotId)
                 .Include(a => a.Author)
                 .Include(a => a.Pictures)
                 .ToListAsync();
@@ -357,7 +357,7 @@ namespace ElectionResults.Core.Elections
                 ballotNews = await dbContext.Articles
                     .Include(a => a.Author)
                     .Include(a => a.Pictures)
-                    .Where(a => a.ElectionId == ballot.ElectionId).ToListAsync();
+                    .Where(a => a.ElectionId == electionId).ToListAsync();
             }
 
             var electionNews = ballotNews.Select(b => new ArticleResponse
@@ -663,6 +663,14 @@ namespace ElectionResults.Core.Elections
             }
 
             return Result.Success(winners);
+        }
+
+        public async Task<List<ArticleResponse>> GetNewsFeed(ElectionResultsQuery query, int electionId)
+        {
+            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+            {
+                return await GetElectionNews(dbContext, query.BallotId, electionId);
+            }
         }
 
         public async Task<Result<List<CandidateResult>>> GetLocalityCityHallWinnersByCounty(int ballotId, int countyId)

@@ -20,7 +20,7 @@ namespace ElectionResults.API.Controllers
         private readonly IResultsAggregator _resultsAggregator;
         private readonly IAppCache _appCache;
 
-        public BallotsController(ILogger<BallotsController> logger, IResultsAggregator resultsAggregator, IAppCache appCache)
+        public BallotsController(ILogger<BallotsController> logger, IResultsAggregator resultsAggregator, IAppCache appCache,)
         {
             _logger = logger;
             _resultsAggregator = resultsAggregator;
@@ -53,6 +53,8 @@ namespace ElectionResults.API.Controllers
                 var result = await _appCache.GetOrAddAsync(
                     query.GetCacheKey(), () => _resultsAggregator.GetBallotResults(query),
                     DateTimeOffset.Now.AddMinutes(query.GetCacheDurationInMinutes()));
+                var newsFeed = await _resultsAggregator.GetNewsFeed(query, result.Value.Meta.ElectionId);
+                result.Value.ElectionNews = newsFeed;
                 return result.Value;
             }
             catch (Exception e)
