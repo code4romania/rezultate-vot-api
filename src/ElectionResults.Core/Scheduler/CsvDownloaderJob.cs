@@ -33,44 +33,15 @@ namespace ElectionResults.Core.Scheduler
             Map(m => m.UAT).Name("name");
         }
     }
-    public class CsvDownloaderJob : ICsvDownloaderJob
+    public class CsvDownloaderJob : CsvGenericDownloadJob
     {
-        private readonly IServiceProvider _serviceProvider;
-        private HttpClient _httpClient;
 
-        public CsvDownloaderJob(IServiceProvider serviceProvider)
+        public CsvDownloaderJob(IServiceProvider serviceProvider) : base(serviceProvider)
         {
-            _serviceProvider = serviceProvider;
-            _httpClient = new HttpClient();
-        }
+            _csvUrl = "https://prezenta.roaep.ro/locale27092020/data/csv/simpv/presence_now.csv";
+        }        
 
-        public async Task DownloadFiles()
-        {
-            var csvUrl = "https://prezenta.roaep.ro/locale27092020/data/csv/simpv/presence_now.csv";
-            var stream = await DownloadFile(csvUrl);
-            await ProcessStream(stream);
-        }
-        private async Task<Stream> DownloadFile(string url)
-        {
-            try
-            {
-                var httpClientHandler = new HttpClientHandler
-                {
-                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-                };
-                httpClientHandler.ServerCertificateCustomValidationCallback = (message, certificate2, arg3, arg4) => true;
-                _httpClient = new HttpClient(httpClientHandler);
-                var response = await _httpClient.GetStringAsync(url);
-                return new MemoryStream(Encoding.UTF8.GetBytes(response));
-            }
-            catch (Exception e)
-            {
-                Log.LogError(e, $"Failed to download file: {url}");
-                throw;
-            }
-        }
-
-        private async Task ProcessStream(Stream csvStream)
+        protected async override Task ProcessStream(Stream csvStream)
         {
             try
             {
