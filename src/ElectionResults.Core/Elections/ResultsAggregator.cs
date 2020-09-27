@@ -35,11 +35,11 @@ namespace ElectionResults.Core.Elections
             _ballotTypeMatchList[BallotType.CountyCouncilPresident] = new List<ElectionDivision> { ElectionDivision.Locality, ElectionDivision.County };
             _ballotTypeMatchList[BallotType.CapitalCityMayor] = new List<ElectionDivision> { ElectionDivision.County };
             _ballotTypeMatchList[BallotType.CapitalCityCouncil] = new List<ElectionDivision> { ElectionDivision.County };
-            _ballotTypeMatchList[BallotType.President] = new List<ElectionDivision> {ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
-            _ballotTypeMatchList[BallotType.EuropeanParliament] = new List<ElectionDivision> {ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
-            _ballotTypeMatchList[BallotType.Senate] = new List<ElectionDivision> {ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
-            _ballotTypeMatchList[BallotType.House] = new List<ElectionDivision> {ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
-            _ballotTypeMatchList[BallotType.Referendum] = new List<ElectionDivision> {ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
+            _ballotTypeMatchList[BallotType.President] = new List<ElectionDivision> { ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
+            _ballotTypeMatchList[BallotType.EuropeanParliament] = new List<ElectionDivision> { ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
+            _ballotTypeMatchList[BallotType.Senate] = new List<ElectionDivision> { ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
+            _ballotTypeMatchList[BallotType.House] = new List<ElectionDivision> { ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
+            _ballotTypeMatchList[BallotType.Referendum] = new List<ElectionDivision> { ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
         }
 
         public async Task<Result<List<ElectionMeta>>> GetAllBallots()
@@ -111,7 +111,7 @@ namespace ElectionResults.Core.Elections
                 return electionResponse;
             }
         }
-        
+
         private async Task<ElectionScope> CreateElectionScope(ApplicationDbContext dbContext, ElectionResultsQuery query)
         {
             var electionScope = new ElectionScope
@@ -355,10 +355,10 @@ namespace ElectionResults.Core.Elections
             //     .ToListAsync();
             // if (ballotNews == null || ballotNews.Any() == false)
             // {
-                var ballotNews = await dbContext.Articles
-                    .Include(a => a.Author)
-                    .Include(a => a.Pictures)
-                    .Where(a => a.ElectionId == electionId).ToListAsync();
+            var ballotNews = await dbContext.Articles
+                .Include(a => a.Author)
+                .Include(a => a.Pictures)
+                .Where(a => a.ElectionId == electionId).ToListAsync();
             //}
 
             var electionNews = ballotNews.Select(b => new ArticleResponse
@@ -406,12 +406,14 @@ namespace ElectionResults.Core.Elections
             {
                 queryable = queryable.Where(t => t.CountyId == query.CountyId);
             }
-
+            else
             if (ballot.Date.Year == 2020)
             {
-                queryable = dbContext.Turnouts
-                    .Where(t =>
-                        t.BallotId == ballot.BallotId);
+                var nationalTurnout = await dbContext.Turnouts
+                    .FirstOrDefaultAsync(t =>
+                        t.BallotId == ballot.BallotId && t.Division == ElectionDivision.National);
+                return nationalTurnout;
+
             }
             var turnoutsForCounty = await queryable.ToListAsync();
 
@@ -426,6 +428,8 @@ namespace ElectionResults.Core.Elections
         private async Task<List<CandidateResult>> GetCandidatesFromDb(ElectionResultsQuery query, Ballot ballot,
             ApplicationDbContext dbContext)
         {
+            if (ballot.Election.Live)
+                return new List<CandidateResult>();
             if (ballot.Election.Category == ElectionCategory.Local && CountyIsNotBucharest(query))
             {
                 if (_ballotTypeMatchList[ballot.BallotType].All(t => t != query.Division))

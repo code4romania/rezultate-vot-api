@@ -96,7 +96,6 @@ namespace ElectionResults.Core.Scheduler
                         dbTurnouts.AddRange(t);
                     }
 
-                    Console.WriteLine("Added ballots");
                     var voteMonitoringStats = await GetVoteMonitoringStats();
                     foreach (var ballot in ballots)
                     {
@@ -124,10 +123,23 @@ namespace ElectionResults.Core.Scheduler
                             observation.ObserverCount = int.Parse(statistics[4].Value);
                             dbContext.Observations.Update(observation);
                         }
+                        var countryTurnout = dbTurnouts.FirstOrDefault(t => t.Division == ElectionDivision.National);
+                        if (countryTurnout == null)
+                        {
+                            countryTurnout = new Turnout
+                            {
+                                BallotId = ballot.BallotId,
+                                Division = ElectionDivision.National
+                            };
+                        }
 
+                        countryTurnout.EligibleVoters = turnouts.Sum(t => t.EnrolledVoters + t.ComplementaryList);
+                        countryTurnout.TotalVotes = turnouts.Sum(t => t.TotalVotes);
+                        countryTurnout.ValidVotes = countryTurnout.TotalVotes;
+                        dbContext.Update(countryTurnout);
+                        await dbContext.SaveChangesAsync();
                     }
                     await dbContext.SaveChangesAsync();
-                    Console.WriteLine("Saved vote monitoring");
                     foreach (var csvCounty in csvCounties)
                     {
                         var csvLocalitiesForCounty = csvCounty.GroupBy(c => c.Locality).ToList();
@@ -146,8 +158,10 @@ namespace ElectionResults.Core.Scheduler
                                                                            && t.Division == ElectionDivision.County
                                                                            && t.CountyId == dbCounty.CountyId);
                             if (dbTurnout == null)
+                            {
                                 continue;
-                            dbTurnout.EligibleVoters = csvCounty.Sum(c => c.EnrolledVoters);
+                            }
+                            dbTurnout.EligibleVoters = csvCounty.Sum(c => c.EnrolledVoters + c.ComplementaryList);
                             dbTurnout.TotalVotes = csvCounty.Sum(c => c.TotalVotes);
                             dbTurnout.PermanentListsVotes = csvCounty.Sum(c => c.LP);
                             dbTurnout.SpecialListsVotes = csvCounty.Sum(c => c.SpecialLists);
@@ -156,6 +170,7 @@ namespace ElectionResults.Core.Scheduler
                         var localitiesForCounty = localities.Where(l => l.CountyId == dbCounty.CountyId).ToList();
                         foreach (var csvLocality in csvLocalitiesForCounty)
                         {
+                            
                             foreach (var ballot in ballots)
                             {
                                 var dbLocality = localitiesForCounty.FirstOrDefault(c => c.Name.EqualsIgnoringAccent(csvLocality.Key));
@@ -190,7 +205,7 @@ namespace ElectionResults.Core.Scheduler
                                 if (turnout == null)
                                     continue;
 
-                                turnout.EligibleVoters = csvLocality.Sum(c => c.EnrolledVoters);
+                                turnout.EligibleVoters = csvLocality.Sum(c => c.EnrolledVoters + c.ComplementaryList);
                                 turnout.TotalVotes = csvLocality.Sum(c => c.TotalVotes);
                                 turnout.PermanentListsVotes = csvLocality.Sum(c => c.LP);
                                 turnout.SpecialListsVotes = csvLocality.Sum(c => c.SpecialLists);
@@ -201,13 +216,6 @@ namespace ElectionResults.Core.Scheduler
                         }
 
                     }
-
-                    foreach (var ballot in ballots)
-                    {
-                        Console.WriteLine($"Ballot {ballot.BallotId}-{ballot.BallotType}: " +
-                                          $"{dbTurnouts.Where(t => t.BallotId == ballot.BallotId).Sum(t => t.EligibleVoters)}");
-                    }
-                    Console.WriteLine($"Updating {DateTime.Now:F}");
                     await dbContext.BulkUpdateAsync(dbTurnouts);
                 }
 
