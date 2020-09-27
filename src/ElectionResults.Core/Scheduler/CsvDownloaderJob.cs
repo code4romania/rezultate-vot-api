@@ -24,7 +24,6 @@ using Z.EntityFramework.Extensions;
 
 namespace ElectionResults.Core.Scheduler
 {
-
     public class CsvTurnoutMap : ClassMap<CsvTurnout>
     {
         public CsvTurnoutMap()
@@ -44,12 +43,21 @@ namespace ElectionResults.Core.Scheduler
             _httpClient = new HttpClient();
         }
 
+        public async Task<List<CandidateResult>> GetCandidatesFromUrl(string url)
+        {
+            var stream = await DownloadFile(url);
+            var candidateResults = await ExtractCandidatesFromCsv(stream);
+
+            return candidateResults.OrderByDescending(c => c.Votes).ToList();
+        }
+
         public async Task DownloadFiles()
         {
             var csvUrl = "https://prezenta.roaep.ro/locale27092020/data/csv/simpv/presence_now.csv";
             var stream = await DownloadFile(csvUrl);
             await ProcessStream(stream);
         }
+
         private async Task<Stream> DownloadFile(string url)
         {
             try
@@ -70,6 +78,62 @@ namespace ElectionResults.Core.Scheduler
             }
         }
 
+        private async Task<List<CandidateResult>> ExtractCandidatesFromCsv(Stream csvStream)
+        {
+            List<CandidateResult> candidates;
+            Console.WriteLine($"Started at {DateTime.Now:F}");
+            var csvContent = await ReadCsvContent(csvStream);
+            TextReader sr = new StringReader(csvContent);
+            var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
+            csvParser.Configuration.HeaderValidated = null;
+            csvParser.Configuration.MissingFieldFound = null;
+            candidates = await GetCandidates(csvParser);
+            while (true)
+            {
+                var result = await csvParser.ReadAsync();
+                if (!result)
+                    return candidates;
+                var index = 0;
+                for (int i = 26; i < candidates.Count + 26; i++)
+                {
+                    try
+                    {
+                        var votes = csvParser.GetField(i);
+                        candidates[index].Votes += int.Parse(votes);
+                        index++;
+                    }
+                    catch (Exception e)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        private async Task<List<CandidateResult>> GetCandidates(CsvReader csvParser)
+        {
+            var readAsync = await csvParser.ReadAsync();
+            var candidates = new List<CandidateResult>();
+            var index = 26;
+            while (true)
+            {
+                try
+                {
+                    var field = csvParser.GetField(index++);
+                    field = field.Replace("-voturi", "");
+                    candidates.Add(new CandidateResult
+                    {
+                        Name = field
+                    });
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    return candidates;
+                }
+            }
+        }
+
         private async Task ProcessStream(Stream csvStream)
         {
             try
@@ -81,6 +145,7 @@ namespace ElectionResults.Core.Scheduler
                 csvParser.Configuration.HeaderValidated = null;
                 csvParser.Configuration.MissingFieldFound = null;
                 var turnouts = csvParser.GetRecords<CsvTurnout>().ToList();
+                var newTurnouts = new List<Turnout>();
                 using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
                 {
                     EntityFrameworkManager.ContextFactory = context => dbContext;
@@ -123,25 +188,29 @@ namespace ElectionResults.Core.Scheduler
                             observation.ObserverCount = int.Parse(statistics[4].Value);
                             dbContext.Observations.Update(observation);
                         }
-                        var countryTurnout = dbTurnouts.FirstOrDefault(t => t.Division == ElectionDivision.National);
-                        if (countryTurnout == null)
+                        var countyTurnout = dbTurnouts.FirstOrDefault(t => t.Division == ElectionDivision.National);
+                        if (countyTurnout == null)
                         {
-                            countryTurnout = new Turnout
+                            countyTurnout = new Turnout
                             {
                                 BallotId = ballot.BallotId,
                                 Division = ElectionDivision.National
                             };
                         }
 
-                        countryTurnout.EligibleVoters = turnouts.Sum(t => t.EnrolledVoters + t.ComplementaryList);
-                        countryTurnout.TotalVotes = turnouts.Sum(t => t.TotalVotes);
-                        countryTurnout.ValidVotes = countryTurnout.TotalVotes;
-                        dbContext.Update(countryTurnout);
+                        countyTurnout.EligibleVoters = turnouts.Sum(t => t.EnrolledVoters + t.ComplementaryList);
+                        countyTurnout.TotalVotes = turnouts.Sum(t => t.TotalVotes);
+                        countyTurnout.ValidVotes = countyTurnout.TotalVotes;
+                        dbContext.Update(countyTurnout);
                         await dbContext.SaveChangesAsync();
                     }
                     await dbContext.SaveChangesAsync();
                     foreach (var csvCounty in csvCounties)
                     {
+                        if (csvCounty.Key == "IS")
+                        {
+                            Console.WriteLine("foundit");
+                        }
                         var csvLocalitiesForCounty = csvCounty.GroupBy(c => c.Locality).ToList();
                         var dbCounty = counties.FirstOrDefault(c => c.ShortName.EqualsIgnoringAccent(csvCounty.Key));
                         if (dbCounty == null || dbCounty.CountyId == 16820)
@@ -149,14 +218,36 @@ namespace ElectionResults.Core.Scheduler
                             continue;
                         }
 
-                        var countyBallots = ballots.Where(b =>
-                            b.BallotType == BallotType.CapitalCityMayor || b.BallotType == BallotType.CountyCouncil ||
-                            b.BallotType == BallotType.CountyCouncilPresident).ToList();
-                        foreach (var countyBallot in countyBallots)
+                        foreach (var countyBallot in ballots)
                         {
                             var dbTurnout = dbTurnouts.FirstOrDefault(t => t.BallotId == countyBallot.BallotId
                                                                            && t.Division == ElectionDivision.County
                                                                            && t.CountyId == dbCounty.CountyId);
+                            if (dbCounty.CountyId != 12913 && dbTurnout == null)
+                            {
+                                if (countyBallot.BallotType == BallotType.CountyCouncil ||
+                                    countyBallot.BallotType == BallotType.CountyCouncilPresident)
+                                {
+                                    dbTurnout = new Turnout
+                                    {
+                                        Division = ElectionDivision.County,
+                                        BallotId = countyBallot.BallotId,
+                                        CountyId = dbCounty.CountyId,
+                                    };
+                                    newTurnouts.Add(dbTurnout);
+                                }
+                            }
+
+                            if (dbCounty.CountyId == 12913 && dbTurnout == null && countyBallot.BallotType == BallotType.CapitalCityCouncil)
+                            {
+                                dbTurnout = new Turnout
+                                {
+                                    Division = ElectionDivision.County,
+                                    BallotId = countyBallot.BallotId,
+                                    CountyId = dbCounty.CountyId,
+                                };
+                                newTurnouts.Add(dbTurnout);
+                            }
                             if (dbTurnout == null)
                             {
                                 continue;
@@ -170,7 +261,7 @@ namespace ElectionResults.Core.Scheduler
                         var localitiesForCounty = localities.Where(l => l.CountyId == dbCounty.CountyId).ToList();
                         foreach (var csvLocality in csvLocalitiesForCounty)
                         {
-                            
+
                             foreach (var ballot in ballots)
                             {
                                 var dbLocality = localitiesForCounty.FirstOrDefault(c => c.Name.EqualsIgnoringAccent(csvLocality.Key));
@@ -188,12 +279,8 @@ namespace ElectionResults.Core.Scheduler
                                     };
                                     dbContext.Localities.Add(dbLocality);
                                     await dbContext.SaveChangesAsync();
-                                    turnout = new Turnout
-                                    {
-                                        Division = ElectionDivision.Locality,
-                                        CountyId = dbCounty.CountyId,
-                                        LocalityId = dbLocality.LocalityId
-                                    };
+                                    turnout = CreateTurnout(dbCounty, dbLocality, ballot);
+                                    newTurnouts.Add(turnout);
                                 }
                                 else
                                 {
@@ -202,8 +289,12 @@ namespace ElectionResults.Core.Scheduler
                                                                              && t.CountyId == dbCounty.CountyId
                                                                              && t.LocalityId == dbLocality.LocalityId);
                                 }
+
                                 if (turnout == null)
-                                    continue;
+                                {
+                                    turnout = CreateTurnout(dbCounty, dbLocality, ballot);
+                                    newTurnouts.Add(turnout);
+                                }
 
                                 turnout.EligibleVoters = csvLocality.Sum(c => c.EnrolledVoters + c.ComplementaryList);
                                 turnout.TotalVotes = csvLocality.Sum(c => c.TotalVotes);
@@ -211,20 +302,35 @@ namespace ElectionResults.Core.Scheduler
                                 turnout.SpecialListsVotes = csvLocality.Sum(c => c.SpecialLists);
                                 turnout.ValidVotes = csvLocality.Sum(c => c.TotalVotes);
                                 turnout.CorrespondenceVotes = csvLocality.Sum(c => c.MobileBallot);
-                                dbContext.Turnouts.Update(turnout);
                             }
                         }
 
                     }
                     await dbContext.BulkUpdateAsync(dbTurnouts);
+                    await dbContext.BulkInsertAsync(newTurnouts);
+
                 }
+                Console.WriteLine($"Elighble: {turnouts.Sum(t => t.EnrolledVoters)}");
+                Console.WriteLine(turnouts.Sum(t => t.TotalVotes));
 
                 Console.WriteLine($"Finished processing at {DateTime.Now:F}");
             }
             catch (Exception e)
             {
+                Console.WriteLine($"Finished processing at {DateTime.Now:F}");
                 Console.WriteLine(e);
             }
+        }
+
+        private static Turnout CreateTurnout(County dbCounty, Locality dbLocality, Ballot ballot)
+        {
+            return new Turnout
+            {
+                Division = ElectionDivision.Locality,
+                CountyId = dbCounty.CountyId,
+                LocalityId = dbLocality.LocalityId,
+                BallotId = ballot.BallotId
+            };
         }
 
         protected virtual async Task<string> ReadCsvContent(Stream csvStream)
@@ -276,8 +382,8 @@ namespace ElectionResults.Core.Scheduler
 
         [Name("LS")]
         public int SpecialLists { get; set; }
-        
+
         [Name("LP")]
-        public int LP{ get; set; }
+        public int LP { get; set; }
     }
 }

@@ -55,5 +55,7 @@ namespace ElectionResults.Core.Entities
         
         [ForeignKey(nameof(Country))]
         public int? CountryId { get; set; }
+
+        public int BallotPosition { get; set; }
     }
 }

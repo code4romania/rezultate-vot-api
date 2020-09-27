@@ -16,5 +16,7 @@ namespace ElectionResults.Core.Entities
         public string LogoUrl { get; set; }
 
         public string Color { get; set; }
+        
+        public string Alias { get; set; }
     }
 }

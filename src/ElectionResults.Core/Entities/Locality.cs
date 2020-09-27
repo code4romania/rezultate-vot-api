@@ -17,5 +17,9 @@ namespace ElectionResults.Core.Entities
         public County County { get; set; }
 
         public int CountryId { get; set; }
+
+        public int Siruta { get; set; }
+
+        public int CountySiruta { get; set; }
     }
 }

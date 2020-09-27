@@ -8,6 +8,7 @@ using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
+using ElectionResults.Core.Scheduler;
 using LazyCache;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,15 +20,17 @@ namespace ElectionResults.Core.Elections
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly IAppCache _appCache;
+        private readonly ICsvDownloaderJob _csvDownloaderJob;
         private string _partiesKey = "parties";
         private string _countriesKey = "countries";
         private string _countiesKey = "counties";
         private Dictionary<BallotType, List<ElectionDivision>> _ballotTypeMatchList;
 
-        public ResultsAggregator(IServiceProvider serviceProvider, IAppCache appCache)
+        public ResultsAggregator(IServiceProvider serviceProvider, IAppCache appCache, ICsvDownloaderJob csvDownloaderJob)
         {
             _serviceProvider = serviceProvider;
             _appCache = appCache;
+            _csvDownloaderJob = csvDownloaderJob;
             _ballotTypeMatchList = new Dictionary<BallotType, List<ElectionDivision>>();
             _ballotTypeMatchList[BallotType.Mayor] = new List<ElectionDivision> { ElectionDivision.Locality };
             _ballotTypeMatchList[BallotType.LocalCouncil] = new List<ElectionDivision> { ElectionDivision.Locality };
@@ -88,6 +91,8 @@ namespace ElectionResults.Core.Elections
                 }
                 else
                 {
+                    if (candidates.Count > 0 && ballot.Election.Live)
+                        divisionTurnout.TotalVotes = candidates.Sum(c => c.Votes);
                     var parties = await _appCache.GetOrAddAsync(
                         _partiesKey, () => dbContext.Parties.ToListAsync(),
                         DateTimeOffset.Now.AddMinutes(50));
@@ -396,18 +401,7 @@ namespace ElectionResults.Core.Elections
         private static async Task<Turnout> RetrieveAggregatedTurnoutForCityHalls(ElectionResultsQuery query,
             Ballot ballot, ApplicationDbContext dbContext)
         {
-            var turnout = new Turnout();
-            var queryable = dbContext.Turnouts
-                .Where(t =>
-                    t.BallotId == ballot.BallotId &&
-                    t.Division == ElectionDivision.Locality);
-
-            if (query.Division == ElectionDivision.County)
-            {
-                queryable = queryable.Where(t => t.CountyId == query.CountyId);
-            }
-            else
-            if (ballot.Date.Year == 2020)
+            if (ballot.Election.Live && query.Division == ElectionDivision.National)
             {
                 var nationalTurnout = await dbContext.Turnouts
                     .FirstOrDefaultAsync(t =>
@@ -415,6 +409,27 @@ namespace ElectionResults.Core.Elections
                 return nationalTurnout;
 
             }
+            var turnout = new Turnout();
+            var queryable = dbContext.Turnouts
+                .Where(t =>
+                    t.BallotId == ballot.BallotId &&
+                    t.CountyId == query.CountyId &&
+                    t.Division == ElectionDivision.Locality);
+
+            if (ballot.Election.Live)
+            {
+                if (query.Division == ElectionDivision.County)
+                {
+                    if (ballot.BallotType != BallotType.Mayor && ballot.BallotType != BallotType.LocalCouncil)
+                    {
+                        queryable = dbContext.Turnouts
+                            .Where(t =>
+                                t.BallotId == ballot.BallotId &&
+                                t.Division == ElectionDivision.County);
+                    }
+                }
+            }
+
             var turnoutsForCounty = await queryable.ToListAsync();
 
             turnout.BallotId = ballot.BallotId;
@@ -429,7 +444,31 @@ namespace ElectionResults.Core.Elections
             ApplicationDbContext dbContext)
         {
             if (ballot.Election.Live)
-                return new List<CandidateResult>();
+            {
+                try
+                {
+                    var url = await GetFileUrl(query, dbContext, ballot);
+                    if (url.IsEmpty())
+                        return new List<CandidateResult>();
+                    var candidates = await _csvDownloaderJob.GetCandidatesFromUrl(url);
+                    var parties = await dbContext.Parties.ToListAsync();
+                    var candidatesForThisElection = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
+                    if (candidatesForThisElection.Count == 0)
+                        candidatesForThisElection = new List<CandidateResult>();
+                    var dbCandidates = new List<CandidateResult>();
+                    foreach (var candidate in candidates)
+                    {
+                        dbCandidates.Add(PopulateCandidateData(candidatesForThisElection, candidate, parties, ballot));
+                    }
+                    return dbCandidates;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Probably there are no votes ");
+                    Console.WriteLine(e);
+                    return new List<CandidateResult>();
+                }
+            }
             if (ballot.Election.Category == ElectionCategory.Local && CountyIsNotBucharest(query))
             {
                 if (_ballotTypeMatchList[ballot.BallotType].All(t => t != query.Division))
@@ -438,15 +477,109 @@ namespace ElectionResults.Core.Elections
                 }
             }
 
+            return await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
+        }
+
+        private static CandidateResult PopulateCandidateData(List<CandidateResult> candidatesForThisElection, CandidateResult candidate, List<Party> parties, Ballot ballot)
+        {
+            if (ballot.BallotType == BallotType.CountyCouncil || ballot.BallotType == BallotType.LocalCouncil)
+            {
+                var party = parties.Where(p => p.Alias != null).FirstOrDefault(p => candidate.Name.ContainsString(p.Alias));
+                if (party != null)
+                {
+                    PopulateWithPartyInfo(candidate, party);
+                }
+                return candidate;
+            }
+            var dbCandidate =
+                candidatesForThisElection.FirstOrDefault(c => candidate.Name.ContainsString(c.PartyName));
+            if (dbCandidate != null)
+            {
+                dbCandidate.Votes = candidate.Votes;
+            }
+            else
+            {
+                var party = parties.Where(p => p.Alias != null).FirstOrDefault(p => candidate.Name.ContainsString(p.Alias));
+                if (party == null)
+                {
+                    party = parties.Where(p => p.Name.Length > 10).FirstOrDefault(p => candidate.Name.ContainsString(p.Name));
+                }
+                if (party != null)
+                {
+                    PopulateWithPartyInfo(candidate, party);
+                }
+                else
+                {
+                    return candidate;
+                }
+            }
+            if (dbCandidate == null)
+                return candidate;
+            return dbCandidate;
+        }
+
+        private static void PopulateWithPartyInfo(CandidateResult candidate, Party party)
+        {
+            candidate.Party = party;
+            candidate.PartyId = party.Id;
+            candidate.Name = candidate.Name.Replace(party.Alias, "").Replace(party.Name, "").Trim('-', '.', ' ');
+        }
+
+        private static async Task<List<CandidateResult>> GetCandidateResultsFromQueryAndBallot(ElectionResultsQuery query, Ballot ballot,
+            ApplicationDbContext dbContext)
+        {
             var resultsQuery = dbContext.CandidateResults
-            .Include(c => c.Party)
-            .Where(er =>
-            er.BallotId == ballot.BallotId &&
-            er.Division == query.Division &&
-            er.CountyId == query.CountyId &&
-            er.CountryId == query.CountryId &&
-            er.LocalityId == query.LocalityId);
+                .Include(c => c.Party)
+                .Where(er =>
+                    er.BallotId == ballot.BallotId &&
+                    er.Division == query.Division &&
+                    er.CountyId == query.CountyId &&
+                    er.CountryId == query.CountryId &&
+                    er.LocalityId == query.LocalityId);
             return await resultsQuery.ToListAsync();
+        }
+
+        private async Task<string> GetFileUrl(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
+        {
+            if (query.Division == ElectionDivision.Locality)
+            {
+                var locality = await dbContext.Localities
+                    .Include(l => l.County)
+                    .FirstOrDefaultAsync(l => l.LocalityId == query.LocalityId);
+                if (locality == null)
+                    return String.Empty;
+                if (ballot.BallotType == BallotType.Mayor)
+                {
+                    return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_prov_uat_p_{locality.County.ShortName.ToLower()}_{locality.Siruta}.csv";
+                }
+
+                if (ballot.BallotType == BallotType.LocalCouncil)
+                {
+                    return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_prov_uat_cl_{locality.County.ShortName.ToLower()}_{locality.Siruta}.csv";
+                }
+
+            }
+
+            if (query.Division == ElectionDivision.County)
+            {
+                var county = await dbContext.Counties
+                    .FirstOrDefaultAsync(l => l.CountyId == query.CountyId);
+                if (county == null)
+                    return String.Empty;
+                if (query.CountyId == 12913)
+                {
+                    if (ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.CountyCouncilPresident || ballot.BallotType == BallotType.CapitalCityMayor)
+                        return "https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_prov_cnty_pcj_b.csv";
+                }
+                switch (ballot.BallotType)
+                {
+                    case BallotType.CountyCouncil:
+                        return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_prov_cnty_cj_{county.ShortName.ToLower()}.csv";
+                    case BallotType.CountyCouncilPresident:
+                        return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_prov_cnty_pcj_{county.ShortName.ToLower()}.csv";
+                }
+            }
+            return String.Empty;
         }
 
         private static bool CountyIsNotBucharest(ElectionResultsQuery query)
