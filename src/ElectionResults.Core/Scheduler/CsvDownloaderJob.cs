@@ -20,6 +20,7 @@ using ElectionResults.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using Z.EntityFramework.Extensions;
 
 namespace ElectionResults.Core.Scheduler
 {
@@ -82,6 +83,7 @@ namespace ElectionResults.Core.Scheduler
                 var turnouts = csvParser.GetRecords<CsvTurnout>();
                 using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
                 {
+                    EntityFrameworkManager.ContextFactory = context => dbContext;
                     var counties = await dbContext.Counties.ToListAsync();
                     var localities = await dbContext.Localities.ToListAsync();
                     var csvCounties = turnouts.GroupBy(c => c.County).ToList();
