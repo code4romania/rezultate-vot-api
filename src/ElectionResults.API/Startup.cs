@@ -36,11 +36,11 @@ namespace ElectionResults.API
                 })
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
-            services.AddResponseCompression(options =>
+            /*services.AddResponseCompression(options =>
             {
                 options.EnableForHttps = true;
                 options.Providers.Add<GzipCompressionProvider>();
-            });
+            });*/
             services.AddControllersWithViews();
             services.AddRazorPages();
 
@@ -53,7 +53,6 @@ namespace ElectionResults.API
                     options.JsonSerializerOptions.IgnoreNullValues = true;
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(new SnakeCaseNamingPolicy()));
                 }); ;
-            services.AddHostedService<ScheduleTask>();
             services.AddLazyCache();
             RegisterDependencies(services, Configuration);
             services.AddSwaggerGen(c =>
@@ -75,6 +74,7 @@ namespace ElectionResults.API
                         builder.WithOrigins("*");
                     });
             });
+            services.AddHostedService<ScheduleTask>();
         }
 
         private static void RegisterDependencies(IServiceCollection services, IConfiguration configuration)

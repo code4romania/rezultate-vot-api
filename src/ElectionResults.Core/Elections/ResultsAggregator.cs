@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using ElectionResults.Core.Endpoints.Query;
@@ -442,11 +441,6 @@ namespace ElectionResults.Core.Elections
         private static bool CountyIsNotBucharest(ElectionResultsQuery query)
         {
             return query.CountyId != 12913;
-        }
-
-        private bool BallotIsForLocality(Ballot ballot)
-        {
-            return ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.LocalCouncil;
         }
 
         private async Task<List<CandidateResult>> RetrieveAggregatedVotes(ElectionResultsQuery query, Ballot ballot)

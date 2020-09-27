@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -80,7 +80,7 @@ namespace ElectionResults.Core.Scheduler
                 var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
                 csvParser.Configuration.HeaderValidated = null;
                 csvParser.Configuration.MissingFieldFound = null;
-                var turnouts = csvParser.GetRecords<CsvTurnout>();
+                var turnouts = csvParser.GetRecords<CsvTurnout>().ToList();
                 using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
                 {
                     EntityFrameworkManager.ContextFactory = context => dbContext;
@@ -148,23 +148,28 @@ namespace ElectionResults.Core.Scheduler
                             if (dbTurnout == null)
                                 continue;
                             dbTurnout.EligibleVoters = csvCounty.Sum(c => c.EnrolledVoters);
-                            dbTurnout.TotalVotes = csvCounty.Sum(c => c.Voters);
-                            dbTurnout.PermanentListsVotes = csvCounty.Sum(c => c.Voters);
+                            dbTurnout.TotalVotes = csvCounty.Sum(c => c.TotalVotes);
+                            dbTurnout.PermanentListsVotes = csvCounty.Sum(c => c.LP);
+                            dbTurnout.SpecialListsVotes = csvCounty.Sum(c => c.SpecialLists);
+                            dbTurnout.ValidVotes = csvCounty.Sum(c => c.TotalVotes);
                         }
                         var localitiesForCounty = localities.Where(l => l.CountyId == dbCounty.CountyId).ToList();
                         foreach (var csvLocality in csvLocalitiesForCounty)
                         {
                             foreach (var ballot in ballots)
                             {
-                                var dbLocality =
-                                    localitiesForCounty.FirstOrDefault(c => c.Name.EqualsIgnoringAccent(csvLocality.Key));
+                                var dbLocality = localitiesForCounty.FirstOrDefault(c => c.Name.EqualsIgnoringAccent(csvLocality.Key));
+                                if (dbCounty.CountyId == 12913)
+                                {
+                                    dbLocality = localitiesForCounty.FirstOrDefault(c => c.Name.EqualsIgnoringAccent(csvLocality.Key.Replace("BUCUREŞTI ", "")));
+                                }
                                 Turnout turnout;
                                 if (dbLocality == null)
                                 {
                                     dbLocality = new Locality
                                     {
                                         CountyId = dbCounty.CountyId,
-                                        Name = csvCounty.Key
+                                        Name = csvLocality.Key
                                     };
                                     dbContext.Localities.Add(dbLocality);
                                     await dbContext.SaveChangesAsync();
@@ -186,12 +191,21 @@ namespace ElectionResults.Core.Scheduler
                                     continue;
 
                                 turnout.EligibleVoters = csvLocality.Sum(c => c.EnrolledVoters);
-                                turnout.TotalVotes = csvLocality.Sum(c => c.Voters);
-                                turnout.PermanentListsVotes = csvLocality.Sum(c => c.Voters);
+                                turnout.TotalVotes = csvLocality.Sum(c => c.TotalVotes);
+                                turnout.PermanentListsVotes = csvLocality.Sum(c => c.LP);
+                                turnout.SpecialListsVotes = csvLocality.Sum(c => c.SpecialLists);
+                                turnout.ValidVotes = csvLocality.Sum(c => c.TotalVotes);
+                                turnout.CorrespondenceVotes = csvLocality.Sum(c => c.MobileBallot);
                                 dbContext.Turnouts.Update(turnout);
                             }
                         }
 
+                    }
+
+                    foreach (var ballot in ballots)
+                    {
+                        Console.WriteLine($"Ballot {ballot.BallotId}-{ballot.BallotType}: " +
+                                          $"{dbTurnouts.Where(t => t.BallotId == ballot.BallotId).Sum(t => t.EligibleVoters)}");
                     }
                     Console.WriteLine($"Updating {DateTime.Now:F}");
                     await dbContext.BulkUpdateAsync(dbTurnouts);
@@ -247,6 +261,15 @@ namespace ElectionResults.Core.Scheduler
         public int ComplementaryList { get; set; }
 
         [Name("LT")]
-        public int Voters { get; set; }
+        public int TotalVotes { get; set; }
+
+        [Name("UM")]
+        public int MobileBallot { get; set; }
+
+        [Name("LS")]
+        public int SpecialLists { get; set; }
+        
+        [Name("LP")]
+        public int LP{ get; set; }
     }
 }
