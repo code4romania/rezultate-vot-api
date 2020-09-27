@@ -20,7 +20,7 @@ namespace ElectionResults.API.Controllers
         private readonly IResultsAggregator _resultsAggregator;
         private readonly IAppCache _appCache;
 
-        public BallotsController(ILogger<BallotsController> logger, IResultsAggregator resultsAggregator, IAppCache appCache,)
+        public BallotsController(ILogger<BallotsController> logger, IResultsAggregator resultsAggregator, IAppCache appCache)
         {
             _logger = logger;
             _resultsAggregator = resultsAggregator;
