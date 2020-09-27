@@ -91,7 +91,7 @@ namespace ElectionResults.Core.Elections
                 {
                     var parties = await _appCache.GetOrAddAsync(
                         _partiesKey, () => dbContext.Parties.ToListAsync(),
-                        DateTimeOffset.Now.AddMinutes(5));
+                        DateTimeOffset.Now.AddMinutes(50));
                     results = ProcessResults(divisionTurnout, ballot, candidates, parties);
                 }
 

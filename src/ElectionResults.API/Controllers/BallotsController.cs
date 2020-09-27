@@ -60,6 +60,7 @@ namespace ElectionResults.API.Controllers
             }
             catch (Exception e)
             {
+                _appCache.Remove(query.GetCacheKey());
                 Log.LogError(e, "Exception encountered while retrieving voter turnout stats");
                 return StatusCode(500, e.StackTrace);
             }

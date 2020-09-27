@@ -110,7 +110,7 @@ namespace ElectionResults.Core.Scheduler
                                 MessageCount = int.Parse(statistics[0].Value),
                                 CoveredPollingPlaces = int.Parse(statistics[1].Value),
                                 CoveredCounties = int.Parse(statistics[2].Value),
-                                IssueCount = int.Parse(statistics[3].Value),
+                                IssueCount = int.Parse(statistics[5].Value),
                                 ObserverCount = int.Parse(statistics[4].Value)
                             });
                         }
