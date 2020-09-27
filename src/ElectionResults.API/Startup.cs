@@ -71,7 +71,10 @@ namespace ElectionResults.API
                 options.AddPolicy("origins",
                     builder =>
                     {
-                        builder.WithOrigins("*");
+                        builder.WithOrigins("*")
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                            .AllowAnyOrigin();
                     });
             });
             services.AddHostedService<ScheduleTask>();
