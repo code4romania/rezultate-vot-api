@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using ElectionResults.Core.Endpoints.Query;
@@ -11,6 +12,7 @@ using ElectionResults.Core.Repositories;
 using LazyCache;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
 namespace ElectionResults.Core.Elections
 {
@@ -110,7 +112,7 @@ namespace ElectionResults.Core.Elections
                 return electionResponse;
             }
         }
-
+        
         private async Task<ElectionScope> CreateElectionScope(ApplicationDbContext dbContext, ElectionResultsQuery query)
         {
             var electionScope = new ElectionScope

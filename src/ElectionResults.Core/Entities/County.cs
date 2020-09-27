@@ -12,6 +12,8 @@ namespace ElectionResults.Core.Entities
 
         public string Name { get; set; }
 
+        public string ShortName { get; set; }
+
         public List<Locality> Localities { get; set; }
     }
 }

@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="2.11.7" />
+    <PackageReference Include="CsvHelper" Version="15.0.6" />
     <PackageReference Include="LazyCache" Version="2.1.1" />
     <PackageReference Include="LazyCache.AspNetCore" Version="2.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.2.0" />
@@ -21,6 +22,7 @@
     <PackageReference Include="Microsoft.Extensions.Options" Version="3.1.8" />
     <PackageReference Include="MySql.Data.EntityFrameworkCore" Version="8.0.21" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Z.EntityFramework.Extensions.EFCore" Version="3.0.96" />
   </ItemGroup>
 
 </Project>

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Amazon;
 using Amazon.S3;
 using Amazon.S3.Transfer;
+using ElectionResults.API.Configuration;
 using ElectionResults.API.ViewModels;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Repositories;

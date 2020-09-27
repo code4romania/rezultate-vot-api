@@ -1,9 +1,11 @@
 using System;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using ElectionResults.API.Configuration;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
+using ElectionResults.Core.Scheduler;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -51,6 +53,7 @@ namespace ElectionResults.API
                     options.JsonSerializerOptions.IgnoreNullValues = true;
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(new SnakeCaseNamingPolicy()));
                 }); ;
+            services.AddHostedService<ScheduleTask>();
             services.AddLazyCache();
             RegisterDependencies(services, Configuration);
             services.AddSwaggerGen(c =>
@@ -81,6 +84,7 @@ namespace ElectionResults.API
             services.AddTransient<IElectionRepository, ElectionRepository>();
             services.AddTransient<IPicturesRepository, PicturesRepository>();
             services.AddTransient<IAuthorsRepository, AuthorsRepository>();
+            services.AddTransient<ICsvDownloaderJob, CsvDownloaderJob>();
 
             services.Configure<AWSS3Settings>(configuration.GetSection("S3Bucket"));
         }
