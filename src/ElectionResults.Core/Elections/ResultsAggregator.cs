@@ -32,6 +32,13 @@ namespace ElectionResults.Core.Elections
             _ballotTypeMatchList[BallotType.LocalCouncil] = new List<ElectionDivision> { ElectionDivision.Locality };
             _ballotTypeMatchList[BallotType.CountyCouncil] = new List<ElectionDivision> { ElectionDivision.Locality, ElectionDivision.County };
             _ballotTypeMatchList[BallotType.CountyCouncilPresident] = new List<ElectionDivision> { ElectionDivision.Locality, ElectionDivision.County };
+            _ballotTypeMatchList[BallotType.CapitalCityMayor] = new List<ElectionDivision> { ElectionDivision.County };
+            _ballotTypeMatchList[BallotType.CapitalCityCouncil] = new List<ElectionDivision> { ElectionDivision.County };
+            _ballotTypeMatchList[BallotType.President] = new List<ElectionDivision> {ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
+            _ballotTypeMatchList[BallotType.EuropeanParliament] = new List<ElectionDivision> {ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
+            _ballotTypeMatchList[BallotType.Senate] = new List<ElectionDivision> {ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
+            _ballotTypeMatchList[BallotType.House] = new List<ElectionDivision> {ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
+            _ballotTypeMatchList[BallotType.Referendum] = new List<ElectionDivision> {ElectionDivision.Locality, ElectionDivision.County, ElectionDivision.Diaspora_Country, ElectionDivision.Diaspora, ElectionDivision.National };
         }
 
         public async Task<Result<List<ElectionMeta>>> GetAllBallots()
