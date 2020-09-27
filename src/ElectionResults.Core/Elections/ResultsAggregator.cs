@@ -348,17 +348,17 @@ namespace ElectionResults.Core.Elections
 
         private static async Task<List<ArticleResponse>> GetElectionNews(ApplicationDbContext dbContext, int ballotId, int electionId)
         {
-            var ballotNews = await dbContext.Articles.Where(a => a.BallotId == ballotId)
-                .Include(a => a.Author)
-                .Include(a => a.Pictures)
-                .ToListAsync();
-            if (ballotNews == null || ballotNews.Any() == false)
-            {
-                ballotNews = await dbContext.Articles
+            // var ballotNews = await dbContext.Articles.Where(a => a.BallotId == ballotId)
+            //     .Include(a => a.Author)
+            //     .Include(a => a.Pictures)
+            //     .ToListAsync();
+            // if (ballotNews == null || ballotNews.Any() == false)
+            // {
+                var ballotNews = await dbContext.Articles
                     .Include(a => a.Author)
                     .Include(a => a.Pictures)
                     .Where(a => a.ElectionId == electionId).ToListAsync();
-            }
+            //}
 
             var electionNews = ballotNews.Select(b => new ArticleResponse
             {
