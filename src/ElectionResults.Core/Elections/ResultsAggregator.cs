@@ -468,10 +468,10 @@ namespace ElectionResults.Core.Elections
             }
         }
 
-        private static List<CandidateResult> RetrieveFirst10Winners(Result<List<CandidateResult>> result)
+        private static List<CandidateResult> RetrieveFirst10Winners(List<CandidateResult> results)
         {
-            var groupedWinners = result.Value
-                .GroupBy(w => w?.Party?.Name)
+            var groupedWinners = results
+                .GroupBy(w => w.Party?.Name)
                 .OrderByDescending(w => w.Count())
                 .ToList();
             var top10 = groupedWinners.Take(10).ToList();
@@ -654,6 +654,7 @@ namespace ElectionResults.Core.Elections
 
             return Result.Success(winners);
         }
+
         public async Task<Result<List<CandidateResult>>> GetLocalityCityHallWinnersByCounty(int ballotId, int countyId)
         {
             var winners = new List<CandidateResult>();

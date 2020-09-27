@@ -58,7 +58,7 @@ namespace ElectionResults.API.Controllers
             catch (Exception e)
             {
                 Log.LogError(e, "Exception encountered while retrieving voter turnout stats");
-                return StatusCode(500, e.Message);
+                return StatusCode(500, e.StackTrace);
             }
         }
 
