@@ -370,7 +370,10 @@ namespace ElectionResults.Core.Elections
             {
                 return await RetrieveAggregatedTurnoutForCityHalls(query, ballot, dbContext);
             }
-
+            if (ballot.BallotType == BallotType.LocalCouncil && query.Division != ElectionDivision.Locality)
+            {
+                return await RetrieveAggregatedTurnoutForCityHalls(query, ballot, dbContext);
+            }
             return await dbContext.Turnouts
                 .FirstOrDefaultAsync(t =>
                     t.BallotId == ballot.BallotId &&
@@ -382,7 +385,7 @@ namespace ElectionResults.Core.Elections
         private static async Task<Turnout> RetrieveAggregatedTurnoutForCityHalls(ElectionResultsQuery query,
             Ballot ballot, ApplicationDbContext dbContext)
         {
-            if (ballot.BallotType == BallotType.Mayor)
+            if (ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.LocalCouncil)
             {
                 if (query.Division == ElectionDivision.County)
                 {
@@ -421,20 +424,53 @@ namespace ElectionResults.Core.Elections
         private async Task<List<CandidateResult>> GetCandidatesFromDb(ElectionResultsQuery query, Ballot ballot,
             ApplicationDbContext dbContext)
         {
-            if (ballot.BallotType == BallotType.Mayor && query.Division != ElectionDivision.Locality)
+            if (ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.LocalCouncil)
             {
-                if (query.CountyId != 12913) //Bucharest has results on county level
+                if (query.Division != ElectionDivision.Locality && query.CountyId != 12913)
+                {
                     return await RetrieveWonCityHalls(query, ballot);
+                }
             }
+          
             var resultsQuery = dbContext.CandidateResults
-                .Include(c => c.Party)
-                .Where(er =>
-                er.BallotId == ballot.BallotId &&
-                er.Division == query.Division &&
-                er.CountyId == query.CountyId &&
-                er.CountryId == query.CountryId &&
-                er.LocalityId == query.LocalityId);
+            .Include(c => c.Party)
+            .Where(er =>
+            er.BallotId == ballot.BallotId &&
+            er.Division == query.Division &&
+            er.CountyId == query.CountyId &&
+            er.CountryId == query.CountryId &&
+            er.LocalityId == query.LocalityId);
             return await resultsQuery.ToListAsync();
+        }
+
+        private async Task<Result<List<CandidateResult>>> GetAllLocalityCouncilWinners(int ballotId)
+        {
+            var winners = new List<CandidateResult>();
+            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+            {
+                var allLocalities = await dbContext.Localities.ToListAsync(); // TODO: use app cache here
+
+                var resultsForElection = await dbContext.CandidateResults
+                    .Include(c => c.Party)
+                    .Where(c => c.BallotId == ballotId && c.Division == ElectionDivision.Locality)
+                    .ToListAsync();
+
+                var localitiesForThisElection = allLocalities
+                    .Where(l => resultsForElection.Any(r => r.LocalityId == l.LocalityId)).ToList();
+
+                foreach (var locality in localitiesForThisElection)
+                {
+                    var localityWinner = resultsForElection
+                        .Where(c => c.LocalityId == locality.LocalityId)
+                        .OrderByDescending(c => c.Votes)
+                        .FirstOrDefault();
+                    if (localityWinner == null)
+                        continue;
+                    winners.Add(localityWinner);
+                }
+            }
+
+            return Result.Success(winners);
         }
 
         private async Task<List<CandidateResult>> RetrieveWonCityHalls(ElectionResultsQuery query, Ballot ballot)
@@ -446,7 +482,7 @@ namespace ElectionResults.Core.Elections
                         var result = await GetLocalityCityHallWinnersByCounty(ballot.BallotId, query.CountyId.GetValueOrDefault());
                         if (result.IsSuccess)
                         {
-                            var candidateResults = RetrieveFirst10Winners(result.Value);
+                            var candidateResults = RetrieveFirst10Winners(result.Value, ballot.BallotType);
 
                             return candidateResults;
                         }
@@ -458,7 +494,7 @@ namespace ElectionResults.Core.Elections
                         if (result.IsSuccess)
                         {
 
-                            var candidateResults = RetrieveFirst10Winners(result.Value);
+                            var candidateResults = RetrieveFirst10Winners(result.Value, ballot.BallotType);
                             return candidateResults;
                         }
                         throw new Exception(result.Error);
@@ -468,7 +504,8 @@ namespace ElectionResults.Core.Elections
             }
         }
 
-        private static List<CandidateResult> RetrieveFirst10Winners(List<CandidateResult> results)
+        private static List<CandidateResult> RetrieveFirst10Winners(List<CandidateResult> results,
+            BallotType ballotType)
         {
             var groupedWinners = results
                 .GroupBy(w => w.Party?.Name)
@@ -481,7 +518,7 @@ namespace ElectionResults.Core.Elections
                 var electionMapWinner = candidate.FirstOrDefault();
                 candidateResults.Add(new CandidateResult
                 {
-                    Votes = candidate.Count(),
+                    Votes = ballotType == BallotType.Mayor ? candidate.Count() : candidate.Sum(c => c.Votes),
                     Name = candidate.Key == null ? "INDEPENDENT" : electionMapWinner.Party.Name,
                     Party = electionMapWinner.Party
                 });
