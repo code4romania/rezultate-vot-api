@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -52,6 +53,12 @@ namespace ElectionResults.Core.Scheduler
         {
             try
             {
+                var httpClientHandler = new HttpClientHandler
+                {
+                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                };
+                httpClientHandler.ServerCertificateCustomValidationCallback = (message, certificate2, arg3, arg4) => true;
+                _httpClient = new HttpClient(httpClientHandler);
                 var response = await _httpClient.GetStringAsync(url);
                 return new MemoryStream(Encoding.UTF8.GetBytes(response));
             }
@@ -64,123 +71,136 @@ namespace ElectionResults.Core.Scheduler
 
         private async Task ProcessStream(Stream csvStream)
         {
-            var csvContent = await ReadCsvContent(csvStream);
-            TextReader sr = new StringReader(csvContent);
-            var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
-            var turnouts = csvParser.GetRecords<CsvTurnout>();
-            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+            try
             {
-                var counties = await dbContext.Counties.ToListAsync();
-                var localities = await dbContext.Localities.ToListAsync();
-                var csvCounties = turnouts.GroupBy(c => c.County).ToList();
-                var liveElection = await dbContext.Elections.FirstOrDefaultAsync(e => e.Live);
-                var ballots = await dbContext.Ballots.Where(b => b.ElectionId == liveElection.ElectionId).ToListAsync();
-                List<Turnout> dbTurnouts = new List<Turnout>();
-                foreach (var ballot in ballots)
+                Console.WriteLine($"Started at {DateTime.Now:F}");
+                var csvContent = await ReadCsvContent(csvStream);
+                TextReader sr = new StringReader(csvContent);
+                var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
+                csvParser.Configuration.HeaderValidated = null;
+                csvParser.Configuration.MissingFieldFound = null;
+                var turnouts = csvParser.GetRecords<CsvTurnout>();
+                using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
                 {
-                    var t = await dbContext.Turnouts.Where(t => t.BallotId == ballot.BallotId).ToListAsync();
-                    dbTurnouts.AddRange(t);
-                }
-                var voteMonitoringStats = await GetVoteMonitoringStats();
-                foreach (var ballot in ballots)
-                {
-                    var statistics = voteMonitoringStats.Value.Statistics;
-                    var observation = await dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
-                    if (observation == null)
+                    var counties = await dbContext.Counties.ToListAsync();
+                    var localities = await dbContext.Localities.ToListAsync();
+                    var csvCounties = turnouts.GroupBy(c => c.County).ToList();
+                    var liveElection = await dbContext.Elections.FirstOrDefaultAsync(e => e.Live);
+                    var ballots = await dbContext.Ballots.Where(b => b.ElectionId == liveElection.ElectionId).ToListAsync();
+                    List<Turnout> dbTurnouts = new List<Turnout>();
+                    foreach (var ballot in ballots)
                     {
-                        dbContext.Observations.Add(new Observation
+                        var t = await dbContext.Turnouts.Where(t => t.BallotId == ballot.BallotId).ToListAsync();
+                        dbTurnouts.AddRange(t);
+                    }
+
+                    Console.WriteLine("Added ballots");
+                    var voteMonitoringStats = await GetVoteMonitoringStats();
+                    foreach (var ballot in ballots)
+                    {
+                        var statistics = voteMonitoringStats.Value.Statistics;
+                        var observation = await dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
+                        if (observation == null)
                         {
-                            BallotId = ballot.BallotId,
-                            MessageCount = int.Parse(statistics[0].Value),
-                            CoveredPollingPlaces = int.Parse(statistics[1].Value),
-                            CoveredCounties = int.Parse(statistics[2].Value),
-                            IssueCount = int.Parse(statistics[3].Value),
-                            ObserverCount = int.Parse(statistics[4].Value)
-                        });
-                    }
-                    else
-                    {
-                        observation.BallotId = ballot.BallotId;
-                        observation.MessageCount = int.Parse(statistics[0].Value);
-                        observation.CoveredPollingPlaces = int.Parse(statistics[1].Value);
-                        observation.CoveredCounties = int.Parse(statistics[2].Value);
-                        observation.IssueCount = int.Parse(statistics[3].Value);
-                        observation.ObserverCount = int.Parse(statistics[4].Value);
-                        dbContext.Observations.Update(observation);
-                    }
-
-                }
-                await dbContext.SaveChangesAsync();
-                
-                foreach (var csvCounty in csvCounties)
-                {
-                    var csvLocalitiesForCounty = csvCounty.GroupBy(c => c.Locality).ToList();
-                    var dbCounty = counties.FirstOrDefault(c => c.ShortName.EqualsIgnoringAccent(csvCounty.Key));
-                    if (dbCounty == null || dbCounty.CountyId == 16820)
-                    {
-                        continue;
-                    }
-
-                    var countyBallots = ballots.Where(b =>
-                        b.BallotType == BallotType.CapitalCityMayor || b.BallotType == BallotType.CountyCouncil ||
-                        b.BallotType == BallotType.CountyCouncilPresident).ToList();
-                    foreach (var countyBallot in countyBallots)
-                    {
-                        var dbTurnout = dbTurnouts.FirstOrDefault(t => t.BallotId == countyBallot.BallotId
-                                                                       && t.Division == ElectionDivision.County
-                                                                       && t.CountyId == dbCounty.CountyId);
-                        if (dbTurnout == null)
-                            continue;
-                        dbTurnout.EligibleVoters = csvCounty.Sum(c => c.EnrolledVoters);
-                        dbTurnout.TotalVotes = csvCounty.Sum(c => c.Voters);
-                        dbTurnout.PermanentListsVotes = csvCounty.Sum(c => c.Voters);
-                    }
-                    var localitiesForCounty = localities.Where(l => l.CountyId == dbCounty.CountyId).ToList();
-                    foreach (var csvLocality in csvLocalitiesForCounty)
-                    {
-                        foreach (var ballot in ballots)
-                        {
-                            var dbLocality =
-                                localitiesForCounty.FirstOrDefault(c => c.Name.EqualsIgnoringAccent(csvLocality.Key));
-                            Turnout turnout;
-                            if (dbLocality == null)
+                            dbContext.Observations.Add(new Observation
                             {
-                                dbLocality = new Locality
-                                {
-                                    CountyId = dbCounty.CountyId,
-                                    Name = csvCounty.Key
-                                };
-                                dbContext.Localities.Add(dbLocality);
-                                await dbContext.SaveChangesAsync();
-                                turnout = new Turnout
-                                {
-                                    Division = ElectionDivision.Locality,
-                                    CountyId = dbCounty.CountyId,
-                                    LocalityId = dbLocality.LocalityId
-                                };
-                            }
-                            else
-                            {
-                                turnout = dbTurnouts.FirstOrDefault(t => t.BallotId == ballot.BallotId
-                                                                         && t.Division == ElectionDivision.Locality
-                                                                         && t.CountyId == dbCounty.CountyId
-                                                                         && t.LocalityId == dbLocality.LocalityId);
-                            }
-                            if (turnout == null)
-                                continue;
-
-                            turnout.EligibleVoters = csvLocality.Sum(c => c.EnrolledVoters);
-                            turnout.TotalVotes = csvLocality.Sum(c => c.Voters);
-                            turnout.PermanentListsVotes = csvLocality.Sum(c => c.Voters);
-                            dbContext.Turnouts.Update(turnout);
+                                BallotId = ballot.BallotId,
+                                MessageCount = int.Parse(statistics[0].Value),
+                                CoveredPollingPlaces = int.Parse(statistics[1].Value),
+                                CoveredCounties = int.Parse(statistics[2].Value),
+                                IssueCount = int.Parse(statistics[3].Value),
+                                ObserverCount = int.Parse(statistics[4].Value)
+                            });
                         }
+                        else
+                        {
+                            observation.BallotId = ballot.BallotId;
+                            observation.MessageCount = int.Parse(statistics[0].Value);
+                            observation.CoveredPollingPlaces = int.Parse(statistics[1].Value);
+                            observation.CoveredCounties = int.Parse(statistics[2].Value);
+                            observation.IssueCount = int.Parse(statistics[3].Value);
+                            observation.ObserverCount = int.Parse(statistics[4].Value);
+                            dbContext.Observations.Update(observation);
+                        }
+
                     }
+                    await dbContext.SaveChangesAsync();
+                    Console.WriteLine("Saved vote monitoring");
+                    foreach (var csvCounty in csvCounties)
+                    {
+                        var csvLocalitiesForCounty = csvCounty.GroupBy(c => c.Locality).ToList();
+                        var dbCounty = counties.FirstOrDefault(c => c.ShortName.EqualsIgnoringAccent(csvCounty.Key));
+                        if (dbCounty == null || dbCounty.CountyId == 16820)
+                        {
+                            continue;
+                        }
 
+                        var countyBallots = ballots.Where(b =>
+                            b.BallotType == BallotType.CapitalCityMayor || b.BallotType == BallotType.CountyCouncil ||
+                            b.BallotType == BallotType.CountyCouncilPresident).ToList();
+                        foreach (var countyBallot in countyBallots)
+                        {
+                            var dbTurnout = dbTurnouts.FirstOrDefault(t => t.BallotId == countyBallot.BallotId
+                                                                           && t.Division == ElectionDivision.County
+                                                                           && t.CountyId == dbCounty.CountyId);
+                            if (dbTurnout == null)
+                                continue;
+                            dbTurnout.EligibleVoters = csvCounty.Sum(c => c.EnrolledVoters);
+                            dbTurnout.TotalVotes = csvCounty.Sum(c => c.Voters);
+                            dbTurnout.PermanentListsVotes = csvCounty.Sum(c => c.Voters);
+                        }
+                        var localitiesForCounty = localities.Where(l => l.CountyId == dbCounty.CountyId).ToList();
+                        foreach (var csvLocality in csvLocalitiesForCounty)
+                        {
+                            foreach (var ballot in ballots)
+                            {
+                                var dbLocality =
+                                    localitiesForCounty.FirstOrDefault(c => c.Name.EqualsIgnoringAccent(csvLocality.Key));
+                                Turnout turnout;
+                                if (dbLocality == null)
+                                {
+                                    dbLocality = new Locality
+                                    {
+                                        CountyId = dbCounty.CountyId,
+                                        Name = csvCounty.Key
+                                    };
+                                    dbContext.Localities.Add(dbLocality);
+                                    await dbContext.SaveChangesAsync();
+                                    turnout = new Turnout
+                                    {
+                                        Division = ElectionDivision.Locality,
+                                        CountyId = dbCounty.CountyId,
+                                        LocalityId = dbLocality.LocalityId
+                                    };
+                                }
+                                else
+                                {
+                                    turnout = dbTurnouts.FirstOrDefault(t => t.BallotId == ballot.BallotId
+                                                                             && t.Division == ElectionDivision.Locality
+                                                                             && t.CountyId == dbCounty.CountyId
+                                                                             && t.LocalityId == dbLocality.LocalityId);
+                                }
+                                if (turnout == null)
+                                    continue;
+
+                                turnout.EligibleVoters = csvLocality.Sum(c => c.EnrolledVoters);
+                                turnout.TotalVotes = csvLocality.Sum(c => c.Voters);
+                                turnout.PermanentListsVotes = csvLocality.Sum(c => c.Voters);
+                                dbContext.Turnouts.Update(turnout);
+                            }
+                        }
+
+                    }
+                    Console.WriteLine($"Updating {DateTime.Now:F}");
+                    await dbContext.BulkUpdateAsync(dbTurnouts);
                 }
-                await dbContext.BulkUpdateAsync(dbTurnouts);
-            }
 
-            Console.WriteLine($"Finished processing at {DateTime.Now:F}");
+                Console.WriteLine($"Finished processing at {DateTime.Now:F}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
         }
 
         protected virtual async Task<string> ReadCsvContent(Stream csvStream)

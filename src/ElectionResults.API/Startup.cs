@@ -133,7 +133,7 @@ namespace ElectionResults.API
             }
             catch (Exception e)
             {
-                //Log.LogError(e);
+                Console.WriteLine(3);
             }
         }
     }
