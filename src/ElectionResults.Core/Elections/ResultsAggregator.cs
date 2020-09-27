@@ -77,9 +77,9 @@ namespace ElectionResults.Core.Elections
                     throw new Exception($"No results found for ballot id {query.BallotId}");
                 var electionResponse = new ElectionResponse();
 
-                var candidates = await GetCandidatesFromDb(query, ballot, dbContext);
                 var divisionTurnout =
                     await GetDivisionTurnout(query, dbContext, ballot);
+                var candidates = await GetCandidatesFromDb(query, ballot, dbContext);
 
                 ElectionResultsResponse results;
                 if (divisionTurnout == null)
@@ -405,6 +405,13 @@ namespace ElectionResults.Core.Elections
             if (query.Division == ElectionDivision.County)
             {
                 queryable = queryable.Where(t => t.CountyId == query.CountyId);
+            }
+
+            if (ballot.Date.Year == 2020)
+            {
+                queryable = dbContext.Turnouts
+                    .Where(t =>
+                        t.BallotId == ballot.BallotId);
             }
             var turnoutsForCounty = await queryable.ToListAsync();
 

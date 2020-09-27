@@ -99,7 +99,6 @@ namespace ElectionResults.API
             {
                 app.UseDeveloperExceptionPage();
             }
-            app.UseResponseCompression();
             MigrateDatabase(context);
             app.UseSwaggerUI(c =>
             {
