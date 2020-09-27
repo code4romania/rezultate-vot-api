@@ -77,7 +77,9 @@ namespace ElectionResults.API
                             .AllowAnyOrigin();
                     });
             });
-            services.AddHostedService<ScheduleTask>();
+            
+            if (Configuration["ScheduleTaskEnabled"].ToLower().Equals("true")) //excuse the primitive syntax
+                services.AddHostedService<ScheduleTask>();
         }
 
         private static void RegisterDependencies(IServiceCollection services, IConfiguration configuration)
