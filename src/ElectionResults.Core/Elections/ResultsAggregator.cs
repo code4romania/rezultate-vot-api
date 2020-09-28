@@ -88,7 +88,7 @@ namespace ElectionResults.Core.Elections
                     divisionTurnout = new Turnout
                     {
                         EligibleVoters = electionInfo.EligibleVoters,
-                        TotalVotes = divisionTurnout?.TotalVotes ?? electionInfo.TotalVotes,
+                        TotalVotes = electionInfo.TotalVotes,
                         ValidVotes = electionInfo.ValidVotes,
                         NullVotes = electionInfo.NullVotes
                     };
@@ -577,12 +577,12 @@ namespace ElectionResults.Core.Elections
                     return String.Empty;
                 if (ballot.BallotType == BallotType.Mayor)
                 {
-                    return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_prov_uat_p_{locality.County.ShortName.ToLower()}_{locality.Siruta}.csv";
+                    return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_part_uat_p_{locality.County.ShortName.ToLower()}_{locality.Siruta}.csv";
                 }
 
                 if (ballot.BallotType == BallotType.LocalCouncil)
                 {
-                    return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_prov_uat_cl_{locality.County.ShortName.ToLower()}_{locality.Siruta}.csv";
+                    return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_part_uat_cl_{locality.County.ShortName.ToLower()}_{locality.Siruta}.csv";
                 }
 
             }
@@ -596,14 +596,14 @@ namespace ElectionResults.Core.Elections
                 if (query.CountyId == 12913)
                 {
                     if (ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.CountyCouncilPresident || ballot.BallotType == BallotType.CapitalCityMayor)
-                        return "https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_prov_cnty_pcj_b.csv";
+                        return "https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_part_cnty_pcj_b.csv";
                 }
                 switch (ballot.BallotType)
                 {
                     case BallotType.CountyCouncil:
-                        return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_prov_cnty_cj_{county.ShortName.ToLower()}.csv";
+                        return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_part_cnty_cj_{county.ShortName.ToLower()}.csv";
                     case BallotType.CountyCouncilPresident:
-                        return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_prov_cnty_pcj_{county.ShortName.ToLower()}.csv";
+                        return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_part_cnty_pcj_{county.ShortName.ToLower()}.csv";
                 }
             }
             return String.Empty;
