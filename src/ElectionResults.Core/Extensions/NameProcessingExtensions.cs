@@ -83,7 +83,7 @@ namespace ElectionResults.Core.Extensions
             if (ballot.BallotType == BallotType.EuropeanParliament || ballot.BallotType == BallotType.Senate ||
                 ballot.BallotType == BallotType.House)
                 return c.Party?.Name.Or(c.PartyName).Or(c.Name) ?? c.Name.Or(c.PartyName);
-            return c.Name;
+            return c.Name.IsEmpty() ? c.PartyName : c.Name;
         }
     }
 }
