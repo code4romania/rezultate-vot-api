@@ -27,7 +27,9 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="3.1.8" />
   </ItemGroup>
-
+  <PropertyGroup>
+    <LibraryRestore>false</LibraryRestore>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\ElectionResults.Core\ElectionResults.Core.csproj" />
   </ItemGroup>
