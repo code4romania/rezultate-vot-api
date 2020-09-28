@@ -8,6 +8,6 @@ namespace ElectionResults.Core.Scheduler
     {
         Task DownloadFiles();
 
-        Task<List<CandidateResult>> GetCandidatesFromUrl(string url);
+        Task<LiveElectionInfo> GetCandidatesFromUrl(string url);
     }
 }

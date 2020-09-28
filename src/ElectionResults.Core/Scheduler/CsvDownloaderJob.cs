@@ -43,12 +43,11 @@ namespace ElectionResults.Core.Scheduler
             _httpClient = new HttpClient();
         }
 
-        public async Task<List<CandidateResult>> GetCandidatesFromUrl(string url)
+        public async Task<LiveElectionInfo> GetCandidatesFromUrl(string url)
         {
             var stream = await DownloadFile(url);
-            var candidateResults = await ExtractCandidatesFromCsv(stream);
-
-            return candidateResults.OrderByDescending(c => c.Votes).ToList();
+            var liveElectionInfo = await ExtractCandidatesFromCsv(stream);
+            return liveElectionInfo;
         }
 
         public async Task DownloadFiles()
@@ -78,7 +77,7 @@ namespace ElectionResults.Core.Scheduler
             }
         }
 
-        private async Task<List<CandidateResult>> ExtractCandidatesFromCsv(Stream csvStream)
+        private async Task<LiveElectionInfo> ExtractCandidatesFromCsv(Stream csvStream)
         {
             List<CandidateResult> candidates;
             Console.WriteLine($"Started at {DateTime.Now:F}");
@@ -88,12 +87,27 @@ namespace ElectionResults.Core.Scheduler
             csvParser.Configuration.HeaderValidated = null;
             csvParser.Configuration.MissingFieldFound = null;
             candidates = await GetCandidates(csvParser);
+            var nullVotes = 0;
+            var total = 0;
+            var voted = 0;
+            var valid = 0;
             while (true)
             {
                 var result = await csvParser.ReadAsync();
                 if (!result)
-                    return candidates;
+                    return new LiveElectionInfo
+                    {
+                        Candidates = candidates,
+                        EligibleVoters = total,
+                        TotalVotes = voted,
+                        NullVotes = nullVotes,
+                        ValidVotes = valid
+                    };
                 var index = 0;
+                total += int.Parse((csvParser.GetField(12)));
+                voted += int.Parse((csvParser.GetField(17)));
+                nullVotes += int.Parse((csvParser.GetField(23)));
+                valid += int.Parse((csvParser.GetField(22)));
                 for (int i = 26; i < candidates.Count + 26; i++)
                 {
                     try
@@ -220,17 +234,24 @@ namespace ElectionResults.Core.Scheduler
                                                                            && t.CountyId == dbCounty.CountyId);
                             if (dbCounty.CountyId != 12913 && dbTurnout == null)
                             {
+                                dbTurnout = new Turnout
+                                {
+                                    Division = ElectionDivision.County,
+                                    BallotId = countyBallot.BallotId,
+                                    CountyId = dbCounty.CountyId,
+                                };
                                 if (countyBallot.BallotType == BallotType.CountyCouncil ||
                                     countyBallot.BallotType == BallotType.CountyCouncilPresident)
                                 {
-                                    dbTurnout = new Turnout
-                                    {
-                                        Division = ElectionDivision.County,
-                                        BallotId = countyBallot.BallotId,
-                                        CountyId = dbCounty.CountyId,
-                                    };
-                                    newTurnouts.Add(dbTurnout);
+                                    dbTurnout.Division = ElectionDivision.County;
                                 }
+                                if (countyBallot.BallotType == BallotType.LocalCouncil ||
+                                    countyBallot.BallotType == BallotType.Mayor)
+                                {
+                                    dbTurnout.Division = ElectionDivision.County;
+
+                                }
+                                newTurnouts.Add(dbTurnout);
                             }
 
                             if (dbCounty.CountyId == 12913 && dbTurnout == null && countyBallot.BallotType == BallotType.CapitalCityCouncil)
@@ -256,7 +277,6 @@ namespace ElectionResults.Core.Scheduler
                         var localitiesForCounty = localities.Where(l => l.CountyId == dbCounty.CountyId).ToList();
                         foreach (var csvLocality in csvLocalitiesForCounty)
                         {
-
                             foreach (var ballot in ballots)
                             {
                                 var dbLocality = localitiesForCounty.FirstOrDefault(c => c.Name.EqualsIgnoringAccent(csvLocality.Key));
@@ -301,7 +321,7 @@ namespace ElectionResults.Core.Scheduler
                         }
 
                     }
-                    
+
                     await dbContext.BulkUpdateAsync(dbTurnouts, operation =>
                     {
                         operation.BatchSize = 1000;
@@ -353,6 +373,17 @@ namespace ElectionResults.Core.Scheduler
         }
     }
 
+    public class LiveElectionInfo
+    {
+        public List<CandidateResult> Candidates { get; set; }
+
+        public int EligibleVoters { get; set; }
+
+        public int NullVotes { get; set; }
+
+        public int TotalVotes { get; set; }
+        public int ValidVotes { get; set; }
+    }
     public class CsvTurnout
     {
         [Name("UAT")]

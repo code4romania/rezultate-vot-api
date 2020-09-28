@@ -82,8 +82,17 @@ namespace ElectionResults.Core.Elections
 
                 var divisionTurnout =
                     await GetDivisionTurnout(query, dbContext, ballot);
-                var candidates = await GetCandidatesFromDb(query, ballot, dbContext);
-
+                var electionInfo = await GetCandidatesFromDb(query, ballot, dbContext);
+                if (electionInfo.TotalVotes > 0)
+                {
+                    divisionTurnout = new Turnout
+                    {
+                        EligibleVoters = electionInfo.EligibleVoters,
+                        TotalVotes = electionInfo.TotalVotes,
+                        ValidVotes = electionInfo.ValidVotes,
+                        NullVotes = electionInfo.NullVotes
+                    };
+                }
                 ElectionResultsResponse results;
                 if (divisionTurnout == null)
                 {
@@ -94,7 +103,7 @@ namespace ElectionResults.Core.Elections
                     var parties = await _appCache.GetOrAddAsync(
                         _partiesKey, () => dbContext.Parties.ToListAsync(),
                         DateTimeOffset.Now.AddMinutes(50));
-                    results = ProcessResults(divisionTurnout, ballot, candidates, parties);
+                    results = ProcessResults(divisionTurnout, ballot, electionInfo.Candidates, parties);
                 }
 
                 electionResponse.Results = results;
@@ -192,6 +201,11 @@ namespace ElectionResults.Core.Elections
             {
                 var colors = new List<string>();
                 var logos = new List<string>();
+                if (candidates == null)
+                {
+                    results.Candidates = new List<CandidateResponse>();
+                    return results;
+                }
                 foreach (var candidate in candidates)
                 {
                     var matchingParty = GetMatchingParty(parties, candidate.ShortName);
@@ -438,44 +452,55 @@ namespace ElectionResults.Core.Elections
             return turnout;
         }
 
-        private async Task<List<CandidateResult>> GetCandidatesFromDb(ElectionResultsQuery query, Ballot ballot,
+        private async Task<LiveElectionInfo> GetCandidatesFromDb(ElectionResultsQuery query, Ballot ballot,
             ApplicationDbContext dbContext)
         {
+            LiveElectionInfo liveElectionInfo = new LiveElectionInfo();
             if (ballot.Election.Live)
             {
                 try
                 {
                     var url = await GetFileUrl(query, dbContext, ballot);
                     if (url.IsEmpty())
-                        return new List<CandidateResult>();
-                    var candidates = await _csvDownloaderJob.GetCandidatesFromUrl(url);
+                        return new LiveElectionInfo();
+                    liveElectionInfo = await _csvDownloaderJob.GetCandidatesFromUrl(url);
+                    var candidates = liveElectionInfo.Candidates;
                     var parties = await dbContext.Parties.ToListAsync();
                     var candidatesForThisElection = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
                     var dbCandidates = new List<CandidateResult>();
                     if (candidates == null)
-                        return dbCandidates;
+                    {
+                        liveElectionInfo.Candidates = dbCandidates;
+                        return liveElectionInfo;
+                    }
                     foreach (var candidate in candidates)
                     {
                         dbCandidates.Add(PopulateCandidateData(candidatesForThisElection, candidate, parties, ballot));
                     }
-                    return dbCandidates;
+
+                    liveElectionInfo.Candidates = dbCandidates;
+                    return liveElectionInfo;
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine("Probably there are no votes ");
                     Console.WriteLine(e);
-                    return new List<CandidateResult>();
+                    return new LiveElectionInfo();
                 }
             }
             if (ballot.Election.Category == ElectionCategory.Local && CountyIsNotBucharest(query))
             {
                 if (_ballotTypeMatchList[ballot.BallotType].All(t => t != query.Division))
                 {
-                    return await RetrieveAggregatedVotes(query, ballot);
+                    var aggregatedVotes = await RetrieveAggregatedVotes(query, ballot);
+                    liveElectionInfo.Candidates = aggregatedVotes;
+                    return liveElectionInfo;
                 }
             }
 
-            return await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
+            var results = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
+            liveElectionInfo.Candidates = results;
+            return liveElectionInfo;
         }
 
         private static CandidateResult PopulateCandidateData(List<CandidateResult> candidatesForThisElection, CandidateResult candidate, List<Party> parties, Ballot ballot)
