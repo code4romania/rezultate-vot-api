@@ -91,8 +91,6 @@ namespace ElectionResults.Core.Elections
                 }
                 else
                 {
-                    if (candidates.Count > 0 && ballot.Election.Live)
-                        divisionTurnout.TotalVotes = candidates.Sum(c => c.Votes);
                     var parties = await _appCache.GetOrAddAsync(
                         _partiesKey, () => dbContext.Parties.ToListAsync(),
                         DateTimeOffset.Now.AddMinutes(50));
@@ -453,9 +451,9 @@ namespace ElectionResults.Core.Elections
                     var candidates = await _csvDownloaderJob.GetCandidatesFromUrl(url);
                     var parties = await dbContext.Parties.ToListAsync();
                     var candidatesForThisElection = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
-                    if (candidatesForThisElection.Count == 0)
-                        candidatesForThisElection = new List<CandidateResult>();
                     var dbCandidates = new List<CandidateResult>();
+                    if (candidates == null)
+                        return dbCandidates;
                     foreach (var candidate in candidates)
                     {
                         dbCandidates.Add(PopulateCandidateData(candidatesForThisElection, candidate, parties, ballot));
@@ -522,7 +520,11 @@ namespace ElectionResults.Core.Elections
         {
             candidate.Party = party;
             candidate.PartyId = party.Id;
-            candidate.Name = candidate.Name.Replace(party.Alias, "").Replace(party.Name, "").Trim('-', '.', ' ');
+            if (party?.Alias != null)
+                candidate.Name = candidate.Name.Replace(party.Alias, "");
+            if (party.Name != null)
+                candidate.Name = candidate.Name.Replace(party.Name, "");
+            candidate.Name = candidate.Name.Trim('-', '.', ' ');
         }
 
         private static async Task<List<CandidateResult>> GetCandidateResultsFromQueryAndBallot(ElectionResultsQuery query, Ballot ballot,

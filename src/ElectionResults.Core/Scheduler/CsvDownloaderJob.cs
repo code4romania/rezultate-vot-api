@@ -128,7 +128,6 @@ namespace ElectionResults.Core.Scheduler
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
                     return candidates;
                 }
             }
@@ -207,10 +206,6 @@ namespace ElectionResults.Core.Scheduler
                     await dbContext.SaveChangesAsync();
                     foreach (var csvCounty in csvCounties)
                     {
-                        if (csvCounty.Key == "IS")
-                        {
-                            Console.WriteLine("foundit");
-                        }
                         var csvLocalitiesForCounty = csvCounty.GroupBy(c => c.Locality).ToList();
                         var dbCounty = counties.FirstOrDefault(c => c.ShortName.EqualsIgnoringAccent(csvCounty.Key));
                         if (dbCounty == null || dbCounty.CountyId == 16820)
@@ -306,7 +301,11 @@ namespace ElectionResults.Core.Scheduler
                         }
 
                     }
-                    await dbContext.BulkUpdateAsync(dbTurnouts);
+                    
+                    await dbContext.BulkUpdateAsync(dbTurnouts, operation =>
+                    {
+                        operation.BatchSize = 1000;
+                    });
                     await dbContext.BulkInsertAsync(newTurnouts);
 
                 }
