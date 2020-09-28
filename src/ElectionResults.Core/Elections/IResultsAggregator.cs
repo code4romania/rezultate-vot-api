@@ -13,18 +13,23 @@ namespace ElectionResults.Core.Elections
 
         Task<Result<ElectionResponse>> GetBallotResults(ElectionResultsQuery query);
 
-        Task<Result<List<County>>> GetCounties();
+        Task<List<ArticleResponse>> GetNewsFeed(ElectionResultsQuery query, int electionId);
+    }
 
-        Task<Result<List<Locality>>> GetLocalities(int? countyId);
-
-        Task<Result<List<Country>>> GetCountries();
-
+    public interface IWinnersAggregator
+    {
         Task<Result<List<ElectionMapWinner>>> GetCountryWinners(int ballotId);
 
         Task<Result<List<ElectionMapWinner>>> GetCountyWinners(int ballotId);
 
         Task<Result<List<ElectionMapWinner>>> GetLocalityWinnersByCounty(int ballotId, int countyId);
 
-        Task<List<ArticleResponse>> GetNewsFeed(ElectionResultsQuery query, int electionId);
+        Task<Result<List<Winner>>> GetLocalityCityHallWinnersByCounty(int ballotId, int countyId);
+
+        List<CandidateResult> RetrieveFirst10Winners(List<CandidateResult> results,
+            BallotType ballotType);
+
+        Task<Result<List<CandidateResult>>> GetAllLocalityWinners(int ballotId);
+
     }
 }

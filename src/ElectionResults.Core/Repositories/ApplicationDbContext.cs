@@ -39,6 +39,8 @@ namespace ElectionResults.Core.Repositories
 
         public DbSet<Observation> Observations { get; set; }
 
+        public DbSet<Winner> Winners { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

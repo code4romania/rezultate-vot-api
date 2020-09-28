@@ -8,6 +8,7 @@ namespace ElectionResults.Core.Repositories
         public int ElectionId { get; set; }
 
         public List<Ballot> Ballots { get; set; }
+
         public string ElectionName { get; set; }
     }
 }

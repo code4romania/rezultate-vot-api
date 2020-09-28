@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,9 +58,10 @@ namespace ElectionResults.API
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Rezultate Vot API", Version = "v2" });
             });
-            services.AddDbContext<ApplicationDbContext>(options =>
+            services.AddDbContextPool<ApplicationDbContext>(options =>
             {
-                options.UseMySQL(Configuration["ConnectionStrings:DefaultConnection"]);
+                options.UseMySQL(Configuration["ConnectionStrings:DefaultConnection"]
+                   );
             });
 
           
@@ -85,12 +85,16 @@ namespace ElectionResults.API
         private static void RegisterDependencies(IServiceCollection services, IConfiguration configuration)
         {
             services.AddTransient<IResultsAggregator, ResultsAggregator>();
-            services.AddTransient<IArticleRepository, ArticleRepository>();
-            services.AddTransient<IElectionRepository, ElectionRepository>();
-            services.AddTransient<IPicturesRepository, PicturesRepository>();
             services.AddTransient<IAuthorsRepository, AuthorsRepository>();
             services.AddTransient<ICsvDownloaderJob, CsvDownloaderJob>();
+            services.AddTransient<IWinnersAggregator, WinnersAggregator>();
 
+            services.AddTransient<IArticleRepository, ArticleRepository>();
+            services.AddTransient<IElectionsRepository, ElectionsRepository>();
+            services.AddTransient<ITerritoryRepository, TerritoryRepository>();
+            services.AddTransient<IPicturesRepository, PicturesRepository>();
+            services.AddTransient<IBallotsRepository, BallotsRepository>();
+            services.AddTransient<IPartiesRepository, PartiesRepository>();
             services.Configure<AWSS3Settings>(configuration.GetSection("S3Bucket"));
         }
 

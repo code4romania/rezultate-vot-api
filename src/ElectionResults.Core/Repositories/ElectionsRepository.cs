@@ -1,23 +1,45 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
+using LazyCache;
 using Microsoft.EntityFrameworkCore;
 
 namespace ElectionResults.Core.Repositories
 {
-    public class ElectionRepository : IElectionRepository
+    public class ElectionsRepository : IElectionsRepository
     {
         private readonly ApplicationDbContext _dbContext;
+        private readonly IAppCache _appCache;
+        private readonly CacheSettings _cacheSettings;
 
-        public ElectionRepository(ApplicationDbContext dbContext)
+        public ElectionsRepository(ApplicationDbContext dbContext, IAppCache appCache)
         {
             _dbContext = dbContext;
+            _appCache = appCache;
+            _cacheSettings = MemoryCache.Elections;
         }
 
-        public async Task<Result<List<ElectionBallot>>> GetElections()
+        public async Task<Result<List<Election>>> GetAllElections(bool includeBallots = false)
+        {
+            var elections = await _appCache.GetOrAddAsync(
+                _cacheSettings.Key, () => CreateQueryable(includeBallots).ToListAsync(),
+                DateTimeOffset.Now.AddMinutes(_cacheSettings.Minutes));
+            return Result.Success(elections);
+        }
+
+        private IQueryable<Election> CreateQueryable(bool includeBallots)
+        {
+            var query = _dbContext.Elections.AsNoTracking();
+            if (includeBallots)
+                query = query.Include(b => b.Ballots);
+            return query;
+        }
+
+        public async Task<Result<List<ElectionBallot>>> GetElectionsForNewsFeed()
         {
             var ballots = await _dbContext.Ballots.AsNoTracking().Include(b => b.Election).ToListAsync();
             var ballotGroups = ballots.GroupBy(b => b.ElectionId).ToList();
@@ -81,5 +103,6 @@ namespace ElectionResults.Core.Repositories
 
             return electionBallots;
         }
+
     }
 }

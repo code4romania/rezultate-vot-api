@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Endpoints.Response;
@@ -13,11 +12,11 @@ namespace ElectionResults.API.Controllers
     [Route("api/winners")]
     public class WinnersController : ControllerBase
     {
-        private readonly IResultsAggregator _resultsAggregator;
+        private readonly IWinnersAggregator _winnersAggregator;
 
-        public WinnersController(IResultsAggregator resultsAggregator)
+        public WinnersController(IWinnersAggregator winnersAggregator)
         {
-            _resultsAggregator = resultsAggregator;
+            _winnersAggregator = winnersAggregator;
         }
 
         [HttpGet("countries")]
@@ -25,7 +24,7 @@ namespace ElectionResults.API.Controllers
         {
             try
             {
-                var result = await _resultsAggregator.GetCountryWinners(ballotId);
+                var result = await _winnersAggregator.GetCountryWinners(ballotId);
                 if (result.IsSuccess)
                     return result.Value;
                 throw new Exception(result.Error);
@@ -42,7 +41,7 @@ namespace ElectionResults.API.Controllers
         {
             try
             {
-                var result = await _resultsAggregator.GetCountyWinners(ballotId);
+                var result = await _winnersAggregator.GetCountyWinners(ballotId);
                 if (result.IsSuccess)
                     return result.Value;
                 throw new Exception(result.Error);
@@ -59,7 +58,7 @@ namespace ElectionResults.API.Controllers
         {
             try
             {
-                var result = await _resultsAggregator.GetLocalityWinnersByCounty(ballotId, countyId);
+                var result = await _winnersAggregator.GetLocalityWinnersByCounty(ballotId, countyId);
                 if (result.IsSuccess)
                     return result.Value;
                 throw new Exception(result.Error);
