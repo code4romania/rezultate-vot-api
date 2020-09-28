@@ -22,7 +22,7 @@ namespace ElectionResults.API.Controllers
     {
         private readonly IWebHostEnvironment webHostEnvironment;
         private readonly IArticleRepository _articleRepository;
-        private readonly IElectionRepository _electionRepository;
+        private readonly IElectionsRepository _electionsRepository;
         private readonly IAuthorsRepository _authorsRepository;
         private readonly IPicturesRepository _picturesRepository;
         private readonly IOptions<AWSS3Settings> _awsS3Settings;
@@ -30,14 +30,14 @@ namespace ElectionResults.API.Controllers
         public HomeController(
             IWebHostEnvironment hostEnvironment,
             IArticleRepository articleRepository,
-            IElectionRepository electionRepository,
+            IElectionsRepository electionsRepository,
             IAuthorsRepository authorsRepository,
             IPicturesRepository picturesRepository,
             IOptions<AWSS3Settings> aws3Settings)
         {
             webHostEnvironment = hostEnvironment;
             _articleRepository = articleRepository;
-            _electionRepository = electionRepository;
+            _electionsRepository = electionsRepository;
             _authorsRepository = authorsRepository;
             _picturesRepository = picturesRepository;
             _awsS3Settings = aws3Settings;
@@ -59,7 +59,7 @@ namespace ElectionResults.API.Controllers
         private async Task<NewsViewModel> BuildEditNewsFeedViewModel()
         {
             var newsFeedViewModel = new NewsViewModel();
-            var elections = await _electionRepository.GetElections();
+            var elections = await _electionsRepository.GetElectionsForNewsFeed();
             newsFeedViewModel.Elections = new List<SelectListItem>();
             foreach (var election in elections.Value)
             {
@@ -129,7 +129,7 @@ namespace ElectionResults.API.Controllers
             {
                 if (ModelState.IsValid)
                 {
-                    var elections = await _electionRepository.GetElections();
+                    var elections = await _electionsRepository.GetElectionsForNewsFeed();
                     var ballots = elections.Value.SelectMany(e => e.Ballots).ToList();
                     var selectedBallot = ballots
                         .FirstOrDefault(b => b.BallotId == model.SelectedElectionId);

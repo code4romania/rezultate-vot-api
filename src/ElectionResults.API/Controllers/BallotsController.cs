@@ -6,6 +6,7 @@ using ElectionResults.Core.Elections;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Infrastructure;
+using ElectionResults.Core.Repositories;
 using LazyCache;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -19,12 +20,14 @@ namespace ElectionResults.API.Controllers
         private readonly ILogger<BallotsController> _logger;
         private readonly IResultsAggregator _resultsAggregator;
         private readonly IAppCache _appCache;
+        private readonly ITerritoryRepository _territoryRepository;
 
-        public BallotsController(ILogger<BallotsController> logger, IResultsAggregator resultsAggregator, IAppCache appCache)
+        public BallotsController(ILogger<BallotsController> logger, IResultsAggregator resultsAggregator, IAppCache appCache, ITerritoryRepository territoryRepository)
         {
             _logger = logger;
             _resultsAggregator = resultsAggregator;
             _appCache = appCache;
+            _territoryRepository = territoryRepository;
         }
 
         [HttpGet("ballots")]
@@ -71,7 +74,7 @@ namespace ElectionResults.API.Controllers
         {
             try
             {
-                var countiesResult = await _resultsAggregator.GetCounties();
+                var countiesResult = await _territoryRepository.GetCounties();
                 if (countiesResult.IsSuccess)
                 {
                     return countiesResult.Value.Select(c => new LocationData
@@ -94,7 +97,7 @@ namespace ElectionResults.API.Controllers
         {
             try
             {
-                var result = await _resultsAggregator.GetLocalities(countyId);
+                var result = await _territoryRepository.GetLocalities(countyId);
                 if (result.IsSuccess)
                 {
                     return result.Value.Select(c => new LocationData
@@ -118,7 +121,7 @@ namespace ElectionResults.API.Controllers
         {
             try
             {
-                var result = await _resultsAggregator.GetCountries();
+                var result = await _territoryRepository.GetCountries();
                 if (result.IsSuccess)
                 {
                     return result.Value.Select(c => new LocationData

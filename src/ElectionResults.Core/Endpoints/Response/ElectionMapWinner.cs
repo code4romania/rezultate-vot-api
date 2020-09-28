@@ -6,6 +6,6 @@
 
         public int ValidVotes { get; set; }
 
-        public Winner Winner { get; set; }
+        public MapWinner Winner { get; set; }
     }
 }

@@ -2,7 +2,7 @@
 
 namespace ElectionResults.Core.Endpoints.Response
 {
-    public class Winner
+    public class MapWinner
     {
         public string Name { get; set; }
 
@@ -11,6 +11,7 @@ namespace ElectionResults.Core.Endpoints.Response
         public string PartyColor { get; set; }
 
         public int Votes { get; set; }
+
         public Party Party { get; set; }
     }
 }
