@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ElectionResults.Core.Entities
 {
+    [Table("winners")]
     public class Winner
     {
         [Key]
