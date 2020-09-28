@@ -88,7 +88,7 @@ namespace ElectionResults.Core.Elections
                     divisionTurnout = new Turnout
                     {
                         EligibleVoters = electionInfo.EligibleVoters,
-                        TotalVotes = electionInfo.TotalVotes,
+                        TotalVotes = divisionTurnout?.TotalVotes ?? electionInfo.TotalVotes,
                         ValidVotes = electionInfo.ValidVotes,
                         NullVotes = electionInfo.NullVotes
                     };
