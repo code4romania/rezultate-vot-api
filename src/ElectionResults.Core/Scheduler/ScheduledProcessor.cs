@@ -10,11 +10,11 @@ namespace ElectionResults.Core.Scheduler
     public abstract class ScheduledProcessor : ScopedProcessor
     {
         private DateTime _nextRun;
-        private int _intervalInSeconds = 60;
+        private int _intervalInSeconds = 3600;
 
         public ScheduledProcessor(IServiceScopeFactory serviceScopeFactory) : base(serviceScopeFactory)
         {
-            _nextRun = DateTime.Now.AddSeconds(10);
+            _nextRun = DateTime.Now.AddHours(1);
             Log.LogInformation($"Next run will be at {_nextRun:F}");
         }
 

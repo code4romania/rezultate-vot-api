@@ -397,7 +397,7 @@ namespace ElectionResults.Core.Elections
 
         private async Task<Turnout> GetDivisionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
         {
-            if (ballot.Election.Category == ElectionCategory.Local && _ballotTypeMatchList[ballot.BallotType].All(t => t != query.Division))
+            if (ballot.Election.Category == ElectionCategory.Local && _ballotTypeMatchList[ballot.BallotType].All(t => t != query.Division) && !ballot.Election.Live)
             {
                 return await RetrieveAggregatedTurnoutForCityHalls(query, ballot, dbContext);
             }
@@ -490,7 +490,7 @@ namespace ElectionResults.Core.Elections
             }
             if (ballot.Election.Category == ElectionCategory.Local && CountyIsNotBucharest(query))
             {
-                if (_ballotTypeMatchList[ballot.BallotType].All(t => t != query.Division))
+                if (_ballotTypeMatchList[ballot.BallotType].All(t => t != query.Division) && !ballot.Election.Live)
                 {
                     var aggregatedVotes = await RetrieveAggregatedVotes(query, ballot);
                     liveElectionInfo.Candidates = aggregatedVotes;
@@ -743,6 +743,7 @@ namespace ElectionResults.Core.Elections
 
         public async Task<Result<List<ElectionMapWinner>>> GetCountyWinners(int ballotId)
         {
+            return Result.Success(new List<ElectionMapWinner>());
             var winners = new List<ElectionMapWinner>();
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
@@ -790,6 +791,7 @@ namespace ElectionResults.Core.Elections
 
         public async Task<Result<List<ElectionMapWinner>>> GetLocalityWinnersByCounty(int ballotId, int countyId)
         {
+            return Result.Success(new List<ElectionMapWinner>());
             var winners = new List<ElectionMapWinner>();
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
@@ -863,8 +865,10 @@ namespace ElectionResults.Core.Elections
             }
             return Result.Success(winners);
         }
+        
         public async Task<Result<List<ElectionMapWinner>>> GetCountryWinners(int ballotId)
         {
+            return Result.Success(new List<ElectionMapWinner>());
             var winners = new List<ElectionMapWinner>();
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {

@@ -32,6 +32,7 @@ namespace ElectionResults.Core.Scheduler
             Map(m => m.UAT).Name("name");
         }
     }
+
     public class CsvDownloaderJob : ICsvDownloaderJob
     {
         private readonly IServiceProvider _serviceProvider;
@@ -80,7 +81,6 @@ namespace ElectionResults.Core.Scheduler
         private async Task<LiveElectionInfo> ExtractCandidatesFromCsv(Stream csvStream)
         {
             List<CandidateResult> candidates;
-            Console.WriteLine($"Started at {DateTime.Now:F}");
             var csvContent = await ReadCsvContent(csvStream);
             TextReader sr = new StringReader(csvContent);
             var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
@@ -116,7 +116,7 @@ namespace ElectionResults.Core.Scheduler
                         candidates[index].Votes += int.Parse(votes);
                         index++;
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         break;
                     }

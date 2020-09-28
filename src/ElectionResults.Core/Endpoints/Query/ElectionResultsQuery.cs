@@ -24,8 +24,8 @@ namespace ElectionResults.Core.Endpoints.Query
         public double GetCacheDurationInMinutes()
         {
             if (BallotId >= 95 && BallotId <= 98)
-                return 1;
-            return 30;
+                return 10;
+            return 60*24;
         }
     }
 }
