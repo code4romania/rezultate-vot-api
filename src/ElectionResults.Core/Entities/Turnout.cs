@@ -49,5 +49,8 @@ namespace ElectionResults.Core.Entities
         
         [ForeignKey(nameof(Country))]
         public int? CountryId { get; set; }
+
+        [NotMapped]
+        public int CountedVotes { get; set; }
     }
 }

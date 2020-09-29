@@ -37,6 +37,7 @@ namespace ElectionResults.Core.Elections
             var localities = await _dbContext.Localities.Where(l => l.CountyId == countyId).ToListAsync();
 
             var candidateResultsForCounty = await _dbContext.CandidateResults
+                .Include(c => c.Ballot)
                 .Include(c => c.Party)
                 .Where(c => c.BallotId == ballotId && c.Division == ElectionDivision.Locality).ToListAsync();
             var turnouts = await _dbContext.Turnouts
