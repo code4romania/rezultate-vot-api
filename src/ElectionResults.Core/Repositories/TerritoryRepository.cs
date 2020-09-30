@@ -48,5 +48,31 @@ namespace ElectionResults.Core.Repositories
                 MemoryCache.Countries.Key, () => _dbContext.Countries.OrderBy(c => c.Name).ToListAsync(),
                 DateTimeOffset.Now.AddMinutes(MemoryCache.Counties.Minutes));
         }
+
+        public async Task<Result<Locality>> GetLocalityById(int? localityId, bool includeCounty = false)
+        {
+            IQueryable<Locality> dbSet = _dbContext.Localities;
+            if (includeCounty)
+            {
+                dbSet.Include(l => l.County);
+            }
+
+            dbSet = dbSet.Where(l => l.LocalityId == localityId);
+            var localityKey = MemoryCache.Locality.Key + localityId + includeCounty;
+            return await _appCache.GetOrAddAsync(
+                localityKey, () => dbSet.FirstOrDefaultAsync(l => l.LocalityId == localityId),
+                DateTimeOffset.Now.AddMinutes(MemoryCache.Locality.Minutes));
+        }
+
+        public async Task<Result<County>> GetCountyById(int? countyId)
+        {
+            IQueryable<County> dbSet = _dbContext.Counties;
+
+            dbSet = dbSet.Where(l => l.CountyId == countyId);
+            var countyKey = MemoryCache.Locality.Key + countyId;
+            return await _appCache.GetOrAddAsync(
+                countyKey, () => dbSet.FirstOrDefaultAsync(l => l.CountyId == countyId),
+                DateTimeOffset.Now.AddMinutes(MemoryCache.County.Minutes));
+        }
     }
 }

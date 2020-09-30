@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using ElectionResults.API.Configuration;
+using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
@@ -88,6 +88,7 @@ namespace ElectionResults.API
             services.AddTransient<IAuthorsRepository, AuthorsRepository>();
             services.AddTransient<ICsvDownloaderJob, CsvDownloaderJob>();
             services.AddTransient<IWinnersAggregator, WinnersAggregator>();
+            services.AddTransient<ILiveElectionUrlBuilder, LiveElectionUrlBuilder>();
 
             services.AddTransient<IArticleRepository, ArticleRepository>();
             services.AddTransient<IElectionsRepository, ElectionsRepository>();
@@ -96,6 +97,7 @@ namespace ElectionResults.API
             services.AddTransient<IBallotsRepository, BallotsRepository>();
             services.AddTransient<IPartiesRepository, PartiesRepository>();
             services.Configure<AWSS3Settings>(configuration.GetSection("S3Bucket"));
+            services.Configure<LiveElectionSettings>(configuration.GetSection("LiveElectionSettings"));
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context)

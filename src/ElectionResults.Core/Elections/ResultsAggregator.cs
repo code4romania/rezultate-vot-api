@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
+using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
@@ -11,6 +12,7 @@ using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using static System.String;
 
 namespace ElectionResults.Core.Elections
@@ -22,18 +24,24 @@ namespace ElectionResults.Core.Elections
         private readonly IPartiesRepository _partiesRepository;
         private readonly IWinnersAggregator _winnersAggregator;
         private readonly IElectionsRepository _electionRepository;
+        private readonly ITerritoryRepository _territoryRepository;
+        private readonly ILiveElectionUrlBuilder _liveElectionUrlBuilder;
 
         public ResultsAggregator(IServiceProvider serviceProvider,
             ICsvDownloaderJob csvDownloaderJob,
             IPartiesRepository partiesRepository,
             IWinnersAggregator winnersAggregator,
-            IElectionsRepository electionRepository)
+            IElectionsRepository electionRepository,
+            ITerritoryRepository territoryRepository,
+            ILiveElectionUrlBuilder liveElectionUrlBuilder)
         {
             _serviceProvider = serviceProvider;
             _csvDownloaderJob = csvDownloaderJob;
             _partiesRepository = partiesRepository;
             _winnersAggregator = winnersAggregator;
             _electionRepository = electionRepository;
+            _territoryRepository = territoryRepository;
+            _liveElectionUrlBuilder = liveElectionUrlBuilder;
         }
 
         public async Task<Result<List<ElectionMeta>>> GetAllBallots()
@@ -79,7 +87,8 @@ namespace ElectionResults.Core.Elections
                     divisionTurnout = new Turnout
                     {
                         EligibleVoters = electionInfo.EligibleVoters,
-                        TotalVotes = electionInfo.TotalVotes,
+                        CountedVotes = electionInfo.TotalVotes,
+                        TotalVotes = divisionTurnout?.TotalVotes ?? electionInfo.TotalVotes,
                         ValidVotes = electionInfo.ValidVotes,
                         NullVotes = electionInfo.NullVotes
                     };
@@ -181,7 +190,7 @@ namespace ElectionResults.Core.Elections
 
         private async Task<Turnout> GetDivisionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
         {
-            if (ballot.Election.Category == ElectionCategory.Local && ballot.DoesNotAllowDivision(query.Division) && !ballot.Election.Live)
+            if (ballot.Election.Category == ElectionCategory.Local && !ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
             {
                 return await RetrieveAggregatedTurnoutForCityHalls(query, ballot, dbContext);
             }
@@ -240,14 +249,31 @@ namespace ElectionResults.Core.Elections
             ApplicationDbContext dbContext)
         {
             LiveElectionInfo liveElectionInfo = new LiveElectionInfo();
-            if (ballot.Election.Live)
+            if (ballot.Election.Live && ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()))
             {
                 try
                 {
-                    var url = await GetFileUrl(query, dbContext, ballot);
-                    if (url.IsEmpty())
-                        return new LiveElectionInfo();
-                    liveElectionInfo = await _csvDownloaderJob.GetCandidatesFromUrl(url);
+                    int? siruta;
+                    var county = await _territoryRepository.GetCountyById(query.CountyId);
+                    if (query.LocalityId.GetValueOrDefault().IsCapitalCity() && query.Division == ElectionDivision.County)
+                        siruta = null;
+                    else
+                    {
+                        var locality = await _territoryRepository.GetLocalityById(query.LocalityId);
+                        if(locality.IsFailure)
+                            return LiveElectionInfo.Default;
+                        siruta = locality.IsSuccess ? locality.Value?.Siruta : null;
+                    }
+                    if (county.IsFailure)
+                    {
+                        return LiveElectionInfo.Default;
+                    }
+
+                    var countyShortName = county.IsSuccess ? county.Value.ShortName : null;
+                    var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, query.Division, countyShortName, siruta);
+                    if (url.IsFailure)
+                        return LiveElectionInfo.Default;
+                    liveElectionInfo = await _csvDownloaderJob.GetCandidatesFromUrl(url.Value);
                     var candidates = liveElectionInfo.Candidates;
                     var parties = await dbContext.Parties.ToListAsync();
                     var candidatesForThisElection = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
@@ -272,9 +298,9 @@ namespace ElectionResults.Core.Elections
                     return new LiveElectionInfo();
                 }
             }
-            if (ballot.Election.Category == ElectionCategory.Local && CountyIsNotBucharest(query))
+            if (ballot.Election.Category == ElectionCategory.Local && query.CountyId.GetValueOrDefault().IsCapitalCity() == false)
             {
-                if (ballot.DoesNotAllowDivision(query.Division) && !ballot.Election.Live)
+                if (!ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
                 {
                     var aggregatedVotes = await RetrieveAggregatedVotes(query, ballot);
                     liveElectionInfo.Candidates = aggregatedVotes;
@@ -298,7 +324,8 @@ namespace ElectionResults.Core.Elections
                 }
                 else
                 {
-                    candidate.PartyName = candidate.Name;
+                    if (candidate.PartyName.IsEmpty())
+                        candidate.PartyName = candidate.Name;
                 }
                 return candidate;
             }
@@ -357,55 +384,7 @@ namespace ElectionResults.Core.Elections
                     er.LocalityId == query.LocalityId);
             return await resultsQuery.ToListAsync();
         }
-
-        private async Task<string> GetFileUrl(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
-        {
-            if (query.Division == ElectionDivision.Locality)
-            {
-                var locality = await dbContext.Localities
-                    .Include(l => l.County)
-                    .FirstOrDefaultAsync(l => l.LocalityId == query.LocalityId);
-                if (locality == null)
-                    return Empty;
-                if (ballot.BallotType == BallotType.Mayor)
-                {
-                    return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_part_uat_p_{locality.County.ShortName.ToLower()}_{locality.Siruta}.csv";
-                }
-
-                if (ballot.BallotType == BallotType.LocalCouncil)
-                {
-                    return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_part_uat_cl_{locality.County.ShortName.ToLower()}_{locality.Siruta}.csv";
-                }
-
-            }
-
-            if (query.Division == ElectionDivision.County)
-            {
-                var county = await dbContext.Counties
-                    .FirstOrDefaultAsync(l => l.CountyId == query.CountyId);
-                if (county == null)
-                    return Empty;
-                if (query.CountyId == 12913)
-                {
-                    if (ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.CountyCouncilPresident || ballot.BallotType == BallotType.CapitalCityMayor)
-                        return "https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_part_cnty_pcj_b.csv";
-                }
-                switch (ballot.BallotType)
-                {
-                    case BallotType.CountyCouncil:
-                        return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_part_cnty_cj_{county.ShortName.ToLower()}.csv";
-                    case BallotType.CountyCouncilPresident:
-                        return $@"https://prezenta.roaep.ro/locale27092020/data/csv/sicpv/pv_part_cnty_pcj_{county.ShortName.ToLower()}.csv";
-                }
-            }
-            return Empty;
-        }
-
-        private static bool CountyIsNotBucharest(ElectionResultsQuery query)
-        {
-            return query.CountyId != 12913;
-        }
-
+        
         private async Task<List<CandidateResult>> RetrieveAggregatedVotes(ElectionResultsQuery query, Ballot ballot)
         {
             switch (query.Division)

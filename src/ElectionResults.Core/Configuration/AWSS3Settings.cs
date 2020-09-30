@@ -1,4 +1,4 @@
-namespace ElectionResults.API.Configuration
+namespace ElectionResults.Core.Configuration
 {
     public class AWSS3Settings
     {
