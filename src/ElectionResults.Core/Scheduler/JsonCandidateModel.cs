@@ -48,7 +48,7 @@ namespace ElectionResults.Core.Scheduler
     public class Field
     {
         public string Name { get; set; }
-        public string Value { get; set; }
+        public int Value { get; set; }
     }
 
     public class Vote
