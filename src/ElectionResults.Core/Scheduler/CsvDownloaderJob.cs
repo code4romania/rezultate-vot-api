@@ -58,7 +58,7 @@ namespace ElectionResults.Core.Scheduler
                 using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
                 {
                     var ballots = await dbContext.Ballots.Where(b => b.Election.Live).ToListAsync();
-                    if(ballots.Any() == false)
+                    if (ballots.Any() == false)
                         return;
                     EntityFrameworkManager.ContextFactory = context => dbContext;
                     var counties = await dbContext.Counties.Include(c => c.Localities).Where(c => c.Name != "Diaspora").ToListAsync();
@@ -112,7 +112,7 @@ namespace ElectionResults.Core.Scheduler
                     list = data.Stages.FINAL.scopes.CNTY.Categories.CJ.Table.OrderBy(c => c.uat_name).ToList();
                 else if (ballot.BallotType == BallotType.CountyCouncilPresident)
                     list = data.Stages.FINAL.scopes.CNTY.Categories.PCJ.Table.OrderBy(c => c.uat_name).ToList();
-                
+
                 if ((ballot.BallotType == BallotType.CountyCouncilPresident ||
                     ballot.BallotType == BallotType.CountyCouncil) && list.Any())
                 {
@@ -209,12 +209,12 @@ namespace ElectionResults.Core.Scheduler
                 Seats2 = vote.Mandates2
             };
             var partyName = ballot.BallotType == BallotType.LocalCouncil || ballot.BallotType == BallotType.CountyCouncil ? vote.Candidate : vote.Party;
-            candidateResult.PartyId = parties.FirstOrDefault(p => p.Alias.ContainsString(partyName))?.Id
-                                      ?? parties.FirstOrDefault(p => p.Name.ContainsString(partyName))?.Id;
-            
+            if (partyName.IsNotEmpty())
+                candidateResult.PartyId = parties.FirstOrDefault(p => p.Alias.ContainsString(partyName))?.Id
+                                          ?? parties.FirstOrDefault(p => p.Name.ContainsString(partyName))?.Id;
+            candidateResult.PartyName = partyName;
             if (candidateResult.PartyId == null && partyName.IsNotEmpty())
             {
-                candidateResult.PartyName = partyName;
                 candidateResult.ShortName = partyName.GetPartyShortName(null);
             }
 
@@ -344,7 +344,7 @@ namespace ElectionResults.Core.Scheduler
                     var localities = await dbContext.Localities.ToListAsync();
                     var csvLocalities = turnouts.GroupBy(c => c.Siruta).ToList();
                     var liveElection = await dbContext.Elections.FirstOrDefaultAsync(e => e.Live);
-                    if(liveElection == null)
+                    if (liveElection == null)
                         return;
                     var ballots = await dbContext.Ballots.Where(b => b.ElectionId == liveElection.ElectionId).ToListAsync();
                     List<Turnout> dbTurnouts = new List<Turnout>();

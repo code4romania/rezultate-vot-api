@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -65,7 +65,7 @@ namespace ElectionResults.Core.Elections
 
         private static Winner CreateWinner(int ballotId, int? countyId, CandidateResult localityWinner, Turnout turnoutForLocality, ElectionDivision division)
         {
-            return new Winner
+            var winner = new Winner
             {
                 BallotId = ballotId,
                 CandidateId = localityWinner.Id,
@@ -75,6 +75,9 @@ namespace ElectionResults.Core.Elections
                 PartyId = localityWinner.PartyId,
                 TurnoutId = turnoutForLocality?.Id
             };
+            if (winner.PartyId == null && localityWinner.PartyName.IsNotEmpty())
+                winner.Party = new Party { Name = localityWinner.PartyName };
+            return winner;
         }
 
         private async Task<List<Winner>> GetWinners(int ballotId, int? countyId, ElectionDivision division)
