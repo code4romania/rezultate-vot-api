@@ -30,6 +30,7 @@ namespace ElectionResults.Core.Elections
             BallotType ballotType);
 
         Task<Result<List<CandidateResult>>> GetAllLocalityWinners(int ballotId);
+        Task<Result<List<CandidateResult>>> GetCountyWinnersAsCandidateResults(int ballotId);
 
     }
 }
