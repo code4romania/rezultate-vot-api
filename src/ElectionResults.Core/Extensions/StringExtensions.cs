@@ -43,12 +43,12 @@ namespace ElectionResults.Core.Extensions
 
         public static bool EqualsIgnoringAccent(this string first, string second)
         {
-            return string.Compare(first?.ToLower(), second?.ToLower(), CultureInfo.CurrentCulture, CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreCase) == 0;
+            return string.Compare(first, second, CultureInfo.CurrentCulture, CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreCase) == 0;
         }
 
         public static bool ContainsString(this string value, string substring)
         {
-            return value.IsNotEmpty() && value.ToLower().Contains(substring.ToLower());
+            return value.IsNotEmpty() && value.ToLower().Contains(substring?.ToLower() ?? string.Empty);
         }
 
         public static bool IsNotEmpty(this string value)

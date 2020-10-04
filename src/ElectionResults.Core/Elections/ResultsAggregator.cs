@@ -260,7 +260,7 @@ namespace ElectionResults.Core.Elections
                     else
                     {
                         var locality = await _territoryRepository.GetLocalityById(query.LocalityId);
-                        if(locality.IsFailure)
+                        if (locality.IsFailure)
                             return LiveElectionInfo.Default;
                         siruta = locality.IsSuccess ? locality.Value?.Siruta : null;
                     }
@@ -330,7 +330,7 @@ namespace ElectionResults.Core.Elections
                 return candidate;
             }
             var dbCandidate =
-                candidatesForThisElection.FirstOrDefault(c => candidate.Name.ContainsString(c.PartyName));
+                candidatesForThisElection.FirstOrDefault(c => c.PartyName != null && candidate.Name.ContainsString(c.PartyName));
             if (dbCandidate != null)
             {
                 dbCandidate.Votes = candidate.Votes;
@@ -384,7 +384,7 @@ namespace ElectionResults.Core.Elections
                     er.LocalityId == query.LocalityId);
             return await resultsQuery.ToListAsync();
         }
-        
+
         private async Task<List<CandidateResult>> RetrieveAggregatedVotes(ElectionResultsQuery query, Ballot ballot)
         {
             switch (query.Division)

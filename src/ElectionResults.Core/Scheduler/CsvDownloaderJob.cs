@@ -9,7 +9,6 @@ using System.Text;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using CsvHelper;
-using CsvHelper.Configuration;
 using CsvHelper.Configuration.Attributes;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
@@ -24,15 +23,6 @@ using Z.EntityFramework.Extensions;
 
 namespace ElectionResults.Core.Scheduler
 {
-    public class CsvTurnoutMap : ClassMap<CsvTurnout>
-    {
-        public CsvTurnoutMap()
-        {
-            Map(m => m.County).Name("id");
-            Map(m => m.UAT).Name("name");
-        }
-    }
-
     public class CsvDownloaderJob : ICsvDownloaderJob
     {
         private readonly IServiceProvider _serviceProvider;
@@ -53,9 +43,160 @@ namespace ElectionResults.Core.Scheduler
 
         public async Task DownloadFiles()
         {
+            await DownloadCandidates();
             var csvUrl = "https://prezenta.roaep.ro/locale27092020/data/csv/simpv/presence_now.csv";
             var stream = await DownloadFile(csvUrl);
             await ProcessStream(stream);
+        }
+
+        private async Task DownloadCandidates()
+        {
+            try
+            {
+                using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+                {
+                    var ballots = await dbContext.Ballots.Where(b => b.Election.Live).ToListAsync();
+                    if(ballots.Any() == false)
+                        return;
+                    EntityFrameworkManager.ContextFactory = context => dbContext;
+                    var counties = await dbContext.Counties.Include(c => c.Localities).Where(c => c.Name != "Diaspora").ToListAsync();
+                    var parties = await dbContext.Parties.Where(p => p.Name.Length > 5).ToListAsync();
+                    foreach (var ballot in ballots)
+                    {
+                        Console.WriteLine($"Inserting {ballot.BallotType} results");
+                        var winners = await dbContext.Winners.Where(w => w.BallotId == ballot.BallotId).ToListAsync();
+                        var resultsForBallot =
+                            await dbContext.CandidateResults.Where(c => c.BallotId == ballot.BallotId).ToListAsync();
+                        await dbContext.Winners.BulkDeleteAsync(winners);
+                        await dbContext.CandidateResults.BulkDeleteAsync(resultsForBallot);
+                        await AddResults(counties, dbContext, ballot, parties);
+                    }
+
+                    var liveElection = await dbContext.Elections.FirstOrDefaultAsync(e => e.Live);
+                    if (liveElection != null)
+                    {
+                        liveElection.Live = false;
+                        dbContext.Elections.Update(liveElection);
+                        await dbContext.SaveChangesAsync();
+                    }
+                    Console.WriteLine("Finished");
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
+        private async Task AddResults(List<County> counties, ApplicationDbContext dbContext, Ballot ballot,
+            List<Party> parties)
+        {
+            foreach (var county in counties)
+            {
+                var data = await GetCountyResults(county);
+                var localities = county.Localities.Where(l => l.Siruta > 0).ToList();
+                List<JsonCandidateModel> list = new List<JsonCandidateModel>();
+                if (ballot.BallotType == BallotType.LocalCouncil)
+                    list = data.Stages.FINAL.scopes.UAT.Categories.CL.Table.OrderBy(c => c.uat_name).ToList();
+                else if (ballot.BallotType == BallotType.Mayor)
+                    list = data.Stages.FINAL.scopes.UAT.Categories.P.Table.OrderBy(c => c.uat_name).ToList();
+                else if (ballot.BallotType == BallotType.CountyCouncil)
+                    list = data.Stages.FINAL.scopes.CNTY.Categories.CJ.Table.OrderBy(c => c.uat_name).ToList();
+                else if (ballot.BallotType == BallotType.CountyCouncilPresident)
+                    list = data.Stages.FINAL.scopes.CNTY.Categories.PCJ.Table.OrderBy(c => c.uat_name).ToList();
+                
+                if ((ballot.BallotType == BallotType.CountyCouncilPresident ||
+                    ballot.BallotType == BallotType.CountyCouncil) && list.Any())
+                {
+                    var jsonCounty = list.FirstOrDefault(l => l.county_code.ToLower() == county.ShortName.ToLower());
+                    await UpdateCountyCandidates(jsonCounty, dbContext, county, ballot, parties);
+                }
+
+                if (ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.LocalCouncil)
+                {
+                    foreach (var jsonLocality in list)
+                    {
+                        await UpdateLocalityCandidates(localities, jsonLocality, dbContext, county, ballot,
+                            parties);
+                    }
+                }
+                Console.WriteLine($"Finished county {county.Name}");
+            }
+        }
+
+        private static async Task UpdateCountyCandidates(JsonCandidateModel jsonLocality,
+            ApplicationDbContext dbContext, County county, Ballot ballot, List<Party> parties)
+        {
+            var newResults = jsonLocality.Votes.Select(r => CreateCandidateResult(r, ballot, parties, null, county.CountyId, ElectionDivision.County))
+                .ToList();
+            await dbContext.CandidateResults.BulkInsertAsync(newResults);
+        }
+
+        private static async Task UpdateLocalityCandidates(List<Locality> localities, JsonCandidateModel jsonLocality,
+            ApplicationDbContext dbContext, County county, Ballot ballot, List<Party> parties)
+        {
+            var locality =
+                localities.FirstOrDefault(l => l.Siruta == jsonLocality.uat_siruta);
+            if (locality == null)
+            {
+                Console.WriteLine($"Siruta not found for {jsonLocality.uat_name} - {jsonLocality.uat_siruta}");
+                locality = await UpdateSirutaForLocality(jsonLocality, dbContext, county.CountyId);
+            }
+
+            var newResults = jsonLocality.Votes.Select(r => CreateCandidateResult(r, ballot, parties, locality.LocalityId, locality.CountyId))
+                .ToList();
+            await dbContext.CandidateResults.BulkInsertAsync(newResults);
+        }
+
+        private static async Task<Locality> UpdateSirutaForLocality(
+            JsonCandidateModel jsonLocality,
+            ApplicationDbContext dbContext, int countyId)
+        {
+            Locality locality;
+            locality = new Locality
+            {
+                Name = jsonLocality.uat_name,
+                CountyId = countyId,
+                Siruta = jsonLocality.uat_siruta.GetValueOrDefault()
+            };
+            dbContext.Localities.Update(locality);
+            await dbContext.SaveChangesAsync();
+            return locality;
+        }
+
+        private static CandidateResult CreateCandidateResult(Vote vote, Ballot ballot, List<Party> parties,
+            int? localityId, int? countyId, ElectionDivision division = ElectionDivision.Locality)
+        {
+            var candidateResult = new CandidateResult
+            {
+                BallotId = ballot.BallotId,
+                Division = division,
+                Votes = vote.Votes,
+                Name = vote.Candidate,
+                CountyId = countyId,
+                LocalityId = localityId,
+                Seats1 = vote.Mandates1,
+                Seats2 = vote.Mandates2
+            };
+            var partyName = ballot.BallotType == BallotType.LocalCouncil ? vote.Candidate : vote.Party;
+            candidateResult.PartyId = parties.FirstOrDefault(p => p.Alias.ContainsString(partyName))?.Id
+                                      ?? parties.FirstOrDefault(p => p.Name.ContainsString(partyName))?.Id;
+
+            return candidateResult;
+        }
+
+        private async Task<JsonResultsModel> GetCountyResults(County county)
+        {
+            var httpClientHandler = new HttpClientHandler
+            {
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+            };
+            httpClientHandler.ServerCertificateCustomValidationCallback = (message, certificate2, arg3, arg4) => true;
+            _httpClient = new HttpClient(httpClientHandler);
+            var response = await _httpClient.GetStringAsync(
+                $"https://prezenta.roaep.ro/locale27092020/data/json/sicpv/pv/pv_{county.ShortName.ToLower()}_final.json?_=1701776878922");
+            var data = JsonConvert.DeserializeObject<JsonResultsModel>(response);
+            return data;
         }
 
         private async Task<Stream> DownloadFile(string url)
