@@ -303,10 +303,11 @@ namespace ElectionResults.Core.Scheduler
                 using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
                 {
                     EntityFrameworkManager.ContextFactory = context => dbContext;
-                    var counties = await dbContext.Counties.ToListAsync();
                     var localities = await dbContext.Localities.ToListAsync();
                     var csvLocalities = turnouts.GroupBy(c => c.Siruta).ToList();
                     var liveElection = await dbContext.Elections.FirstOrDefaultAsync(e => e.Live);
+                    if(liveElection == null)
+                        return;
                     var ballots = await dbContext.Ballots.Where(b => b.ElectionId == liveElection.ElectionId).ToListAsync();
                     List<Turnout> dbTurnouts = new List<Turnout>();
                     foreach (var ballot in ballots)
