@@ -48,7 +48,7 @@ namespace ElectionResults.Core.Extensions
 
         public static bool ContainsString(this string value, string substring)
         {
-            return value.IsNotEmpty() && value.ToLower().Contains(substring?.ToLower() ?? string.Empty);
+            return value.IsNotEmpty() && (value.EqualsIgnoringAccent(substring) || value.Contains(substring ?? string.Empty, StringComparison.InvariantCultureIgnoreCase));
         }
 
         public static bool IsNotEmpty(this string value)

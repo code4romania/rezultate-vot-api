@@ -406,7 +406,7 @@ namespace ElectionResults.Core.Elections
                         var result = await _winnersAggregator.GetLocalityCityHallWinnersByCounty(ballot.BallotId, query.CountyId.GetValueOrDefault());
                         if (result.IsSuccess)
                         {
-                            var candidateResults = _winnersAggregator.RetrieveFirst10Winners(result.Value.Select(w => w.Candidate).ToList(), ballot.BallotType);
+                            var candidateResults = _winnersAggregator.RetrieveWinners(result.Value.Select(w => w.Candidate).ToList(), ballot.BallotType);
 
                             return candidateResults;
                         }
@@ -418,7 +418,7 @@ namespace ElectionResults.Core.Elections
                         if (ballot.BallotType == BallotType.CountyCouncil ||
                             ballot.BallotType == BallotType.CountyCouncilPresident)
                         {
-                            result = await _winnersAggregator.GetCountyWinnersAsCandidateResults(ballot.BallotId);
+                            result = await _winnersAggregator.GetWinningCandidatesByCounty(ballot.BallotId);
                         }
                         else
                         {
@@ -426,7 +426,7 @@ namespace ElectionResults.Core.Elections
                         }
                         if (result.IsSuccess)
                         {
-                            var candidateResults = _winnersAggregator.RetrieveFirst10Winners(result.Value, ballot.BallotType);
+                            var candidateResults = _winnersAggregator.RetrieveWinners(result.Value, ballot.BallotType);
                             return candidateResults;
                         }
                         throw new Exception(result.Error);

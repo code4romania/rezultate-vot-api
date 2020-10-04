@@ -211,6 +211,12 @@ namespace ElectionResults.Core.Scheduler
             var partyName = ballot.BallotType == BallotType.LocalCouncil || ballot.BallotType == BallotType.CountyCouncil ? vote.Candidate : vote.Party;
             candidateResult.PartyId = parties.FirstOrDefault(p => p.Alias.ContainsString(partyName))?.Id
                                       ?? parties.FirstOrDefault(p => p.Name.ContainsString(partyName))?.Id;
+            
+            if (candidateResult.PartyId == null && partyName.IsNotEmpty())
+            {
+                candidateResult.PartyName = partyName;
+                candidateResult.ShortName = partyName.GetPartyShortName(null);
+            }
 
             return candidateResult;
         }

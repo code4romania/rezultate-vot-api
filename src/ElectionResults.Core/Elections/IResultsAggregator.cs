@@ -26,11 +26,11 @@ namespace ElectionResults.Core.Elections
 
         Task<Result<List<Winner>>> GetLocalityCityHallWinnersByCounty(int ballotId, int countyId);
 
-        List<CandidateResult> RetrieveFirst10Winners(List<CandidateResult> results,
+        List<CandidateResult> RetrieveWinners(List<CandidateResult> results,
             BallotType ballotType);
 
         Task<Result<List<CandidateResult>>> GetAllLocalityWinners(int ballotId);
-        Task<Result<List<CandidateResult>>> GetCountyWinnersAsCandidateResults(int ballotId);
+        Task<Result<List<CandidateResult>>> GetWinningCandidatesByCounty(int ballotId);
 
     }
 }
