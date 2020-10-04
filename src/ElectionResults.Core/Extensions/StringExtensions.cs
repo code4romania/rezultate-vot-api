@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using Diacritics.Extensions;
 
 namespace ElectionResults.Core.Extensions
 {
@@ -48,7 +49,9 @@ namespace ElectionResults.Core.Extensions
 
         public static bool ContainsString(this string value, string substring)
         {
-            return value.IsNotEmpty() && (value.EqualsIgnoringAccent(substring) || value.Contains(substring ?? string.Empty, StringComparison.InvariantCultureIgnoreCase));
+            var s1 = value?.ToLower().RemoveDiacritics();
+            var s2 = substring?.ToLower().RemoveDiacritics();
+            return s1.IsNotEmpty() && s2.IsNotEmpty() && (s1 == s2 || s1.Contains(s2 ?? string.Empty));
         }
 
         public static bool IsNotEmpty(this string value)

@@ -7,6 +7,7 @@
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="2.11.7" />
     <PackageReference Include="CsvHelper" Version="15.0.6" />
+    <PackageReference Include="Diacritics" Version="2.1.20036.1" />
     <PackageReference Include="LazyCache" Version="2.1.1" />
     <PackageReference Include="LazyCache.AspNetCore" Version="2.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.2.0" />

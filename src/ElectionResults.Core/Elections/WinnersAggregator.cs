@@ -303,6 +303,11 @@ namespace ElectionResults.Core.Elections
         public List<CandidateResult> RetrieveWinners(List<CandidateResult> results,
             BallotType ballotType)
         {
+            foreach (var candidateResult in results)
+            {
+                if (candidateResult.Party == null && candidateResult.PartyName.IsNotEmpty())
+                    candidateResult.Party = new Party { Name = candidateResult.PartyName };
+            }
             var groupedWinners = results
                 .GroupBy(w => w.Party?.Name)
                 .OrderByDescending(w => w.Count())
