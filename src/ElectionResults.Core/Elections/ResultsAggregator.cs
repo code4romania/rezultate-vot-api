@@ -403,7 +403,8 @@ namespace ElectionResults.Core.Elections
             {
                 case ElectionDivision.County:
                     {
-                        var result = await _winnersAggregator.GetLocalityCityHallWinnersByCounty(ballot.BallotId, query.CountyId.GetValueOrDefault());
+                        var takeOnlyWinner = ballot.BallotType != BallotType.LocalCouncil;
+                        var result = await _winnersAggregator.GetLocalityCityHallWinnersByCounty(ballot.BallotId, query.CountyId.GetValueOrDefault(), takeOnlyWinner);
                         if (result.IsSuccess)
                         {
                             var candidateResults = _winnersAggregator.RetrieveWinners(result.Value.Select(w => w.Candidate).ToList(), ballot.BallotType);

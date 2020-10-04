@@ -28,7 +28,7 @@ namespace ElectionResults.Core.Elections
             _territoryRepository = territoryRepository;
         }
 
-        public async Task<Result<List<Winner>>> GetLocalityCityHallWinnersByCounty(int ballotId, int countyId)
+        public async Task<Result<List<Winner>>> GetLocalityCityHallWinnersByCounty(int ballotId, int countyId, bool takeOnlyWinner = true)
         {
             var dbWinners = await GetWinners(ballotId, countyId, ElectionDivision.Locality);
             if (dbWinners.Count > 0)
@@ -47,15 +47,26 @@ namespace ElectionResults.Core.Elections
             List<Winner> winningCandidates = new List<Winner>();
             foreach (var locality in localities)
             {
-                var localityWinner = candidateResultsForCounty
+                var results = candidateResultsForCounty
                     .Where(c => c.LocalityId == locality.LocalityId)
-                    .OrderByDescending(c => c.Votes)
+                    .OrderByDescending(c => c.Votes).ToList();
+                var localityWinner = results
                     .FirstOrDefault();
+                var turnoutForLocality = turnouts
+                    .FirstOrDefault(c => c.LocalityId == locality.LocalityId);
                 if (localityWinner != null)
                 {
-                    var turnoutForLocality = turnouts
-                        .FirstOrDefault(c => c.LocalityId == locality.LocalityId);
-                    winningCandidates.Add(CreateWinner(ballotId, countyId, localityWinner, turnoutForLocality, ElectionDivision.Locality));
+                    if (takeOnlyWinner)
+                    {
+                        winningCandidates.Add(CreateWinner(ballotId, countyId, localityWinner, turnoutForLocality, ElectionDivision.Locality));
+                    }
+                    else
+                    {
+                        foreach (var candidateResult in results)
+                        {
+                            winningCandidates.Add(CreateWinner(ballotId, countyId, candidateResult, turnoutForLocality, ElectionDivision.Locality));
+                        }
+                    }
                 }
             }
 
