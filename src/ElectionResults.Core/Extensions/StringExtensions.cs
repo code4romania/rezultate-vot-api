@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using Diacritics.Extensions;
 
 namespace ElectionResults.Core.Extensions
 {
@@ -43,12 +44,14 @@ namespace ElectionResults.Core.Extensions
 
         public static bool EqualsIgnoringAccent(this string first, string second)
         {
-            return string.Compare(first?.ToLower(), second?.ToLower(), CultureInfo.CurrentCulture, CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreCase) == 0;
+            return string.Compare(first, second, CultureInfo.CurrentCulture, CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreCase) == 0;
         }
 
         public static bool ContainsString(this string value, string substring)
         {
-            return value.IsNotEmpty() && value.ToLower().Contains(substring.ToLower());
+            var s1 = value?.ToLower().RemoveDiacritics();
+            var s2 = substring?.ToLower().RemoveDiacritics();
+            return s1.IsNotEmpty() && s2.IsNotEmpty() && (s1 == s2 || s1.Contains(s2 ?? string.Empty));
         }
 
         public static bool IsNotEmpty(this string value)

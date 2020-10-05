@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
+using ElectionResults.Core.Infrastructure;
 
 namespace ElectionResults.Core.Extensions
 {
@@ -60,7 +61,7 @@ namespace ElectionResults.Core.Extensions
                 return shortName;
             var fullName = shortName.Replace("CANDIDAT INDEPENDENT - ", "");
             var firstInitial = fullName[0].ToString().ToUpper() + ". ";
-            string firstname = string.Empty;
+            string firstname;
             if (fullName.Contains("-"))
             {
                 firstname = fullName.Split("-")[0] + "-";
@@ -74,8 +75,8 @@ namespace ElectionResults.Core.Extensions
         public static string GetPartyColor(this CandidateResult c)
         {
             if (c.Party != null && c.Party.Name?.ToLower() == "independent" || c.Name.ToLower() == "independent")
-                return null;
-            return c.Party?.Color;
+                return Consts.IndependentCandidateColor;
+            return c.Party?.Color ?? Consts.IndependentCandidateColor;
         }
 
         public static string GetCandidateName(this CandidateResult c, Ballot ballot)

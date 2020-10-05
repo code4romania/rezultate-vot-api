@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,6 +6,7 @@ using CSharpFunctionalExtensions;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
+using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using LazyCache;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +29,7 @@ namespace ElectionResults.Core.Elections
             _territoryRepository = territoryRepository;
         }
 
-        public async Task<Result<List<Winner>>> GetLocalityCityHallWinnersByCounty(int ballotId, int countyId)
+        public async Task<Result<List<Winner>>> GetLocalityCityHallWinnersByCounty(int ballotId, int countyId, bool takeOnlyWinner = true)
         {
             var dbWinners = await GetWinners(ballotId, countyId, ElectionDivision.Locality);
             if (dbWinners.Count > 0)
@@ -47,15 +48,26 @@ namespace ElectionResults.Core.Elections
             List<Winner> winningCandidates = new List<Winner>();
             foreach (var locality in localities)
             {
-                var localityWinner = candidateResultsForCounty
+                var results = candidateResultsForCounty
                     .Where(c => c.LocalityId == locality.LocalityId)
-                    .OrderByDescending(c => c.Votes)
+                    .OrderByDescending(c => c.Votes).ToList();
+                var localityWinner = results
                     .FirstOrDefault();
+                var turnoutForLocality = turnouts
+                    .FirstOrDefault(c => c.LocalityId == locality.LocalityId);
                 if (localityWinner != null)
                 {
-                    var turnoutForLocality = turnouts
-                        .FirstOrDefault(c => c.LocalityId == locality.LocalityId);
-                    winningCandidates.Add(CreateWinner(ballotId, countyId, localityWinner, turnoutForLocality, ElectionDivision.Locality));
+                    if (takeOnlyWinner)
+                    {
+                        winningCandidates.Add(CreateWinner(ballotId, countyId, localityWinner, turnoutForLocality, ElectionDivision.Locality));
+                    }
+                    else
+                    {
+                        foreach (var candidateResult in results)
+                        {
+                            winningCandidates.Add(CreateWinner(ballotId, countyId, candidateResult, turnoutForLocality, ElectionDivision.Locality));
+                        }
+                    }
                 }
             }
 
@@ -65,7 +77,7 @@ namespace ElectionResults.Core.Elections
 
         private static Winner CreateWinner(int ballotId, int? countyId, CandidateResult localityWinner, Turnout turnoutForLocality, ElectionDivision division)
         {
-            return new Winner
+            var winner = new Winner
             {
                 BallotId = ballotId,
                 CandidateId = localityWinner.Id,
@@ -73,8 +85,9 @@ namespace ElectionResults.Core.Elections
                 Division = division,
                 Name = localityWinner.Name,
                 PartyId = localityWinner.PartyId,
-                TurnoutId = turnoutForLocality?.Id
+                TurnoutId = turnoutForLocality?.Id,
             };
+            return winner;
         }
 
         private async Task<List<Winner>> GetWinners(int ballotId, int? countyId, ElectionDivision division)
@@ -85,7 +98,7 @@ namespace ElectionResults.Core.Elections
                             && w.CountyId == countyId).ToListAsync();
             var winnersKey = MemoryCache.CreateWinnersKey(ballotId, countyId, division);
             var winners = await _appCache.GetOrAddAsync(winnersKey,
-                () => query, DateTimeOffset.Now.AddMinutes(60));
+                () => query, DateTimeOffset.Now.AddMinutes(10));
             return winners;
         }
 
@@ -111,7 +124,7 @@ namespace ElectionResults.Core.Elections
         {
             var electionMapWinner = CreateElectionMapWinner(winner.CountyId ?? winner.LocalityId ?? winner.CountryId, winner.Ballot, winner.Candidate, winner.Turnout);
             if (electionMapWinner.Winner.PartyColor.IsEmpty())
-                electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(winner.Candidate.ShortName)?.Color;
+                electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(winner.Candidate.ShortName)?.Color ?? Consts.IndependentCandidateColor;
             return electionMapWinner;
         }
 
@@ -157,7 +170,7 @@ namespace ElectionResults.Core.Elections
 
                 var electionMapWinner = CreateElectionMapWinner(country.Id, ballot, countryWinner, turnoutForCountry);
                 if (electionMapWinner.Winner.PartyColor.IsEmpty())
-                    electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(countryWinner.ShortName)?.Color;
+                    electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(countryWinner.ShortName)?.Color ?? Consts.IndependentCandidateColor;
                 winners.Add(electionMapWinner);
                 winningCandidates.Add(CreateWinner(ballotId, countryWinner, electionMapWinner, turnoutForCountry.Id, country.Id, ElectionDivision.Diaspora_Country));
             }
@@ -174,7 +187,12 @@ namespace ElectionResults.Core.Elections
             if (dbWinners.Count > 0)
                 return dbWinners.Select(winner => WinnerToElectionMapWinner(winner, parties)).ToList();
             _appCache.Remove(MemoryCache.CreateWinnersKey(ballotId, null, ElectionDivision.Diaspora_Country));
-            var winners = new List<ElectionMapWinner>();
+            var winners = await AggregateCountyWinners(ballotId, parties);
+            return Result.Success(winners.Select(winner => WinnerToElectionMapWinner(winner, parties)).ToList());
+        }
+
+        private async Task<List<Winner>> AggregateCountyWinners(int ballotId, IEnumerable<Party> parties)
+        {
             var counties = await _territoryRepository.GetCounties();
             var ballot = await _dbContext.Ballots
                 .AsNoTracking()
@@ -205,12 +223,24 @@ namespace ElectionResults.Core.Elections
                     continue;
                 var electionMapWinner = CreateElectionMapWinner(county.CountyId, ballot, countyWinner, turnoutForCounty);
                 if (electionMapWinner.Winner.PartyColor.IsEmpty())
-                    electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(countyWinner.ShortName)?.Color;
-                winners.Add(electionMapWinner);
-                winningCandidates.Add(CreateWinner(ballotId, countyWinner, electionMapWinner, turnoutForCounty.Id, county.CountyId, ElectionDivision.County));
+                    electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(countyWinner.ShortName)?.Color ?? Consts.IndependentCandidateColor;
+                winningCandidates.Add(CreateWinner(ballotId, countyWinner, electionMapWinner, turnoutForCounty.Id,
+                    county.CountyId, ElectionDivision.County));
             }
+
             await SaveWinners(winningCandidates);
-            return Result.Success(winners);
+            return winningCandidates;
+        }
+
+        public async Task<Result<List<CandidateResult>>> GetWinningCandidatesByCounty(int ballotId)
+        {
+            var parties = await _partiesRepository.GetAllParties();
+            var dbWinners = await GetWinners(ballotId, null, ElectionDivision.County);
+            if (dbWinners.Count > 0)
+                return dbWinners.Select(w => w.Candidate).ToList();
+            _appCache.Remove(MemoryCache.CreateWinnersKey(ballotId, null, ElectionDivision.Diaspora_Country));
+            var winners = await AggregateCountyWinners(ballotId, parties);
+            return winners.Select(w => w.Candidate).ToList();
         }
 
         private static Winner CreateWinner(int ballotId, CandidateResult countyWinner,
@@ -248,7 +278,7 @@ namespace ElectionResults.Core.Elections
                 electionMapWinner.Winner.Name = winner.Name;
                 electionMapWinner.Winner.ShortName = winner.ShortName;
                 electionMapWinner.Winner.Votes = winner.Votes;
-                electionMapWinner.Winner.PartyColor = winner.Party?.Color;
+                electionMapWinner.Winner.PartyColor = winner.Party?.Color ?? Consts.IndependentCandidateColor;
                 electionMapWinner.Winner.Party = winner.Party;
             }
             else
@@ -280,24 +310,33 @@ namespace ElectionResults.Core.Elections
             return electionMapWinner;
         }
 
-        public List<CandidateResult> RetrieveFirst10Winners(List<CandidateResult> results,
+        public List<CandidateResult> RetrieveWinners(List<CandidateResult> results,
             BallotType ballotType)
         {
+            foreach (var candidateResult in results)
+            {
+                if (candidateResult.Party == null && candidateResult.PartyName.IsNotEmpty())
+                    candidateResult.Party = new Party { Name = candidateResult.PartyName };
+            }
             var groupedWinners = results
                 .GroupBy(w => w.Party?.Name)
                 .OrderByDescending(w => w.Count())
                 .ToList();
-            var top10 = groupedWinners.Take(10).ToList();
             var candidateResults = new List<CandidateResult>();
-            foreach (var candidate in top10)
+            foreach (var candidate in groupedWinners)
             {
                 var electionMapWinner = candidate.FirstOrDefault();
-                candidateResults.Add(new CandidateResult
+                var item = new CandidateResult
                 {
-                    Votes = ballotType == BallotType.Mayor ? candidate.Count() : candidate.Sum(c => c.Votes),
-                    Name = candidate.Key == null ? "INDEPENDENT" : electionMapWinner.Party.Name,
-                    Party = electionMapWinner.Party
-                });
+                    Name = candidate.Key == null ? "INDEPENDENT" : electionMapWinner?.Party.Name,
+                    Party = electionMapWinner?.Party
+                };
+                if (ballotType == BallotType.Mayor || ballotType == BallotType.CountyCouncilPresident)
+                    item.Votes = candidate.Count();
+                else
+                    item.Votes = candidate.Sum(c => c.Votes);
+                item.TotalSeats = item.SeatsGained = candidate.Sum(c => c.Seats1 + c.Seats2);
+                candidateResults.Add(item);
             }
 
             return candidateResults;

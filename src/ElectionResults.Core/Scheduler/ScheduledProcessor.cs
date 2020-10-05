@@ -10,7 +10,7 @@ namespace ElectionResults.Core.Scheduler
     public abstract class ScheduledProcessor : ScopedProcessor
     {
         private DateTime _nextRun;
-        private int _intervalInSeconds = 3600*24;
+        private int _intervalInSeconds = 3600;
 
         public ScheduledProcessor(IServiceScopeFactory serviceScopeFactory) : base(serviceScopeFactory)
         {

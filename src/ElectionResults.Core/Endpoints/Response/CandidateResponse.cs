@@ -15,5 +15,6 @@
         public int? Seats { get; set; }
 
         public int? SeatsGained { get; set; }
+        public int TotalSeats { get; set; }
     }
 }

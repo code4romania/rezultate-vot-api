@@ -215,11 +215,23 @@ namespace ElectionResults.Core.Elections
 
             }
             var turnout = new Turnout();
-            var queryable = dbContext.Turnouts
-                .Where(t =>
-                    t.BallotId == ballot.BallotId &&
-                    t.CountyId == query.CountyId &&
-                    t.Division == ElectionDivision.Locality);
+            var division = ElectionDivision.Locality;
+            IQueryable<Turnout> queryable;
+            if (query.Division == ElectionDivision.National && (ballot.BallotType == BallotType.CountyCouncilPresident || ballot.BallotType == BallotType.CountyCouncil))
+            {
+                queryable = dbContext.Turnouts
+                    .Where(t =>
+                        t.BallotId == ballot.BallotId &&
+                        t.Division == ElectionDivision.County);
+            }
+            else
+            {
+                queryable = dbContext.Turnouts
+                    .Where(t =>
+                        t.BallotId == ballot.BallotId &&
+                        t.CountyId == query.CountyId &&
+                        t.Division == division);
+            }
 
             if (ballot.Election.Live)
             {
@@ -260,7 +272,7 @@ namespace ElectionResults.Core.Elections
                     else
                     {
                         var locality = await _territoryRepository.GetLocalityById(query.LocalityId);
-                        if(locality.IsFailure)
+                        if (locality.IsFailure)
                             return LiveElectionInfo.Default;
                         siruta = locality.IsSuccess ? locality.Value?.Siruta : null;
                     }
@@ -330,7 +342,7 @@ namespace ElectionResults.Core.Elections
                 return candidate;
             }
             var dbCandidate =
-                candidatesForThisElection.FirstOrDefault(c => candidate.Name.ContainsString(c.PartyName));
+                candidatesForThisElection.FirstOrDefault(c => c.PartyName != null && candidate.Name.ContainsString(c.PartyName));
             if (dbCandidate != null)
             {
                 dbCandidate.Votes = candidate.Votes;
@@ -384,17 +396,18 @@ namespace ElectionResults.Core.Elections
                     er.LocalityId == query.LocalityId);
             return await resultsQuery.ToListAsync();
         }
-        
+
         private async Task<List<CandidateResult>> RetrieveAggregatedVotes(ElectionResultsQuery query, Ballot ballot)
         {
             switch (query.Division)
             {
                 case ElectionDivision.County:
                     {
-                        var result = await _winnersAggregator.GetLocalityCityHallWinnersByCounty(ballot.BallotId, query.CountyId.GetValueOrDefault());
+                        var takeOnlyWinner = ballot.BallotType != BallotType.LocalCouncil;
+                        var result = await _winnersAggregator.GetLocalityCityHallWinnersByCounty(ballot.BallotId, query.CountyId.GetValueOrDefault(), takeOnlyWinner);
                         if (result.IsSuccess)
                         {
-                            var candidateResults = _winnersAggregator.RetrieveFirst10Winners(result.Value.Select(w => w.Candidate).ToList(), ballot.BallotType);
+                            var candidateResults = _winnersAggregator.RetrieveWinners(result.Value.Select(w => w.Candidate).ToList(), ballot.BallotType);
 
                             return candidateResults;
                         }
@@ -402,10 +415,19 @@ namespace ElectionResults.Core.Elections
                     }
                 case ElectionDivision.National:
                     {
-                        var result = await _winnersAggregator.GetAllLocalityWinners(ballot.BallotId);
+                        Result<List<CandidateResult>> result;
+                        if (ballot.BallotType == BallotType.CountyCouncil ||
+                            ballot.BallotType == BallotType.CountyCouncilPresident)
+                        {
+                            result = await _winnersAggregator.GetWinningCandidatesByCounty(ballot.BallotId);
+                        }
+                        else
+                        {
+                            result = await _winnersAggregator.GetAllLocalityWinners(ballot.BallotId);
+                        }
                         if (result.IsSuccess)
                         {
-                            var candidateResults = _winnersAggregator.RetrieveFirst10Winners(result.Value, ballot.BallotType);
+                            var candidateResults = _winnersAggregator.RetrieveWinners(result.Value, ballot.BallotType);
                             return candidateResults;
                         }
                         throw new Exception(result.Error);
