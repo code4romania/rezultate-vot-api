@@ -100,7 +100,7 @@ namespace ElectionResults.API
             services.Configure<LiveElectionSettings>(configuration.GetSection("LiveElectionSettings"));
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context, ICsvDownloaderJob csvDownloaderJob)
         {
             Console.WriteLine($"Environment: {env.EnvironmentName}");
             if (env.IsDevelopment())
@@ -108,6 +108,7 @@ namespace ElectionResults.API
                 app.UseDeveloperExceptionPage();
             }
             MigrateDatabase(context);
+            csvDownloaderJob.DownloadFiles().Wait();
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Rezultate Vot API V2");
