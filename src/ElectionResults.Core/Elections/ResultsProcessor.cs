@@ -11,6 +11,11 @@ namespace ElectionResults.Core.Elections
         public static ElectionResultsResponse PopulateElectionResults(Turnout electionTurnout, Ballot ballot, List<CandidateResult> candidates, List<Party> parties)
         {
             ElectionResultsResponse results = new ElectionResultsResponse();
+            if (candidates == null)
+            {
+                results.Candidates = new List<CandidateResponse>();
+                return results;
+            }
             results.NullVotes = electionTurnout.NullVotes;
             results.TotalVotes = electionTurnout.TotalVotes;
             results.ValidVotes = electionTurnout.ValidVotes;
@@ -50,11 +55,6 @@ namespace ElectionResults.Core.Elections
             {
                 var colors = new List<string>();
                 var logos = new List<string>();
-                if (candidates == null)
-                {
-                    results.Candidates = new List<CandidateResponse>();
-                    return results;
-                }
                 foreach (var candidate in candidates)
                 {
                     var matchingParty = parties.GetMatchingParty(candidate.ShortName);

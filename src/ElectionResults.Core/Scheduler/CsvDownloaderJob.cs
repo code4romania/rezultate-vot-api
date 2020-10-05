@@ -46,9 +46,6 @@ namespace ElectionResults.Core.Scheduler
         public async Task DownloadFiles()
         {
             await DownloadCandidates();
-            var csvUrl = "https://prezenta.roaep.ro/locale27092020/data/csv/simpv/presence_now.csv";
-            var stream = await DownloadFile(csvUrl);
-            await ProcessStream(stream);
         }
 
         private async Task DownloadCandidates()
@@ -57,7 +54,7 @@ namespace ElectionResults.Core.Scheduler
             {
                 using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
                 {
-                    var ballots = await dbContext.Ballots.Where(b => b.Election.Live).ToListAsync();
+                    var ballots = await dbContext.Ballots.Where(b => b.Date.Year == 2020).ToListAsync();
                     if (ballots.Any() == false)
                         return;
                     EntityFrameworkManager.ContextFactory = context => dbContext;
