@@ -15,7 +15,7 @@ namespace ElectionResults.Core.Elections
             results.TotalVotes = electionTurnout.TotalVotes;
             results.ValidVotes = electionTurnout.ValidVotes;
             results.EligibleVoters = electionTurnout.EligibleVoters;
-            results.TotalSeats = electionTurnout.TotalSeats;
+            results.TotalSeats = candidates.Sum(c => c.Seats1 + c.Seats2);
             results.VotesByMail = electionTurnout.VotesByMail != 0 ? electionTurnout.VotesByMail : (int?)null;
             if (ballot.BallotType == BallotType.Referendum)
             {
@@ -76,8 +76,7 @@ namespace ElectionResults.Core.Elections
                     Votes = c.Votes,
                     PartyColor = c.GetPartyColor(),
                     PartyLogo = c.Party?.LogoUrl,
-                    Seats = c.TotalSeats != 0 ? c.TotalSeats : c.Seats1 + c.Seats2,
-                    SeatsGained = c.SeatsGained
+                    Seats = c.TotalSeats != 0 ? c.TotalSeats : c.Seats1 + c.Seats2
                 }).ToList();
                 for (var i = 0; i < results.Candidates.Count; i++)
                 {

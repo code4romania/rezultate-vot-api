@@ -6,6 +6,7 @@ using CSharpFunctionalExtensions;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
+using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using LazyCache;
 using Microsoft.EntityFrameworkCore;
@@ -84,10 +85,8 @@ namespace ElectionResults.Core.Elections
                 Division = division,
                 Name = localityWinner.Name,
                 PartyId = localityWinner.PartyId,
-                TurnoutId = turnoutForLocality?.Id
+                TurnoutId = turnoutForLocality?.Id,
             };
-            if (winner.PartyId == null && localityWinner.PartyName.IsNotEmpty())
-                winner.Party = new Party { Name = localityWinner.PartyName };
             return winner;
         }
 
@@ -125,7 +124,7 @@ namespace ElectionResults.Core.Elections
         {
             var electionMapWinner = CreateElectionMapWinner(winner.CountyId ?? winner.LocalityId ?? winner.CountryId, winner.Ballot, winner.Candidate, winner.Turnout);
             if (electionMapWinner.Winner.PartyColor.IsEmpty())
-                electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(winner.Candidate.ShortName)?.Color;
+                electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(winner.Candidate.ShortName)?.Color ?? Consts.IndependentCandidateColor;
             return electionMapWinner;
         }
 
@@ -171,7 +170,7 @@ namespace ElectionResults.Core.Elections
 
                 var electionMapWinner = CreateElectionMapWinner(country.Id, ballot, countryWinner, turnoutForCountry);
                 if (electionMapWinner.Winner.PartyColor.IsEmpty())
-                    electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(countryWinner.ShortName)?.Color;
+                    electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(countryWinner.ShortName)?.Color ?? Consts.IndependentCandidateColor;
                 winners.Add(electionMapWinner);
                 winningCandidates.Add(CreateWinner(ballotId, countryWinner, electionMapWinner, turnoutForCountry.Id, country.Id, ElectionDivision.Diaspora_Country));
             }
@@ -224,7 +223,7 @@ namespace ElectionResults.Core.Elections
                     continue;
                 var electionMapWinner = CreateElectionMapWinner(county.CountyId, ballot, countyWinner, turnoutForCounty);
                 if (electionMapWinner.Winner.PartyColor.IsEmpty())
-                    electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(countyWinner.ShortName)?.Color;
+                    electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(countyWinner.ShortName)?.Color ?? Consts.IndependentCandidateColor;
                 winningCandidates.Add(CreateWinner(ballotId, countyWinner, electionMapWinner, turnoutForCounty.Id,
                     county.CountyId, ElectionDivision.County));
             }
@@ -279,7 +278,7 @@ namespace ElectionResults.Core.Elections
                 electionMapWinner.Winner.Name = winner.Name;
                 electionMapWinner.Winner.ShortName = winner.ShortName;
                 electionMapWinner.Winner.Votes = winner.Votes;
-                electionMapWinner.Winner.PartyColor = winner.Party?.Color;
+                electionMapWinner.Winner.PartyColor = winner.Party?.Color ?? Consts.IndependentCandidateColor;
                 electionMapWinner.Winner.Party = winner.Party;
             }
             else
@@ -336,6 +335,7 @@ namespace ElectionResults.Core.Elections
                     item.Votes = candidate.Count();
                 else
                     item.Votes = candidate.Sum(c => c.Votes);
+                item.TotalSeats = item.SeatsGained = candidate.Sum(c => c.Seats1 + c.Seats2);
                 candidateResults.Add(item);
             }
 

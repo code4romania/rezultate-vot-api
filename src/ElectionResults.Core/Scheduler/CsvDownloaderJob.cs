@@ -320,7 +320,7 @@ namespace ElectionResults.Core.Scheduler
                         Name = field
                     });
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     return candidates;
                 }
