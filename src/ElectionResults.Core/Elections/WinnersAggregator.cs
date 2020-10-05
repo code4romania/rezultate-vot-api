@@ -98,7 +98,7 @@ namespace ElectionResults.Core.Elections
                             && w.CountyId == countyId).ToListAsync();
             var winnersKey = MemoryCache.CreateWinnersKey(ballotId, countyId, division);
             var winners = await _appCache.GetOrAddAsync(winnersKey,
-                () => query, DateTimeOffset.Now.AddMinutes(60));
+                () => query, DateTimeOffset.Now.AddMinutes(10));
             return winners;
         }
 
