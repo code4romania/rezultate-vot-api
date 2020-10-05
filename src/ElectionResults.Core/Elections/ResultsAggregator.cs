@@ -215,23 +215,26 @@ namespace ElectionResults.Core.Elections
 
             }
             var turnout = new Turnout();
-            var division = ElectionDivision.Locality;
-            IQueryable<Turnout> queryable;
-            if (query.Division == ElectionDivision.National && (ballot.BallotType == BallotType.CountyCouncilPresident || ballot.BallotType == BallotType.CountyCouncil))
+            IQueryable<Turnout> queryable = dbContext.Turnouts
+                .Where(t =>
+                    t.BallotId == ballot.BallotId);
+            if (ballot.BallotType == BallotType.CountyCouncilPresident || ballot.BallotType == BallotType.CountyCouncil)
             {
-                queryable = dbContext.Turnouts
+                queryable = queryable
                     .Where(t =>
-                        t.BallotId == ballot.BallotId &&
                         t.Division == ElectionDivision.County);
             }
             else
             {
-                queryable = dbContext.Turnouts
+                queryable = queryable
                     .Where(t =>
-                        t.BallotId == ballot.BallotId &&
-                        t.CountyId == query.CountyId &&
-                        t.Division == division);
+                        t.Division == ElectionDivision.Locality);
             }
+
+
+            if (query.CountyId != null)
+                queryable = queryable.Where(c => c.CountyId == query.CountyId);
+
 
             if (ballot.Election.Live)
             {
