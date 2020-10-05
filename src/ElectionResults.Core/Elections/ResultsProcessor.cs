@@ -76,7 +76,8 @@ namespace ElectionResults.Core.Elections
                     Votes = c.Votes,
                     PartyColor = c.GetPartyColor(),
                     PartyLogo = c.Party?.LogoUrl,
-                    Seats = c.TotalSeats != 0 ? c.TotalSeats : c.Seats1 + c.Seats2
+                    Seats = c.TotalSeats != 0 ? c.TotalSeats : c.Seats1 + c.Seats2,
+                    TotalSeats = c.TotalSeats != 0 ? c.TotalSeats : c.Seats1 + c.Seats2
                 }).ToList();
                 for (var i = 0; i < results.Candidates.Count; i++)
                 {
