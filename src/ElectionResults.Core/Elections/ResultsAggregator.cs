@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -75,10 +75,17 @@ namespace ElectionResults.Core.Elections
                     .AsNoTracking()
                     .Include(b => b.Election)
                     .FirstOrDefault(e => e.BallotId == query.BallotId);
+                if (query.CountyId != null && ballot?.BallotType == BallotType.Mayor && query.CountyId.Value.IsCapitalCity() && ballot.Date.Year == 2020)
+                {
+                    ballot = dbContext.Ballots
+                        .AsNoTracking()
+                        .Include(b => b.Election)
+                        .FirstOrDefault(e => e.ElectionId == ballot.ElectionId && e.BallotType == BallotType.CountyCouncilPresident);
+                }
                 if (ballot == null)
                     throw new Exception($"No results found for ballot id {query.BallotId}");
                 var electionResponse = new ElectionResponse();
-
+                
                 var divisionTurnout =
                     await GetDivisionTurnout(query, dbContext, ballot);
                 var electionInfo = await GetCandidatesFromDb(query, ballot, dbContext);
