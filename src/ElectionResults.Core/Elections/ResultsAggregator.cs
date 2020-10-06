@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
-using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
@@ -12,36 +11,25 @@ using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using static System.String;
 
 namespace ElectionResults.Core.Elections
 {
     public class ResultsAggregator : IResultsAggregator
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly ICsvDownloaderJob _csvDownloaderJob;
         private readonly IPartiesRepository _partiesRepository;
         private readonly IWinnersAggregator _winnersAggregator;
         private readonly IElectionsRepository _electionRepository;
-        private readonly ITerritoryRepository _territoryRepository;
-        private readonly ILiveElectionUrlBuilder _liveElectionUrlBuilder;
 
         public ResultsAggregator(IServiceProvider serviceProvider,
-            ICsvDownloaderJob csvDownloaderJob,
             IPartiesRepository partiesRepository,
             IWinnersAggregator winnersAggregator,
-            IElectionsRepository electionRepository,
-            ITerritoryRepository territoryRepository,
-            ILiveElectionUrlBuilder liveElectionUrlBuilder)
+            IElectionsRepository electionRepository)
         {
             _serviceProvider = serviceProvider;
-            _csvDownloaderJob = csvDownloaderJob;
             _partiesRepository = partiesRepository;
             _winnersAggregator = winnersAggregator;
             _electionRepository = electionRepository;
-            _territoryRepository = territoryRepository;
-            _liveElectionUrlBuilder = liveElectionUrlBuilder;
         }
 
         public async Task<Result<List<ElectionMeta>>> GetAllBallots()
@@ -221,14 +209,6 @@ namespace ElectionResults.Core.Elections
         private static async Task<Turnout> RetrieveAggregatedTurnoutForCityHalls(ElectionResultsQuery query,
             Ballot ballot, ApplicationDbContext dbContext)
         {
-            if (ballot.Election.Live && query.Division == ElectionDivision.National)
-            {
-                var nationalTurnout = await dbContext.Turnouts
-                    .FirstOrDefaultAsync(t =>
-                        t.BallotId == ballot.BallotId && t.Division == ElectionDivision.National);
-                return nationalTurnout;
-
-            }
             var turnout = new Turnout();
             IQueryable<Turnout> queryable = dbContext.Turnouts
                 .Where(t =>
@@ -279,55 +259,6 @@ namespace ElectionResults.Core.Elections
             ApplicationDbContext dbContext)
         {
             LiveElectionInfo liveElectionInfo = new LiveElectionInfo();
-            if (ballot.Election.Live && ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()))
-            {
-                try
-                {
-                    int? siruta;
-                    var county = await _territoryRepository.GetCountyById(query.CountyId);
-                    if (query.LocalityId.GetValueOrDefault().IsCapitalCity() && query.Division == ElectionDivision.County)
-                        siruta = null;
-                    else
-                    {
-                        var locality = await _territoryRepository.GetLocalityById(query.LocalityId);
-                        if (locality.IsFailure)
-                            return LiveElectionInfo.Default;
-                        siruta = locality.IsSuccess ? locality.Value?.Siruta : null;
-                    }
-                    if (county.IsFailure)
-                    {
-                        return LiveElectionInfo.Default;
-                    }
-
-                    var countyShortName = county.IsSuccess ? county.Value.ShortName : null;
-                    var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, query.Division, countyShortName, siruta);
-                    if (url.IsFailure)
-                        return LiveElectionInfo.Default;
-                    liveElectionInfo = await _csvDownloaderJob.GetCandidatesFromUrl(url.Value);
-                    var candidates = liveElectionInfo.Candidates;
-                    var parties = await dbContext.Parties.ToListAsync();
-                    var candidatesForThisElection = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
-                    var dbCandidates = new List<CandidateResult>();
-                    if (candidates == null)
-                    {
-                        liveElectionInfo.Candidates = dbCandidates;
-                        return liveElectionInfo;
-                    }
-                    foreach (var candidate in candidates)
-                    {
-                        dbCandidates.Add(PopulateCandidateData(candidatesForThisElection, candidate, parties, ballot));
-                    }
-
-                    liveElectionInfo.Candidates = dbCandidates;
-                    return liveElectionInfo;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Probably there are no votes ");
-                    Console.WriteLine(e);
-                    return new LiveElectionInfo();
-                }
-            }
             if (ballot.Election.Category == ElectionCategory.Local && query.CountyId.GetValueOrDefault().IsCapitalCity() == false)
             {
                 if (!ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
@@ -343,64 +274,6 @@ namespace ElectionResults.Core.Elections
             return liveElectionInfo;
         }
 
-        private static CandidateResult PopulateCandidateData(List<CandidateResult> candidatesForThisElection, CandidateResult candidate, List<Party> parties, Ballot ballot)
-        {
-            if (ballot.BallotType == BallotType.CountyCouncil || ballot.BallotType == BallotType.LocalCouncil)
-            {
-                var party = parties.Where(p => p.Alias != null).FirstOrDefault(p => candidate.Name.ContainsString(p.Alias));
-                if (party != null)
-                {
-                    PopulatePartyInfo(candidate, party);
-                }
-                else
-                {
-                    if (candidate.PartyName.IsEmpty())
-                        candidate.PartyName = candidate.Name;
-                }
-                return candidate;
-            }
-            var dbCandidate =
-                candidatesForThisElection.FirstOrDefault(c => c.PartyName != null && candidate.Name.ContainsString(c.PartyName));
-            if (dbCandidate != null)
-            {
-                dbCandidate.Votes = candidate.Votes;
-            }
-            else
-            {
-                var party = parties.Where(p => p.Alias != null).FirstOrDefault(p => candidate.Name.ContainsString(p.Alias));
-                if (party == null)
-                {
-                    party = parties.Where(p => p.Name.Length > 10).FirstOrDefault(p => candidate.Name.ContainsString(p.Name));
-                }
-                if (party != null)
-                {
-                    PopulateCandidateWithPartyInfo(candidate, party);
-                }
-                else
-                {
-                    return candidate;
-                }
-            }
-            if (dbCandidate == null)
-                return candidate;
-            return dbCandidate;
-        }
-
-        private static void PopulateCandidateWithPartyInfo(CandidateResult candidate, Party party)
-        {
-            candidate.Party = party;
-            candidate.PartyId = party.Id;
-            if (party?.Alias != null)
-                candidate.Name = candidate.Name.Replace(party.Alias, "");
-            if (party.Name != null)
-                candidate.Name = candidate.Name.Replace(party.Name, "");
-            candidate.Name = candidate.Name.Trim('-', '.', ' ');
-        }
-        private static void PopulatePartyInfo(CandidateResult candidate, Party party)
-        {
-            candidate.Party = party;
-            candidate.PartyId = party.Id;
-        }
         private static async Task<List<CandidateResult>> GetCandidateResultsFromQueryAndBallot(ElectionResultsQuery query, Ballot ballot,
             ApplicationDbContext dbContext)
         {
