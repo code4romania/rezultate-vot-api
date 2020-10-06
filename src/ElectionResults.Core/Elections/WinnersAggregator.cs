@@ -172,7 +172,7 @@ namespace ElectionResults.Core.Elections
                 if (electionMapWinner.Winner.PartyColor.IsEmpty())
                     electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(countryWinner.ShortName)?.Color ?? Consts.IndependentCandidateColor;
                 winners.Add(electionMapWinner);
-                winningCandidates.Add(CreateWinner(ballotId, countryWinner, electionMapWinner, turnoutForCountry.Id, country.Id, ElectionDivision.Diaspora_Country));
+                winningCandidates.Add(CreateWinner(ballot, countryWinner, electionMapWinner, turnoutForCountry.Id, country.Id, ElectionDivision.Diaspora_Country));
             }
 
             await SaveWinners(winningCandidates);
@@ -195,7 +195,6 @@ namespace ElectionResults.Core.Elections
         {
             var counties = await _territoryRepository.GetCounties();
             var ballot = await _dbContext.Ballots
-                .AsNoTracking()
                 .Include(b => b.Election)
                 .FirstOrDefaultAsync(b => b.BallotId == ballotId);
             var candidateResultsByCounties = await _dbContext.CandidateResults
@@ -224,7 +223,7 @@ namespace ElectionResults.Core.Elections
                 var electionMapWinner = CreateElectionMapWinner(county.CountyId, ballot, countyWinner, turnoutForCounty);
                 if (electionMapWinner.Winner.PartyColor.IsEmpty())
                     electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(countyWinner.ShortName)?.Color ?? Consts.IndependentCandidateColor;
-                winningCandidates.Add(CreateWinner(ballotId, countyWinner, electionMapWinner, turnoutForCounty.Id,
+                winningCandidates.Add(CreateWinner(ballot, countyWinner, electionMapWinner, turnoutForCounty.Id,
                     county.CountyId, ElectionDivision.County));
             }
 
@@ -243,12 +242,13 @@ namespace ElectionResults.Core.Elections
             return winners.Select(w => w.Candidate).ToList();
         }
 
-        private static Winner CreateWinner(int ballotId, CandidateResult countyWinner,
+        private static Winner CreateWinner(Ballot ballot, CandidateResult countyWinner,
             ElectionMapWinner electionMapWinner, int turnoutId, int countryId, ElectionDivision division)
         {
             return new Winner
             {
-                BallotId = ballotId,
+                BallotId = ballot.BallotId,
+                Ballot = ballot,
                 CandidateId = countyWinner.Id,
                 Name = electionMapWinner.Winner.Name,
                 PartyId = electionMapWinner.Winner.Party?.Id,
