@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using Diacritics.Extensions;
 
 namespace ElectionResults.Core.Extensions
@@ -107,18 +108,8 @@ namespace ElectionResults.Core.Extensions
         }
         public static string ToSnakeCase(this string str)
         {
-            var enumerable = str.Select((x, i) => i > 0 && char.IsUpper(x) && str.IndexOf(x) > 0 && str[str.IndexOf(x)-1] != '_' ? "_" + x : x.ToString());
-            return string.Concat(enumerable).ToLower();
-        }
-
-        public static string ConvertEnumToString(this Enum type)
-        {
-            return type
-                .GetType()
-                .GetMember(type.ToString())
-                .FirstOrDefault()
-                ?.GetCustomAttribute<DescriptionAttribute>()
-                ?.Description ?? type.ToString();
+            Regex pattern = new Regex(@"[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+");
+            return string.Join("_", pattern.Matches(str)).ToLower();
         }
     }
 }

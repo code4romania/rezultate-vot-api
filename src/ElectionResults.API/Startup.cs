@@ -108,7 +108,6 @@ namespace ElectionResults.API
                 app.UseDeveloperExceptionPage();
             }
             MigrateDatabase(context);
-            csvDownloaderJob.DownloadFiles().Wait();
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Rezultate Vot API V2");
