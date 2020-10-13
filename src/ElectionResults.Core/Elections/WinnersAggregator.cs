@@ -141,7 +141,6 @@ namespace ElectionResults.Core.Elections
             if (countries.IsFailure)
                 return Result.Failure<List<ElectionMapWinner>>(countries.Error);
             var ballot = await _dbContext.Ballots
-                .AsNoTracking()
                 .Include(b => b.Election)
                 .FirstOrDefaultAsync(b => b.BallotId == ballotId);
 
