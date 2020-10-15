@@ -3,7 +3,7 @@ on:
     branches:
       - develop
 
-name: build
+name: Build & Deploy API Staging
 
 env:
   IMAGE_NAME: ${{ secrets.DOCKER_HUB_ORGANIZATION || 'code4romania' }}/rezultate-vot-api-stage
@@ -36,3 +36,10 @@ jobs:
             $IMAGE_NAME:$GITHUB_SHA \
             $IMAGE_NAME:latest
           docker push $IMAGE_NAME:latest
+      - name: Update and restart API
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.STAGING_SERVER_IP }}
+          username: ${{ secrets.STAGING_SERVER_SSH_USERNAME }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          script: "/root/deploy/restart.sh"

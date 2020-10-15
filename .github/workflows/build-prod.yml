@@ -3,7 +3,7 @@ on:
     branches:
       - master
 
-name: build
+name: Build & Deploy API Production
 
 env:
   IMAGE_NAME: ${{ secrets.DOCKER_HUB_ORGANIZATION || 'code4romania' }}/rezultate-vot-api
@@ -36,3 +36,10 @@ jobs:
             $IMAGE_NAME:$GITHUB_SHA \
             $IMAGE_NAME:latest
           docker push $IMAGE_NAME:latest
+      - name: Update and restart API
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.PROD_SERVER_IP }}
+          username: ${{ secrets.PROD_SERVER_SSH_USERNAME }}
+          key: ${{ secrets.PROD_SERVER_SSH_KEY }}
+          script: "/root/deploy/restart.sh"
