@@ -3,7 +3,7 @@ on:
     branches:
       - master
 
-name: build
+name: Build & Deploy API Production
 
 env:
   IMAGE_NAME: ${{ secrets.DOCKER_HUB_ORGANIZATION || 'code4romania' }}/rezultate-vot-api
