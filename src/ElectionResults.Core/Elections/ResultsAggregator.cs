@@ -198,12 +198,20 @@ namespace ElectionResults.Core.Elections
                 return await RetrieveAggregatedTurnoutForCityHalls(query, ballot, dbContext);
             }
 
-            return await dbContext.Turnouts
-                .FirstOrDefaultAsync(t =>
+            var turnouts = await dbContext.Turnouts
+                .Where(t =>
                     t.BallotId == ballot.BallotId &&
                     t.CountyId == query.CountyId &&
                     t.CountryId == query.CountryId &&
-                    t.LocalityId == query.LocalityId);
+                    t.Division == query.Division &&
+                    t.LocalityId == query.LocalityId).ToListAsync();
+            if (turnouts.Count > 0 && query.Division == ElectionDivision.Diaspora_Country)
+            {
+                var turnout = AggregateTurnouts(turnouts);
+                turnout.BallotId = ballot.BallotId;
+                return turnout;
+            }
+            return turnouts.FirstOrDefault();
         }
 
         private static async Task<Turnout> RetrieveAggregatedTurnoutForCityHalls(ElectionResultsQuery query,
@@ -247,11 +255,18 @@ namespace ElectionResults.Core.Elections
 
             var turnoutsForCounty = await queryable.ToListAsync();
 
+            turnout = AggregateTurnouts(turnoutsForCounty);
             turnout.BallotId = ballot.BallotId;
-            turnout.EligibleVoters = turnoutsForCounty.Sum(c => c.EligibleVoters);
-            turnout.TotalVotes = turnoutsForCounty.Sum(c => c.TotalVotes);
-            turnout.ValidVotes = turnoutsForCounty.Sum(c => c.ValidVotes);
-            turnout.NullVotes = turnoutsForCounty.Sum(c => c.NullVotes);
+            return turnout;
+        }
+
+        private static Turnout AggregateTurnouts(List<Turnout> turnouts)
+        {
+            Turnout turnout = new Turnout();    
+            turnout.EligibleVoters = turnouts.Sum(c => c.EligibleVoters);
+            turnout.TotalVotes = turnouts.Sum(c => c.TotalVotes);
+            turnout.ValidVotes = turnouts.Sum(c => c.ValidVotes);
+            turnout.NullVotes = turnouts.Sum(c => c.NullVotes);
             return turnout;
         }
 
@@ -285,7 +300,17 @@ namespace ElectionResults.Core.Elections
                     er.CountyId == query.CountyId &&
                     er.CountryId == query.CountryId &&
                     er.LocalityId == query.LocalityId);
-            return await resultsQuery.ToListAsync();
+            var results = await resultsQuery.ToListAsync();
+            if (query.Division == ElectionDivision.Diaspora_Country)
+            {
+                results = results.GroupBy(r => r.Name).Select(r =>
+                {
+                    var candidate = r.FirstOrDefault();
+                    candidate.Votes = r.Sum(c => c.Votes);
+                    return candidate;
+                }).ToList();
+            }
+            return results;
         }
 
         private async Task<List<CandidateResult>> RetrieveAggregatedVotes(ElectionResultsQuery query, Ballot ballot)
