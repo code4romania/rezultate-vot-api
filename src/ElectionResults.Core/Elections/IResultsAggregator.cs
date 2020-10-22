@@ -29,8 +29,6 @@ namespace ElectionResults.Core.Elections
         List<CandidateResult> RetrieveWinners(List<CandidateResult> results,
             BallotType ballotType);
 
-        Task<Result<List<CandidateResult>>> GetAllLocalityWinners(int ballotId);
         Task<Result<List<CandidateResult>>> GetWinningCandidatesByCounty(int ballotId);
-
     }
 }

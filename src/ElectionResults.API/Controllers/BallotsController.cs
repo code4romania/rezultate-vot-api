@@ -42,7 +42,6 @@ namespace ElectionResults.API.Controllers
         }
 
         [HttpGet("ballot")]
-        //[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public async Task<ActionResult<ElectionResponse>> GetBallot([FromQuery] ElectionResultsQuery query)
         {
             try
