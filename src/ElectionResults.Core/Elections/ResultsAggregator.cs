@@ -278,7 +278,7 @@ namespace ElectionResults.Core.Elections
             {
                 if (!ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
                 {
-                    var aggregatedVotes = await RetrieveAggregatedVotes(query, ballot);
+                    var aggregatedVotes = await RetrieveAggregatedVotes(dbContext, query, ballot);
                     liveElectionInfo.Candidates = aggregatedVotes;
                     return liveElectionInfo;
                 }
@@ -313,7 +313,8 @@ namespace ElectionResults.Core.Elections
             return results;
         }
 
-        private async Task<List<CandidateResult>> RetrieveAggregatedVotes(ElectionResultsQuery query, Ballot ballot)
+        private async Task<List<CandidateResult>> RetrieveAggregatedVotes(ApplicationDbContext dbContext,
+            ElectionResultsQuery query, Ballot ballot)
         {
             switch (query.Division)
             {
@@ -336,15 +337,16 @@ namespace ElectionResults.Core.Elections
                             ballot.BallotType == BallotType.CountyCouncilPresident)
                         {
                             result = await _winnersAggregator.GetWinningCandidatesByCounty(ballot.BallotId);
+                            if (result.IsSuccess)
+                                return _winnersAggregator.RetrieveWinners(result.Value, ballot.BallotType);
                         }
                         else
                         {
-                            result = await _winnersAggregator.GetAllLocalityWinners(ballot.BallotId);
-                        }
-                        if (result.IsSuccess)
-                        {
-                            var candidateResults = _winnersAggregator.RetrieveWinners(result.Value, ballot.BallotType);
-                            return candidateResults;
+                            var resultsForElection = await dbContext.CandidateResults
+                                .Include(c => c.Party)
+                                .Where(c => c.BallotId == query.BallotId && c.Division == ElectionDivision.Locality)
+                                .ToListAsync();
+                            return _winnersAggregator.RetrieveWinners(resultsForElection, ballot.BallotType);
                         }
                         throw new Exception(result.Error);
                     }

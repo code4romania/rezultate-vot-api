@@ -45,7 +45,7 @@ namespace ElectionResults.Core.Scheduler
 
         public async Task DownloadFiles()
         {
-            await DownloadCandidates();
+           // await DownloadCandidates();
         }
 
         private async Task DownloadCandidates()
