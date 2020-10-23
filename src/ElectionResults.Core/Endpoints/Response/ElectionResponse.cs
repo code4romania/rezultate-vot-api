@@ -19,5 +19,6 @@ namespace ElectionResults.Core.Endpoints.Response
         public Observation Observation { get; set; }
         
         public List<ArticleResponse> ElectionNews { get; set; }
+        public bool Aggregated { get; set; }
     }
 }
