@@ -474,6 +474,7 @@ namespace ElectionResults.Core.Scheduler
         public int ValidVotes { get; set; }
 
         public static LiveElectionInfo Default { get; } = new LiveElectionInfo();
+        public bool Aggregated { get; set; }
     }
 
     public class CsvTurnout

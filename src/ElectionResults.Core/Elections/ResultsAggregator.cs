@@ -107,6 +107,7 @@ namespace ElectionResults.Core.Elections
                     results = ResultsProcessor.PopulateElectionResults(divisionTurnout, ballot, electionInfo.Candidates, parties.ToList());
                 }
 
+                electionResponse.Aggregated = electionInfo.Aggregated;
                 electionResponse.Results = results;
                 electionResponse.Observation = await dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
                 if (divisionTurnout != null)
@@ -280,6 +281,7 @@ namespace ElectionResults.Core.Elections
                 {
                     var aggregatedVotes = await RetrieveAggregatedVotes(dbContext, query, ballot);
                     liveElectionInfo.Candidates = aggregatedVotes;
+                    liveElectionInfo.Aggregated = true;
                     return liveElectionInfo;
                 }
             }
