@@ -117,6 +117,7 @@ namespace ElectionResults.Core.Elections
                 .Include(w => w.Candidate.Party)
                 .Include(w => w.Turnout)
                 .Include(w => w.Ballot)
+                .Include(w => w.Ballot.Election)
                 .Include(w => w.Party);
         }
 
@@ -260,7 +261,7 @@ namespace ElectionResults.Core.Elections
 
         private async Task SaveWinners(List<Winner> winningCandidates)
         {
-            _dbContext.Winners.AddRange(winningCandidates);
+            _dbContext.Winners.UpdateRange(winningCandidates);
             await _dbContext.SaveChangesAsync();
         }
 
@@ -340,45 +341,5 @@ namespace ElectionResults.Core.Elections
 
             return candidateResults;
         }
-
-        public async Task<Result<List<CandidateResult>>> GetAllLocalityWinners(int ballotId)
-        {
-            var dbWinners = await GetWinners(ballotId, null, ElectionDivision.Locality);
-            if (dbWinners.Count > 0)
-                return dbWinners.Select(w => w.Candidate).ToList();
-            _appCache.Remove(MemoryCache.CreateWinnersKey(ballotId, null, ElectionDivision.Locality));
-            var winners = new List<CandidateResult>();
-            var allLocalities = await _dbContext.Localities.ToListAsync();
-            var resultsForElection = await _dbContext.CandidateResults
-                .Include(c => c.Party)
-                .Where(c => c.BallotId == ballotId && c.Division == ElectionDivision.Locality)
-                .ToListAsync();
-
-            var localitiesForThisElection = allLocalities
-                .Where(l => resultsForElection.Any(r => r.LocalityId == l.LocalityId)).ToList();
-            var turnouts = await _dbContext.Turnouts
-                .Where(c => c.BallotId == ballotId &&
-                            c.Division == ElectionDivision.Locality)
-                .ToListAsync();
-            List<Winner> winningCandidates = new List<Winner>();
-            foreach (var locality in localitiesForThisElection)
-            {
-                var localityWinner = resultsForElection
-                    .Where(c => c.LocalityId == locality.LocalityId)
-                    .OrderByDescending(c => c.Votes)
-                    .FirstOrDefault();
-                if (localityWinner == null)
-                    continue;
-                var turnoutForLocality = turnouts
-                    .FirstOrDefault(c => c.LocalityId == locality.LocalityId);
-                winners.Add(localityWinner);
-                winningCandidates.Add(CreateWinner(ballotId, null, localityWinner, turnoutForLocality, ElectionDivision.Locality));
-            }
-
-            await SaveWinners(winningCandidates);
-
-            return Result.Success(winners);
-        }
-
     }
 }
