@@ -117,6 +117,7 @@ namespace ElectionResults.Core.Elections
                 .Include(w => w.Candidate.Party)
                 .Include(w => w.Turnout)
                 .Include(w => w.Ballot)
+                .Include(w => w.Ballot.Election)
                 .Include(w => w.Party);
         }
 
@@ -260,7 +261,7 @@ namespace ElectionResults.Core.Elections
 
         private async Task SaveWinners(List<Winner> winningCandidates)
         {
-            _dbContext.Winners.AddRange(winningCandidates);
+            _dbContext.Winners.UpdateRange(winningCandidates);
             await _dbContext.SaveChangesAsync();
         }
 
