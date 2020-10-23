@@ -42,4 +42,4 @@ jobs:
           host: ${{ secrets.STAGING_SERVER_IP }}
           username: ${{ secrets.STAGING_SERVER_SSH_USERNAME }}
           key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
-          script: "/root/deploy/restart.sh"
+          script: "/home/ubuntu/restart.sh"
