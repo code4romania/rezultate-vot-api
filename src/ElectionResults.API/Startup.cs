@@ -56,7 +56,7 @@ namespace ElectionResults.API
             RegisterDependencies(services, Configuration);
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Rezultate Vot API", Version = "v2" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Rezultate Vot API", Version = "v1" });
             });
             services.AddDbContextPool<ApplicationDbContext>(options =>
             {
@@ -102,6 +102,7 @@ namespace ElectionResults.API
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context, ICsvDownloaderJob csvDownloaderJob)
         {
+            app.UseSwagger();
             Console.WriteLine($"Environment: {env.EnvironmentName}");
             if (env.IsDevelopment())
             {
