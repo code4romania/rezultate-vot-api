@@ -218,7 +218,6 @@ namespace ElectionResults.Core.Elections
         private static async Task<Turnout> RetrieveAggregatedTurnoutForCityHalls(ElectionResultsQuery query,
             Ballot ballot, ApplicationDbContext dbContext)
         {
-            var turnout = new Turnout();
             IQueryable<Turnout> queryable = dbContext.Turnouts
                 .Where(t =>
                     t.BallotId == ballot.BallotId);
@@ -239,24 +238,9 @@ namespace ElectionResults.Core.Elections
             if (query.CountyId != null)
                 queryable = queryable.Where(c => c.CountyId == query.CountyId);
 
-
-            if (ballot.Election.Live)
-            {
-                if (query.Division == ElectionDivision.County)
-                {
-                    if (ballot.BallotType != BallotType.Mayor && ballot.BallotType != BallotType.LocalCouncil)
-                    {
-                        queryable = dbContext.Turnouts
-                            .Where(t =>
-                                t.BallotId == ballot.BallotId &&
-                                t.Division == ElectionDivision.County);
-                    }
-                }
-            }
-
             var turnoutsForCounty = await queryable.ToListAsync();
 
-            turnout = AggregateTurnouts(turnoutsForCounty);
+            var turnout = AggregateTurnouts(turnoutsForCounty);
             turnout.BallotId = ballot.BallotId;
             return turnout;
         }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -183,6 +184,43 @@ namespace ElectionResults.Core.Elections
         public async Task<Result<List<ElectionMapWinner>>> GetCountyWinners(int ballotId)
         {
             var parties = await _partiesRepository.GetAllParties();
+            var ballot = await _dbContext.Ballots
+                .Include(b => b.Election)
+                .FirstOrDefaultAsync(b => b.BallotId == ballotId);
+            if (ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.LocalCouncil)
+            {
+                var results = await _dbContext.CandidateResults
+                    .Include(c => c.Party)
+                    .Where(c => c.BallotId == ballotId && c.Division == ElectionDivision.Locality)
+                    .ToListAsync();
+
+                var list = new List<CandidateResult>();
+                var resultsForElection = results.GroupBy(c => c.CountyId);
+                foreach (var countyGroup in resultsForElection)
+                {
+                    var candidateResults = RetrieveWinners(countyGroup.ToList(), ballot.BallotType);
+                    CandidateResult topResult;
+                    if (ballot.BallotType == BallotType.Mayor)
+                    {
+                        topResult = candidateResults.OrderByDescending(c => c.Votes).FirstOrDefault();
+                    }
+                    else
+                    {
+                        topResult = candidateResults.OrderByDescending(c => c.TotalSeats).FirstOrDefault();
+                    }
+                    list.Add(topResult);
+                }
+                return list
+                    .Select(c =>
+                    {
+                        var turnout = new Turnout { ValidVotes = c.Votes };
+                        if (ballot.BallotType == BallotType.LocalCouncil)
+                        {
+                            turnout.ValidVotes = c.TotalSeats;
+                        }
+                        return CreateElectionMapWinner(c.CountyId, ballot, c, turnout);
+                    }).ToList();
+            }
             var dbWinners = await GetWinners(ballotId, null, ElectionDivision.County);
             if (dbWinners.Count > 0)
                 return dbWinners.Select(winner => WinnerToElectionMapWinner(winner, parties)).ToList();
@@ -197,6 +235,7 @@ namespace ElectionResults.Core.Elections
             var ballot = await _dbContext.Ballots
                 .Include(b => b.Election)
                 .FirstOrDefaultAsync(b => b.BallotId == ballotId);
+
             var candidateResultsByCounties = await _dbContext.CandidateResults
                 .Include(c => c.Party)
                 .Where(c => c.BallotId == ballotId
@@ -265,12 +304,12 @@ namespace ElectionResults.Core.Elections
             await _dbContext.SaveChangesAsync();
         }
 
-        private static ElectionMapWinner CreateElectionMapWinner(int? id, Ballot ballot, CandidateResult winner,
-            Turnout turnoutForCountry)
+        private static ElectionMapWinner CreateElectionMapWinner(int? divisionId, Ballot ballot, CandidateResult winner,
+            Turnout turnoutForDivision)
         {
             var electionMapWinner = new ElectionMapWinner
             {
-                Id = id.GetValueOrDefault(),
+                Id = divisionId.GetValueOrDefault(),
                 Winner = new MapWinner()
             };
             if (ballot.BallotType != BallotType.Referendum)
@@ -287,7 +326,7 @@ namespace ElectionResults.Core.Elections
                 {
                     electionMapWinner.Winner.Name = "NU AU VOTAT";
                     electionMapWinner.Winner.ShortName = "NU AU VOTAT";
-                    electionMapWinner.Winner.Votes = turnoutForCountry.EligibleVoters - turnoutForCountry.TotalVotes;
+                    electionMapWinner.Winner.Votes = turnoutForDivision.EligibleVoters - turnoutForDivision.TotalVotes;
                 }
                 else
                 {
@@ -306,7 +345,7 @@ namespace ElectionResults.Core.Elections
                 }
             }
 
-            electionMapWinner.ValidVotes = turnoutForCountry.ValidVotes;
+            electionMapWinner.ValidVotes = turnoutForDivision.ValidVotes;
             return electionMapWinner;
         }
 
@@ -329,7 +368,8 @@ namespace ElectionResults.Core.Elections
                 var item = new CandidateResult
                 {
                     Name = candidate.Key == null ? "INDEPENDENT" : electionMapWinner?.Party.Name,
-                    Party = electionMapWinner?.Party
+                    Party = electionMapWinner?.Party,
+                    CountyId = electionMapWinner.CountyId
                 };
                 if (ballotType == BallotType.Mayor || ballotType == BallotType.CountyCouncilPresident)
                     item.Votes = candidate.Count();
