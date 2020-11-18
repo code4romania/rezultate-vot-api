@@ -198,7 +198,10 @@ namespace ElectionResults.Core.Elections
                 var resultsForElection = results.GroupBy(c => c.CountyId);
                 foreach (var countyGroup in resultsForElection)
                 {
-                    var candidateResults = RetrieveWinners(countyGroup.ToList(), ballot.BallotType);
+                    var countyWinners = countyGroup
+                        .GroupBy(c => c.LocalityId)
+                        .Select(g => g.OrderByDescending(x => x.Votes).FirstOrDefault()).ToList();
+                    var candidateResults = RetrieveWinners(countyWinners, ballot.BallotType);
                     CandidateResult topResult;
                     if (ballot.BallotType == BallotType.Mayor)
                     {
