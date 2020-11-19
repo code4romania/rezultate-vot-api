@@ -42,4 +42,4 @@ jobs:
           host: ${{ secrets.PROD_SERVER_IP }}
           username: ${{ secrets.PROD_SERVER_SSH_USERNAME }}
           key: ${{ secrets.PROD_SERVER_SSH_KEY }}
-          script: "/root/deploy/restart.sh"
+          script: "/home/ubuntu/restart.sh"
