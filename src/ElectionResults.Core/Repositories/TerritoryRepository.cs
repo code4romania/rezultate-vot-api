@@ -23,7 +23,9 @@ namespace ElectionResults.Core.Repositories
         public async Task<Result<List<County>>> GetCounties()
         {
             return await _appCache.GetOrAddAsync(
-                MemoryCache.Counties.Key, () => _dbContext.Counties.OrderBy(c => c.Name).ToListAsync(),
+                MemoryCache.Counties.Key, () => _dbContext.Counties
+                    .Where(c => c.Name != "MINORITĂȚI")
+                    .OrderBy(c => c.Name).ToListAsync(),
                 DateTimeOffset.Now.AddMinutes(MemoryCache.Counties.Minutes));
         }
 

@@ -20,5 +20,10 @@ namespace ElectionResults.Core.Extensions
         {
             return id == 12913;
         }
+
+        public static bool IsDiaspora(this int id)
+        {
+            return id == 16820;
+        }
     }
 }
