@@ -42,10 +42,11 @@ namespace ElectionResults.API.Controllers
         }
 
         [HttpGet("ballots/{ballotId}/candidates")]
-        public async Task<ActionResult<List<BasicCandidateInfo>>> GetCandidatesForBallot([FromQuery] ElectionResultsQuery query)
+        public async Task<ActionResult<List<BasicCandidateInfo>>> GetCandidatesForBallot([FromQuery] ElectionResultsQuery query, int ballotId)
         {
             try
             {
+                query.BallotId = ballotId;
                 if (query.LocalityId == 0)
                     query.LocalityId = null;
                 if (query.CountyId == 0)
