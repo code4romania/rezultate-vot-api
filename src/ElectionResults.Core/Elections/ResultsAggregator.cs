@@ -365,7 +365,7 @@ namespace ElectionResults.Core.Elections
             }
         }
 
-        public async Task<Result<List<BasicCandidateInfo>>> GetBallotCandidates(ElectionResultsQuery query)
+        public async Task<Result<List<PartyList>>> GetBallotCandidates(ElectionResultsQuery query)
         {
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
@@ -378,12 +378,14 @@ namespace ElectionResults.Core.Elections
                 var minorities = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
                 candidates = candidates.Concat(minorities).ToList();
                 return candidates
-                    .OrderBy(c => c.PartyName)
-                    .ThenBy(c => c.BallotPosition)
-                    .Select(c => new BasicCandidateInfo
+                    .GroupBy(c => c.PartyName)
+                    .Select(p => new PartyList
                     {
-                        Name = c.Name,
-                        PartyName = c.PartyName
+                        Candidates = p.OrderBy(c => c.BallotPosition).Select(c => new BasicCandidateInfo
+                        {
+                            Name = c.Name
+                        }).ToList(),
+                        Name = p.FirstOrDefault()?.PartyName
                     }).ToList();
             }
         }
