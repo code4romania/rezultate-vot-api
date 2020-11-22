@@ -60,6 +60,7 @@ namespace ElectionResults.Importer
             try
             {
                 var election = await CreateElection(dbContext);
+                Log.LogInformation($"Created election with id {election.ElectionId}");
                 var senateBallot = await CreateBallot(dbContext, "Senat", election, BallotType.Senate);
                 var houseBallot = await CreateBallot(dbContext, "Camera Deputatilor", election, BallotType.House);
                 var senators = new List<ExcelCandidate>();
@@ -79,10 +80,11 @@ namespace ElectionResults.Importer
             }
             catch (ArgumentOutOfRangeException)
             {
+                Log.LogWarning("The election already exists");
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Log.LogError(e);
             }
         }
 
@@ -152,6 +154,7 @@ namespace ElectionResults.Importer
 
         private static async Task<List<ExcelCandidate>> ImportDeputies(string countyName)
         {
+            Log.LogInformation(countyName + " Camera-Deputatilor");
             var url = GetUrl("Camera-Deputatilor", countyName);
             try
             {
@@ -168,8 +171,7 @@ namespace ElectionResults.Importer
             }
             catch (Exception e)
             {
-                Console.WriteLine(url);
-                Console.WriteLine(e);
+                Log.LogError(e);
             }
 
             return new List<ExcelCandidate>();
@@ -197,6 +199,7 @@ namespace ElectionResults.Importer
 
         private static async Task<List<ExcelCandidate>> ImportSenate(string countyName)
         {
+            Log.LogInformation(countyName + " Senat");
             var url = GetUrl("Senat", countyName);
             try
             {
@@ -211,8 +214,7 @@ namespace ElectionResults.Importer
             }
             catch (Exception e)
             {
-                Console.WriteLine(url);
-                Console.WriteLine(e);
+                Log.LogError(e);
                 return new List<ExcelCandidate>();
             }
         }
@@ -262,6 +264,7 @@ namespace ElectionResults.Importer
             _countiesMap.Add("VÂLCEA", 19520);
             _countiesMap.Add("VASLUI", 20009);
             _countiesMap.Add("VRANCEA", 20574);
+            Log.LogInformation($"Created counties map with {_countiesMap.Count} values");
         }
     }
 }
