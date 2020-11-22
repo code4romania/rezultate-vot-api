@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
 using ElectionResults.Importer;
@@ -18,9 +19,16 @@ namespace ElectionResults.API.Import
 
         public async Task Import()
         {
-            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+            try
             {
-                await ParliamentImporter.Import(dbContext);
+                using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+                {
+                    await ParliamentImporter.Import(dbContext);
+                }
+            }
+            catch (Exception e)
+            {
+                Log.LogError(e);
             }
         }
     }

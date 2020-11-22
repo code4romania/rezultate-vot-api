@@ -5,6 +5,7 @@ using ElectionResults.API.Import;
 using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Extensions;
+using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
 using ElectionResults.Importer;
@@ -16,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 
 namespace ElectionResults.API
@@ -103,8 +105,9 @@ namespace ElectionResults.API
             services.Configure<LiveElectionSettings>(configuration.GetSection("LiveElectionSettings"));
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context, ILoggerFactory loggerFactory)
         {
+            Log.SetLogger(loggerFactory.CreateLogger<Startup>());
             app.UseSwagger();
             Console.WriteLine($"Environment: {env.EnvironmentName}");
             if (env.IsDevelopment())

@@ -55,6 +55,7 @@ namespace ElectionResults.Core.Infrastructure
         {
             try
             {
+                Console.WriteLine(message);
                 _logger.LogWarning(message);
             }
             catch
