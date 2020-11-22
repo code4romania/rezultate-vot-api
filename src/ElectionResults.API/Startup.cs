@@ -141,6 +141,7 @@ namespace ElectionResults.API
             try
             {
                 context.Database.Migrate();
+                Importer.ParliamentImporter.Import(context).Wait();
             }
             catch (Exception e)
             {
