@@ -14,7 +14,8 @@
 
         public int? Seats { get; set; }
 
-        public int? SeatsGained { get; set; }
         public int TotalSeats { get; set; }
+
+        public string PartyName { get; set; }
     }
 }

@@ -32,6 +32,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\ElectionResults.Core\ElectionResults.Core.csproj" />
+    <ProjectReference Include="..\ElectionResults.Importer\ElectionResults.Importer.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="wwwroot\*" />

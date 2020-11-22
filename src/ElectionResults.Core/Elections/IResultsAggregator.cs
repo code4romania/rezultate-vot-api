@@ -14,6 +14,8 @@ namespace ElectionResults.Core.Elections
         Task<Result<ElectionResponse>> GetBallotResults(ElectionResultsQuery query);
 
         Task<List<ArticleResponse>> GetNewsFeed(ElectionResultsQuery query, int electionId);
+
+        Task<Result<List<PartyList>>> GetBallotCandidates(ElectionResultsQuery query);
     }
 
     public interface IWinnersAggregator
