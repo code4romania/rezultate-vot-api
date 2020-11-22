@@ -7,19 +7,19 @@ namespace ElectionResults.Core.Scheduler
 {
     public class ScheduleTask : ScheduledProcessor
     {
-        private readonly ICsvDownloaderJob _csvDownloaderJob;
+        private readonly IParliamentCrawler _parliamentCrawler;
 
         public ScheduleTask(IServiceScopeFactory serviceScopeFactory,
-            ICsvDownloaderJob csvDownloaderJob)
+            IParliamentCrawler parliamentCrawler)
             : base(serviceScopeFactory)
         {
-            _csvDownloaderJob = csvDownloaderJob;
+            _parliamentCrawler = parliamentCrawler;
         }
 
         public override async Task ProcessInScope(IServiceProvider serviceProvider)
         {
-            Log.LogInformation($"Processing starts here at {DateTime.UtcNow:F}");
-            await _csvDownloaderJob.DownloadFiles();
+            Log.LogInformation($"Importing candidates at {DateTime.UtcNow:F}");
+            await _parliamentCrawler.Import();
         }
     }
 }
