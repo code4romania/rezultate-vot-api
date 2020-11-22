@@ -11,6 +11,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Extensions;
+using ElectionResults.Core.Infrastructure;
 
 namespace ElectionResults.Importer
 {
@@ -61,12 +62,10 @@ namespace ElectionResults.Importer
                 var election = await CreateElection(dbContext);
                 var senateBallot = await CreateBallot(dbContext, "Senat", election, BallotType.Senate);
                 var houseBallot = await CreateBallot(dbContext, "Camera Deputatilor", election, BallotType.House);
-                var counties = await dbContext.Counties.ToListAsync();
                 var senators = new List<ExcelCandidate>();
                 var deputies = new List<ExcelCandidate>();
                 foreach (var county in _countiesMap)
                 {
-                    var dbCounty = counties.FirstOrDefault(c => c.CountyId == county.Value);
                     var senate = await ImportSenate(county.Key);
                     var deputiesList = await ImportDeputies(county.Key);
                     senators.AddRange(senate);
@@ -107,7 +106,7 @@ namespace ElectionResults.Importer
                     candidateResult.CountyId = null;
                 }
 
-                if (countyId == 16821)
+                if (countyId == Consts.MinoritiesCountyId)
                 {
                     candidateResult.CountyId = null;
                 }

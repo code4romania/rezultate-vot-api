@@ -6,6 +6,7 @@ using ElectionResults.Core.Elections;
 using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
+using ElectionResults.Importer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -100,7 +101,7 @@ namespace ElectionResults.API
             services.Configure<LiveElectionSettings>(configuration.GetSection("LiveElectionSettings"));
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context, ICsvDownloaderJob csvDownloaderJob)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context)
         {
             app.UseSwagger();
             Console.WriteLine($"Environment: {env.EnvironmentName}");
@@ -109,7 +110,6 @@ namespace ElectionResults.API
                 app.UseDeveloperExceptionPage();
             }
             MigrateDatabase(context);
-            Importer.ParliamentImporter.Import(context).Wait();
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Rezultate Vot API V2");
@@ -135,6 +135,7 @@ namespace ElectionResults.API
                     endpoints.MapPost("/Identity/Account/Register", context => Task.Factory.StartNew(() => context.Response.Redirect("/Identity/Account/Login", true)));
                 }
             });
+            ParliamentImporter.Import(context).Wait(TimeSpan.FromMinutes(10));
         }
 
         private static void MigrateDatabase(ApplicationDbContext context)
