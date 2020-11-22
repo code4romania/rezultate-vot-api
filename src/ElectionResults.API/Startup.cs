@@ -1,6 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using ElectionResults.API.Import;
 using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Extensions;
@@ -88,6 +89,7 @@ namespace ElectionResults.API
             services.AddTransient<IResultsAggregator, ResultsAggregator>();
             services.AddTransient<IAuthorsRepository, AuthorsRepository>();
             services.AddTransient<ICsvDownloaderJob, CsvDownloaderJob>();
+            services.AddTransient<IParliamentCrawler, ParliamentCrawler>();
             services.AddTransient<IWinnersAggregator, WinnersAggregator>();
             services.AddTransient<ILiveElectionUrlBuilder, LiveElectionUrlBuilder>();
 
@@ -135,7 +137,6 @@ namespace ElectionResults.API
                     endpoints.MapPost("/Identity/Account/Register", context => Task.Factory.StartNew(() => context.Response.Redirect("/Identity/Account/Login", true)));
                 }
             });
-            ParliamentImporter.Import(context).Wait(TimeSpan.FromMinutes(10));
         }
 
         private static void MigrateDatabase(ApplicationDbContext context)
