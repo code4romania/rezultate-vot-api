@@ -64,7 +64,7 @@ namespace ElectionResults.API
                    );
             });
 
-          
+
             services.AddLazyCache();
             services.AddCors(options =>
             {
@@ -77,7 +77,7 @@ namespace ElectionResults.API
                             .AllowAnyOrigin();
                     });
             });
-            
+
             if (Configuration["ScheduleTaskEnabled"].ToLower().Equals("true")) //excuse the primitive syntax
                 services.AddHostedService<ScheduleTask>();
         }
@@ -109,6 +109,7 @@ namespace ElectionResults.API
                 app.UseDeveloperExceptionPage();
             }
             MigrateDatabase(context);
+            Importer.ParliamentImporter.Import(context).Wait();
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Rezultate Vot API V2");
@@ -141,7 +142,6 @@ namespace ElectionResults.API
             try
             {
                 context.Database.Migrate();
-                Importer.ParliamentImporter.Import(context).Wait();
             }
             catch (Exception e)
             {
