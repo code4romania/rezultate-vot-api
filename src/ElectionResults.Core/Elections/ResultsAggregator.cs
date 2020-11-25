@@ -7,6 +7,7 @@ using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
+using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
 using Microsoft.EntityFrameworkCore;
@@ -63,9 +64,9 @@ namespace ElectionResults.Core.Elections
                     .AsNoTracking()
                     .Include(b => b.Election)
                     .FirstOrDefault(e => e.BallotId == query.BallotId);
-                if (query.CountyId != null 
+                if (query.CountyId != null
                     && query.CountyId.Value.IsCapitalCity()
-                    && query.Division == ElectionDivision.County 
+                    && query.Division == ElectionDivision.County
                     && ballot.Date.Year == 2020)
                 {
                     BallotType ballotType = ballot.BallotType;
@@ -81,7 +82,7 @@ namespace ElectionResults.Core.Elections
                 if (ballot == null)
                     throw new Exception($"No results found for ballot id {query.BallotId}");
                 var electionResponse = new ElectionResponse();
-                
+
                 var divisionTurnout =
                     await GetDivisionTurnout(query, dbContext, ballot);
                 var electionInfo = await GetCandidatesFromDb(query, ballot, dbContext);
@@ -247,7 +248,7 @@ namespace ElectionResults.Core.Elections
 
         private static Turnout AggregateTurnouts(List<Turnout> turnouts)
         {
-            Turnout turnout = new Turnout();    
+            Turnout turnout = new Turnout();
             turnout.EligibleVoters = turnouts.Sum(c => c.EligibleVoters);
             turnout.TotalVotes = turnouts.Sum(c => c.TotalVotes);
             turnout.ValidVotes = turnouts.Sum(c => c.ValidVotes);
@@ -361,6 +362,31 @@ namespace ElectionResults.Core.Elections
             using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
             {
                 return await GetElectionNews(dbContext, query.BallotId, electionId);
+            }
+        }
+
+        public async Task<Result<List<PartyList>>> GetBallotCandidates(ElectionResultsQuery query)
+        {
+            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+            {
+                var ballot = dbContext.Ballots
+                    .AsNoTracking()
+                    .Include(b => b.Election)
+                    .FirstOrDefault(e => e.BallotId == query.BallotId);
+                var candidates = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
+                query.CountyId = Consts.MinoritiesCountyId;
+                var minorities = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
+                candidates = candidates.Concat(minorities).ToList();
+                return candidates
+                    .GroupBy(c => c.PartyName)
+                    .Select(p => new PartyList
+                    {
+                        Candidates = p.OrderBy(c => c.BallotPosition).Select(c => new BasicCandidateInfo
+                        {
+                            Name = c.Name
+                        }).ToList(),
+                        Name = p.FirstOrDefault()?.PartyName
+                    }).ToList();
             }
         }
     }

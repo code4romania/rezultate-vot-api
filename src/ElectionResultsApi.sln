@@ -5,7 +5,9 @@ VisualStudioVersion = 16.0.30503.244
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ElectionResults.API", "ElectionResults.API\ElectionResults.API.csproj", "{6C06B9A8-39A9-4D2C-9B6F-1F974FDA8871}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ElectionResults.Core", "ElectionResults.Core\ElectionResults.Core.csproj", "{8EEAE78A-E747-47F7-A4B1-EE42B18CA0F4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ElectionResults.Core", "ElectionResults.Core\ElectionResults.Core.csproj", "{8EEAE78A-E747-47F7-A4B1-EE42B18CA0F4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ElectionResults.Importer", "ElectionResults.Importer\ElectionResults.Importer.csproj", "{C2DCD125-B208-4F51-B27F-20722E1758ED}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{8EEAE78A-E747-47F7-A4B1-EE42B18CA0F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8EEAE78A-E747-47F7-A4B1-EE42B18CA0F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8EEAE78A-E747-47F7-A4B1-EE42B18CA0F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2DCD125-B208-4F51-B27F-20722E1758ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2DCD125-B208-4F51-B27F-20722E1758ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2DCD125-B208-4F51-B27F-20722E1758ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2DCD125-B208-4F51-B27F-20722E1758ED}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

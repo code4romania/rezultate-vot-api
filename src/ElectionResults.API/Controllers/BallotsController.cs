@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -39,6 +39,32 @@ namespace ElectionResults.API.Controllers
             if (result.IsSuccess)
                 return result.Value;
             return StatusCode(500, result.Error);
+        }
+
+        [HttpGet("ballots/{ballotId}/candidates")]
+        public async Task<ActionResult<List<PartyList>>> GetCandidatesForBallot([FromQuery] ElectionResultsQuery query, int ballotId)
+        {
+            try
+            {
+                query.BallotId = ballotId;
+                if (query.LocalityId == 0)
+                    query.LocalityId = null;
+                if (query.CountyId == 0)
+                    query.CountyId = null;
+                if (query.Round == 0)
+                    query.Round = null;
+
+                var result = await _appCache.GetOrAddAsync(
+                    query.GetCacheKey(), () => _resultsAggregator.GetBallotCandidates(query),
+                    DateTimeOffset.Now.AddMinutes(query.GetCacheDurationInMinutes()));
+                return result.Value;
+            }
+            catch (Exception e)
+            {
+                _appCache.Remove(query.GetCacheKey());
+                Log.LogError(e, "Exception encountered while retrieving voter turnout stats");
+                return StatusCode(500, e.StackTrace);
+            }
         }
 
         [HttpGet("ballot")]

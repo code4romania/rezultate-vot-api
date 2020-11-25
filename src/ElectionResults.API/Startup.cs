@@ -1,11 +1,14 @@
 using System;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using ElectionResults.API.Import;
 using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Extensions;
+using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
+using ElectionResults.Importer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -14,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 
 namespace ElectionResults.API
@@ -64,7 +68,7 @@ namespace ElectionResults.API
                    );
             });
 
-          
+
             services.AddLazyCache();
             services.AddCors(options =>
             {
@@ -77,7 +81,7 @@ namespace ElectionResults.API
                             .AllowAnyOrigin();
                     });
             });
-            
+
             if (Configuration["ScheduleTaskEnabled"].ToLower().Equals("true")) //excuse the primitive syntax
                 services.AddHostedService<ScheduleTask>();
         }
@@ -87,6 +91,7 @@ namespace ElectionResults.API
             services.AddTransient<IResultsAggregator, ResultsAggregator>();
             services.AddTransient<IAuthorsRepository, AuthorsRepository>();
             services.AddTransient<ICsvDownloaderJob, CsvDownloaderJob>();
+            services.AddTransient<IParliamentCrawler, ParliamentCrawler>();
             services.AddTransient<IWinnersAggregator, WinnersAggregator>();
             services.AddTransient<ILiveElectionUrlBuilder, LiveElectionUrlBuilder>();
 
@@ -100,8 +105,9 @@ namespace ElectionResults.API
             services.Configure<LiveElectionSettings>(configuration.GetSection("LiveElectionSettings"));
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context, ICsvDownloaderJob csvDownloaderJob)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context, ILoggerFactory loggerFactory)
         {
+            Log.SetLogger(loggerFactory.CreateLogger<Startup>());
             app.UseSwagger();
             Console.WriteLine($"Environment: {env.EnvironmentName}");
             if (env.IsDevelopment())
