@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
+using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
@@ -12,6 +13,7 @@ using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace ElectionResults.Core.Elections
 {
@@ -21,16 +23,19 @@ namespace ElectionResults.Core.Elections
         private readonly IPartiesRepository _partiesRepository;
         private readonly IWinnersAggregator _winnersAggregator;
         private readonly IElectionsRepository _electionRepository;
+        private LiveElectionSettings _settings;
 
         public ResultsAggregator(IServiceProvider serviceProvider,
             IPartiesRepository partiesRepository,
             IWinnersAggregator winnersAggregator,
-            IElectionsRepository electionRepository)
+            IElectionsRepository electionRepository,
+            IOptions<LiveElectionSettings> options)
         {
             _serviceProvider = serviceProvider;
             _partiesRepository = partiesRepository;
             _winnersAggregator = winnersAggregator;
             _electionRepository = electionRepository;
+            _settings = options.Value;
         }
 
         public async Task<Result<List<ElectionMeta>>> GetAllBallots()
@@ -342,7 +347,7 @@ namespace ElectionResults.Core.Elections
             }
         }
 
-        private static ElectionMeta CreateElectionMeta(Ballot ballot)
+        private ElectionMeta CreateElectionMeta(Ballot ballot)
         {
             return new ElectionMeta
             {
@@ -353,7 +358,8 @@ namespace ElectionResults.Core.Elections
                 Title = ballot.Election.Name,
                 ElectionId = ballot.ElectionId,
                 BallotId = ballot.BallotId,
-                Live = ballot.Election.Live
+                Live = ballot.Election.Live,
+                Stage = _settings.ResultsType
             };
         }
 
