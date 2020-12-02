@@ -12,14 +12,11 @@ namespace ElectionResults.Core.Elections
 {
     public class LiveElectionUrlBuilder : ILiveElectionUrlBuilder
     {
-        private readonly ITerritoryRepository _territoryRepository;
         private readonly LiveElectionSettings _settings;
         private readonly Dictionary<(BallotType, ElectionDivision), string> _electionFileData = new Dictionary<(BallotType, ElectionDivision), string>();
 
-        public LiveElectionUrlBuilder(ITerritoryRepository territoryRepository,
-            IOptions<LiveElectionSettings> options)
+        public LiveElectionUrlBuilder(IOptions<LiveElectionSettings> options)
         {
-            _territoryRepository = territoryRepository;
             _settings = options.Value;
 
             _electionFileData[(BallotType.Mayor, ElectionDivision.Locality)] = "uat_p";
