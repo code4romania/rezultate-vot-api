@@ -27,15 +27,17 @@ namespace ElectionResults.API.Import
     public class TurnoutCrawler : ITurnoutCrawler
     {
         private readonly IServiceProvider _serviceProvider;
-        private static HttpClient _httpClient;
+        private readonly IFileDownloader _fileDownloader;
+        private HttpClient _httpClient;
         private List<County> _dbCounties;
         private List<Country> _dbCountries;
         private List<Locality> _localities;
         private LiveElectionSettings _settings;
 
-        public TurnoutCrawler(IServiceProvider serviceProvider, IOptions<LiveElectionSettings> options)
+        public TurnoutCrawler(IServiceProvider serviceProvider, IOptions<LiveElectionSettings> options, IFileDownloader fileDownloader)
         {
             _serviceProvider = serviceProvider;
+            _fileDownloader = fileDownloader;
             _httpClient = new HttpClient();
             _settings = options.Value;
         }
@@ -44,7 +46,7 @@ namespace ElectionResults.API.Import
         {
             try
             {
-                var stream = await DownloadFile(_settings.TurnoutUrl);
+                var stream = await _fileDownloader.Download(_settings.TurnoutUrl);
 
                 await ProcessStream(stream);
             }

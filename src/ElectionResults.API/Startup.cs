@@ -87,6 +87,8 @@ namespace ElectionResults.API
 
         private static void RegisterDependencies(IServiceCollection services, IConfiguration configuration)
         {
+            services.AddTransient<IFileDownloader, FileDownloader>();
+            services.AddTransient<IResultsCrawler, ResultsCrawler>();
             services.AddTransient<IResultsAggregator, ResultsAggregator>();
             services.AddTransient<IAuthorsRepository, AuthorsRepository>();
             services.AddTransient<ICsvDownloaderJob, CsvDownloaderJob>();
