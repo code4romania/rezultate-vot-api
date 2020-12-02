@@ -7,5 +7,7 @@ namespace ElectionResults.Core.Configuration
         public string FtpUser { get; set; }
 
         public string FtpPassword { get; set; }
+        
+        public string TurnoutUrl { get; set; }
     }
 }
