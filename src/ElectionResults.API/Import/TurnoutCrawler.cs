@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -45,6 +45,7 @@ namespace ElectionResults.API.Import
             try
             {
                 var stream = await DownloadFile(_settings.TurnoutUrl);
+
                 await ProcessStream(stream);
             }
             catch (Exception e)
@@ -63,7 +64,7 @@ namespace ElectionResults.API.Import
                 };
                 if (_settings.FtpUser.IsNotEmpty() && _settings.FtpPassword.IsNotEmpty())
                 {
-                    httpClientHandler.Credentials = new NetworkCredential(_settings.FtpUser, _settings.FtpPassword)
+                    httpClientHandler.Credentials = new NetworkCredential(_settings.FtpUser, _settings.FtpPassword);
                 }
                 httpClientHandler.ServerCertificateCustomValidationCallback = (message, certificate2, arg3, arg4) => true;
                 _httpClient = new HttpClient(httpClientHandler);
