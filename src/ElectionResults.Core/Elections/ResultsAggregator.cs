@@ -23,18 +23,24 @@ namespace ElectionResults.Core.Elections
         private readonly IPartiesRepository _partiesRepository;
         private readonly IWinnersAggregator _winnersAggregator;
         private readonly IElectionsRepository _electionRepository;
+        private readonly ILiveElectionUrlBuilder _urlBuilder;
+        private readonly IResultsCrawler _resultsCrawler;
         private LiveElectionSettings _settings;
 
         public ResultsAggregator(IServiceProvider serviceProvider,
             IPartiesRepository partiesRepository,
             IWinnersAggregator winnersAggregator,
             IElectionsRepository electionRepository,
-            IOptions<LiveElectionSettings> options)
+            IOptions<LiveElectionSettings> options,
+            ILiveElectionUrlBuilder urlBuilder,
+            IResultsCrawler resultsCrawler)
         {
             _serviceProvider = serviceProvider;
             _partiesRepository = partiesRepository;
             _winnersAggregator = winnersAggregator;
             _electionRepository = electionRepository;
+            _urlBuilder = urlBuilder;
+            _resultsCrawler = resultsCrawler;
             _settings = options.Value;
         }
 
@@ -265,6 +271,14 @@ namespace ElectionResults.Core.Elections
             ApplicationDbContext dbContext)
         {
             LiveElectionInfo liveElectionInfo = new LiveElectionInfo();
+            if (ballot.Election.Live)
+            {
+                var county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
+                var url = _urlBuilder.GetFileUrl(ballot.BallotType, query.Division, county?.ShortName,
+                    query.LocalityId);
+                var result = await _resultsCrawler.Import(url.Value);
+                return result.Value;
+            }
             if (ballot.Election.Category == ElectionCategory.Local && query.CountyId.GetValueOrDefault().IsCapitalCity() == false)
             {
                 if (!ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
