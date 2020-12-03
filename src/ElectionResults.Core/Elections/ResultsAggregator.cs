@@ -276,6 +276,8 @@ namespace ElectionResults.Core.Elections
                 var county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
                 var url = _urlBuilder.GetFileUrl(ballot.BallotType, query.Division, county?.ShortName,
                     query.LocalityId);
+                if (url.IsFailure)
+                    return LiveElectionInfo.Default;
                 var result = await _resultsCrawler.Import(url.Value);
                 return result.Value;
             }
