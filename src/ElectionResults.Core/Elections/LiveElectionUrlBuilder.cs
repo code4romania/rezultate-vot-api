@@ -45,6 +45,7 @@ namespace ElectionResults.Core.Elections
             }
             StringBuilder builder = new StringBuilder();
             builder.Append(_settings.ResultsUrl);
+            builder.Append("pv");
             builder.Append($"_{_settings.ResultsType}");
             builder.Append($"_{_territoryCodes[(ballotType, division)]}");
             if (countyShortName.IsNotEmpty())
