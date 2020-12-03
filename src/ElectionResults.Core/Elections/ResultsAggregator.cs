@@ -111,7 +111,13 @@ namespace ElectionResults.Core.Elections
                 ElectionResultsResponse results;
                 if (divisionTurnout == null)
                 {
-                    results = null;
+                    results = new ElectionResultsResponse
+                    {
+                        TotalVotes = 0,
+                        EligibleVoters = 0,
+                        NullVotes = 0,
+                        ValidVotes = 0
+                    };
                 }
                 else
                 {

@@ -15,6 +15,10 @@ namespace ElectionResults.Core.Elections
             if (candidates == null)
             {
                 results.Candidates = new List<CandidateResponse>();
+                results.TotalVotes = 0;
+                results.EligibleVoters = 0;
+                results.NullVotes = 0;
+                results.ValidVotes = 0;
                 return results;
             }
             results.NullVotes = electionTurnout.NullVotes;
