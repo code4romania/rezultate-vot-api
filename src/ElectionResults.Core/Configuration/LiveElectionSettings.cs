@@ -11,5 +11,9 @@ namespace ElectionResults.Core.Configuration
         public string TurnoutUrl { get; set; }
         
         public string ResultsUrl { get; set; }
+
+        public int TurnoutIntervalInMinutes { get; set; }
+
+        public int ResultsCacheInMinutes { get; set; }
     }
 }

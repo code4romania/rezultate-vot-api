@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
+using ElectionResults.Core.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace ElectionResults.Core.Scheduler
 {
@@ -9,8 +11,9 @@ namespace ElectionResults.Core.Scheduler
         private readonly ITurnoutCrawler _turnoutCrawler;
 
         public ScheduledTask(IServiceScopeFactory serviceScopeFactory,
-            ITurnoutCrawler turnoutCrawler)
-            : base(serviceScopeFactory)
+            ITurnoutCrawler turnoutCrawler,
+            IOptions<LiveElectionSettings> options)
+            : base(serviceScopeFactory, options)
         {
             _turnoutCrawler = turnoutCrawler;
         }
