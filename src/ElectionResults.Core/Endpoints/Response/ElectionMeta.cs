@@ -21,5 +21,7 @@ namespace ElectionResults.Core.Endpoints.Response
         public bool Live { get; set; }
 
         public int? Round { get; set; }
+
+        public string Stage { get; set; }
     }
 }

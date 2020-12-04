@@ -76,7 +76,7 @@ namespace ElectionResults.Core.Extensions
         {
             if (c.Party != null && c.Party.Name?.ToLower() == "independent" || c.Name.ToLower() == "independent")
                 return Consts.IndependentCandidateColor;
-            return c.Party?.Color ?? Consts.IndependentCandidateColor;
+            return c.Party?.Color;
         }
 
         public static string GetCandidateName(this CandidateResult c, Ballot ballot)

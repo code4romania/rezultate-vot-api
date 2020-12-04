@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
+using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
@@ -12,6 +13,7 @@ using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace ElectionResults.Core.Elections
 {
@@ -21,16 +23,25 @@ namespace ElectionResults.Core.Elections
         private readonly IPartiesRepository _partiesRepository;
         private readonly IWinnersAggregator _winnersAggregator;
         private readonly IElectionsRepository _electionRepository;
+        private readonly ILiveElectionUrlBuilder _urlBuilder;
+        private readonly IResultsCrawler _resultsCrawler;
+        private LiveElectionSettings _settings;
 
         public ResultsAggregator(IServiceProvider serviceProvider,
             IPartiesRepository partiesRepository,
             IWinnersAggregator winnersAggregator,
-            IElectionsRepository electionRepository)
+            IElectionsRepository electionRepository,
+            IOptions<LiveElectionSettings> options,
+            ILiveElectionUrlBuilder urlBuilder,
+            IResultsCrawler resultsCrawler)
         {
             _serviceProvider = serviceProvider;
             _partiesRepository = partiesRepository;
             _winnersAggregator = winnersAggregator;
             _electionRepository = electionRepository;
+            _urlBuilder = urlBuilder;
+            _resultsCrawler = resultsCrawler;
+            _settings = options.Value;
         }
 
         public async Task<Result<List<ElectionMeta>>> GetAllBallots()
@@ -100,7 +111,13 @@ namespace ElectionResults.Core.Elections
                 ElectionResultsResponse results;
                 if (divisionTurnout == null)
                 {
-                    results = null;
+                    results = new ElectionResultsResponse
+                    {
+                        TotalVotes = 0,
+                        EligibleVoters = 0,
+                        NullVotes = 0,
+                        ValidVotes = 0
+                    };
                 }
                 else
                 {
@@ -118,6 +135,11 @@ namespace ElectionResults.Core.Elections
                         TotalVotes = divisionTurnout.TotalVotes,
                         EligibleVoters = divisionTurnout.EligibleVoters,
                     };
+                    if (query.Division == ElectionDivision.Diaspora ||
+                        query.Division == ElectionDivision.Diaspora_Country)
+                    {
+                        electionResponse.Turnout.EligibleVoters = electionResponse.Turnout.TotalVotes;
+                    }
                 }
 
                 electionResponse.Scope = await CreateElectionScope(dbContext, query);
@@ -260,6 +282,16 @@ namespace ElectionResults.Core.Elections
             ApplicationDbContext dbContext)
         {
             LiveElectionInfo liveElectionInfo = new LiveElectionInfo();
+            if (ballot.Election.Live)
+            {
+                var county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
+                var url = _urlBuilder.GetFileUrl(ballot.BallotType, query.Division, county?.ShortName,
+                    query.LocalityId);
+                if (url.IsFailure)
+                    return LiveElectionInfo.Default;
+                var result = await _resultsCrawler.Import(url.Value);
+                return result.Value;
+            }
             if (ballot.Election.Category == ElectionCategory.Local && query.CountyId.GetValueOrDefault().IsCapitalCity() == false)
             {
                 if (!ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
@@ -342,7 +374,7 @@ namespace ElectionResults.Core.Elections
             }
         }
 
-        private static ElectionMeta CreateElectionMeta(Ballot ballot)
+        private ElectionMeta CreateElectionMeta(Ballot ballot)
         {
             return new ElectionMeta
             {
@@ -353,7 +385,8 @@ namespace ElectionResults.Core.Elections
                 Title = ballot.Election.Name,
                 ElectionId = ballot.ElectionId,
                 BallotId = ballot.BallotId,
-                Live = ballot.Election.Live
+                Live = ballot.Election.Live,
+                Stage = _settings.ResultsType
             };
         }
 

@@ -3,6 +3,7 @@ using System.Linq;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
+using ElectionResults.Core.Infrastructure;
 
 namespace ElectionResults.Core.Elections
 {
@@ -14,6 +15,10 @@ namespace ElectionResults.Core.Elections
             if (candidates == null)
             {
                 results.Candidates = new List<CandidateResponse>();
+                results.TotalVotes = 0;
+                results.EligibleVoters = 0;
+                results.NullVotes = 0;
+                results.ValidVotes = 0;
                 return results;
             }
             results.NullVotes = electionTurnout.NullVotes;
@@ -57,7 +62,7 @@ namespace ElectionResults.Core.Elections
                 var logos = new List<string>();
                 foreach (var candidate in candidates)
                 {
-                    var matchingParty = parties.GetMatchingParty(candidate.ShortName);
+                    var matchingParty = parties.GetMatchingParty(candidate.ShortName) ?? parties.FirstOrDefault(p => p.Name.ContainsString(candidate.Name));
                     if (matchingParty != null)
                     {
                         colors.Add(matchingParty.Color);
@@ -84,7 +89,7 @@ namespace ElectionResults.Core.Elections
                     var candidate = results.Candidates[i];
                     if (candidate.PartyColor.IsEmpty())
                     {
-                        candidate.PartyColor = colors[i];
+                        candidate.PartyColor = colors[i] ?? Consts.IndependentCandidateColor;
                     }
                     if (candidate.PartyLogo.IsEmpty())
                     {

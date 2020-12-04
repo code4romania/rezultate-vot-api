@@ -2,7 +2,7 @@
 
 namespace ElectionResults.Core.Scheduler
 {
-    public interface IParliamentCrawler
+    public interface ITurnoutCrawler
     {
         Task Import();
     }

@@ -8,7 +8,6 @@ using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
-using ElectionResults.Importer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -83,15 +82,17 @@ namespace ElectionResults.API
             });
 
             if (Configuration["ScheduleTaskEnabled"].ToLower().Equals("true")) //excuse the primitive syntax
-                services.AddHostedService<ScheduleTask>();
+                services.AddHostedService<ScheduledTask>();
         }
 
         private static void RegisterDependencies(IServiceCollection services, IConfiguration configuration)
         {
+            services.AddTransient<IFileDownloader, FileDownloader>();
+            services.AddTransient<IResultsCrawler, ResultsCrawler>();
             services.AddTransient<IResultsAggregator, ResultsAggregator>();
             services.AddTransient<IAuthorsRepository, AuthorsRepository>();
             services.AddTransient<ICsvDownloaderJob, CsvDownloaderJob>();
-            services.AddTransient<IParliamentCrawler, ParliamentCrawler>();
+            services.AddTransient<ITurnoutCrawler, TurnoutCrawler>();
             services.AddTransient<IWinnersAggregator, WinnersAggregator>();
             services.AddTransient<ILiveElectionUrlBuilder, LiveElectionUrlBuilder>();
 

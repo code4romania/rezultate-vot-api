@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
@@ -10,6 +11,7 @@ using ElectionResults.Core.Repositories;
 using LazyCache;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ElectionResults.API.Controllers
 {
@@ -21,13 +23,19 @@ namespace ElectionResults.API.Controllers
         private readonly IResultsAggregator _resultsAggregator;
         private readonly IAppCache _appCache;
         private readonly ITerritoryRepository _territoryRepository;
+        private readonly LiveElectionSettings _settings;
 
-        public BallotsController(ILogger<BallotsController> logger, IResultsAggregator resultsAggregator, IAppCache appCache, ITerritoryRepository territoryRepository)
+        public BallotsController(ILogger<BallotsController> logger,
+            IResultsAggregator resultsAggregator,
+            IAppCache appCache,
+            ITerritoryRepository territoryRepository,
+            IOptions<LiveElectionSettings> settings)
         {
             _logger = logger;
             _resultsAggregator = resultsAggregator;
             _appCache = appCache;
             _territoryRepository = territoryRepository;
+            _settings = settings.Value;
         }
 
         [HttpGet("ballots")]
@@ -79,9 +87,10 @@ namespace ElectionResults.API.Controllers
                 if (query.Round == 0)
                     query.Round = null;
 
+                var expiration = GetExpirationDate(query);
                 var result = await _appCache.GetOrAddAsync(
                     query.GetCacheKey(), () => _resultsAggregator.GetBallotResults(query),
-                    DateTimeOffset.Now.AddMinutes(query.GetCacheDurationInMinutes()));
+                    expiration);
                 var newsFeed = await _resultsAggregator.GetNewsFeed(query, result.Value.Meta.ElectionId);
                 result.Value.ElectionNews = newsFeed;
                 return result.Value;
@@ -162,6 +171,15 @@ namespace ElectionResults.API.Controllers
             {
                 return StatusCode(500, e.Message);
             }
+        }
+
+        private DateTimeOffset GetExpirationDate(ElectionResultsQuery electionResultsQuery)
+        {
+            if (electionResultsQuery.BallotId < 95) // ballot older than local elections in 2020
+            {
+                return DateTimeOffset.Now.AddDays(1);
+            }
+            return DateTimeOffset.Now.AddMinutes(_settings.ResultsCacheInMinutes);
         }
     }
 }
