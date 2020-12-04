@@ -135,6 +135,11 @@ namespace ElectionResults.Core.Elections
                         TotalVotes = divisionTurnout.TotalVotes,
                         EligibleVoters = divisionTurnout.EligibleVoters,
                     };
+                    if (query.Division == ElectionDivision.Diaspora ||
+                        query.Division == ElectionDivision.Diaspora_Country)
+                    {
+                        electionResponse.Turnout.EligibleVoters = electionResponse.Turnout.TotalVotes;
+                    }
                 }
 
                 electionResponse.Scope = await CreateElectionScope(dbContext, query);
