@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,7 +27,6 @@ namespace ElectionResults.API.Import
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly IFileDownloader _fileDownloader;
-        private HttpClient _httpClient;
         private List<County> _dbCounties;
         private List<Country> _dbCountries;
         private List<Locality> _localities;
@@ -38,7 +36,6 @@ namespace ElectionResults.API.Import
         {
             _serviceProvider = serviceProvider;
             _fileDownloader = fileDownloader;
-            _httpClient = new HttpClient();
             _settings = options.Value;
         }
 
@@ -53,30 +50,6 @@ namespace ElectionResults.API.Import
             catch (Exception e)
             {
                 Console.WriteLine(e);
-            }
-        }
-
-        private async Task<Stream> DownloadFile(string url)
-        {
-            try
-            {
-                var httpClientHandler = new HttpClientHandler
-                {
-                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-                };
-                if (_settings.FtpUser.IsNotEmpty() && _settings.FtpPassword.IsNotEmpty())
-                {
-                    httpClientHandler.Credentials = new NetworkCredential(_settings.FtpUser, _settings.FtpPassword);
-                }
-                httpClientHandler.ServerCertificateCustomValidationCallback = (message, certificate2, arg3, arg4) => true;
-                _httpClient = new HttpClient(httpClientHandler);
-                var response = await _httpClient.GetStringAsync(url);
-                return new MemoryStream(Encoding.UTF8.GetBytes(response));
-            }
-            catch (Exception e)
-            {
-                Log.LogError(e, $"Failed to download file: {url}");
-                throw;
             }
         }
 
@@ -209,7 +182,7 @@ namespace ElectionResults.API.Import
 
         private Country FindCountry(CsvTurnout turnout)
         {
-            return _dbCountries.FirstOrDefault(c => c.Name.EqualsIgnoringAccent(turnout.UAT));
+            return _dbCountries.FirstOrDefault(c => c.Name.EqualsIgnoringAccent(NormalizeCountryName(turnout.UAT)));
         }
 
         private void UpdateNationalTurnout(Ballot ballot, ApplicationDbContext dbContext,
@@ -312,6 +285,32 @@ namespace ElectionResults.API.Import
             {
                 Statistics = response,
             });
+        }
+
+        private string NormalizeCountryName(string countryName)
+        {
+            return countryName.Replace("REPUBLICA ALBANIA", "Albania")
+                .Replace("REGATUL ARABIEI SAUDITE", "Arabia Saudita")
+                .Replace("REPUBLICA BELARUS", "Belarus")
+                .Replace("BOSNIA SI HERTEGOVINA", "Bosnia")
+                .Replace("REPUBLICA CEHA", "Cehia")
+                .Replace("REPUBLICA COREEA", "Coreea De Sud")
+                .Replace("REPUBLICA ELENA", "Grecia")
+                .Replace("REPUBLICA INDIA", "India")
+                .Replace("REPUBLICA INDONEZIA", "Indonezia")
+                .Replace("REGATUL HASEMIT AL IORDANIEI", "Iordania")
+                .Replace("REPUBLICA MACEDONIA DE NORD", "Macedonia")
+                .Replace("REGATUL UNIT AL MARII BRITANII SI IRLANDEI DE NORD", "Marea Britanie")
+                .Replace("REGATUL MAROC", "Maroc")
+                .Replace("REPUBLICA ISLAMICA PAKISTAN", "Pakistan")
+                .Replace("REPUBLICA PERU", "Peru")
+                .Replace("FEDERATIA RUSA", "Rusia")
+                .Replace("REPUBLICA SINGAPORE", "Singapore")
+                .Replace("REPUBLICA ARABA SIRIANA", "Siria")
+                .Replace("REPUBLICA SLOVACA", "Slovacia")
+                .Replace("REGATUL THAILANDEI", "Thailanda")
+                .Replace("REPUBLICA ORIENTALA A URUGUAYULUI", "Uruguay")
+                .Replace("REPUBLICA SOCIALISTA VIETNAM", "Vietnam");
         }
     }
 }
