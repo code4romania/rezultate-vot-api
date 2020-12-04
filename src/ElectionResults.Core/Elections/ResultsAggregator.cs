@@ -407,8 +407,7 @@ namespace ElectionResults.Core.Elections
                     .Include(b => b.Election)
                     .FirstOrDefault(e => e.BallotId == query.BallotId);
                 var candidates = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
-                query.CountyId = Consts.MinoritiesCountyId;
-                var minorities = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
+                var minorities = await GetMinorities(ballot, dbContext);
                 candidates = candidates.Concat(minorities).ToList();
                 return candidates
                     .GroupBy(c => c.PartyName)
@@ -421,6 +420,15 @@ namespace ElectionResults.Core.Elections
                         Name = p.FirstOrDefault()?.PartyName
                     }).ToList();
             }
+        }
+
+        private async Task<List<CandidateResult>> GetMinorities(Ballot ballot, ApplicationDbContext dbContext)
+        {
+            var query = new ElectionResultsQuery();
+            query.CountyId = null;
+            query.Division = ElectionDivision.County;
+            var minorities = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
+            return minorities;
         }
     }
 }
