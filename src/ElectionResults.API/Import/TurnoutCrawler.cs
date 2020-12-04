@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -165,19 +165,26 @@ namespace ElectionResults.API.Import
                         BallotId = ballot.BallotId
                     };
                 }
+
                 countryTurnout.EligibleVoters = csvTurnouts.Sum(c => c.EnrolledVoters + c.ComplementaryList);
                 countryTurnout.TotalVotes = csvTurnouts.Sum(c => c.TotalVotes);
                 totalDiasporaVotes += countryTurnout.TotalVotes;
                 dbContext.Update(countryTurnout);
             }
-
-            var diasporaTurnout = new Turnout
+            var diasporaTurnout = existingTurnouts
+                .FirstOrDefault(t => t.Division == ElectionDivision.Diaspora);
+            if (diasporaTurnout == null)
             {
-                Division = ElectionDivision.Diaspora,
-                BallotId = ballot.BallotId,
-                TotalVotes = totalDiasporaVotes
-            };
-            dbContext.Turnouts.Add(diasporaTurnout);
+                diasporaTurnout = new Turnout
+                {
+                    Division = ElectionDivision.Diaspora,
+                    BallotId = ballot.BallotId,
+                    TotalVotes = totalDiasporaVotes
+                };
+            }
+
+            diasporaTurnout.TotalVotes = totalDiasporaVotes;
+            dbContext.Update(diasporaTurnout);
         }
 
         private Country FindCountry(CsvTurnout turnout)
