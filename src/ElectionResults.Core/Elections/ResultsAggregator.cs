@@ -116,7 +116,8 @@ namespace ElectionResults.Core.Elections
                         TotalVotes = 0,
                         EligibleVoters = 0,
                         NullVotes = 0,
-                        ValidVotes = 0
+                        ValidVotes = 0,
+                        Candidates = new List<CandidateResponse>()
                     };
                 }
                 else
