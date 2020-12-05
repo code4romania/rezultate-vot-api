@@ -116,7 +116,8 @@ namespace ElectionResults.Core.Elections
                         TotalVotes = 0,
                         EligibleVoters = 0,
                         NullVotes = 0,
-                        ValidVotes = 0
+                        ValidVotes = 0,
+                        Candidates = new List<CandidateResponse>()
                     };
                 }
                 else
@@ -231,6 +232,18 @@ namespace ElectionResults.Core.Elections
                     t.LocalityId == query.LocalityId).ToListAsync();
             if (turnouts.Count > 0 && query.Division == ElectionDivision.Diaspora_Country)
             {
+                var turnout = AggregateTurnouts(turnouts);
+                turnout.BallotId = ballot.BallotId;
+                return turnout;
+            }
+            if (turnouts.Count == 0 && query.Division == ElectionDivision.Diaspora)
+            {
+                turnouts = await dbContext.Turnouts
+                    .Where(t =>
+                        t.BallotId == ballot.BallotId &&
+                        t.CountyId == null &&
+                        t.Division == ElectionDivision.Diaspora_Country &&
+                        t.LocalityId == null).ToListAsync();
                 var turnout = AggregateTurnouts(turnouts);
                 turnout.BallotId = ballot.BallotId;
                 return turnout;
