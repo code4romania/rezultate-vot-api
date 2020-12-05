@@ -235,6 +235,18 @@ namespace ElectionResults.Core.Elections
                 turnout.BallotId = ballot.BallotId;
                 return turnout;
             }
+            if (turnouts.Count == 0 && query.Division == ElectionDivision.Diaspora)
+            {
+                turnouts = await dbContext.Turnouts
+                    .Where(t =>
+                        t.BallotId == ballot.BallotId &&
+                        t.CountyId == null &&
+                        t.Division == ElectionDivision.Diaspora_Country &&
+                        t.LocalityId == null).ToListAsync();
+                var turnout = AggregateTurnouts(turnouts);
+                turnout.BallotId = ballot.BallotId;
+                return turnout;
+            }
             return turnouts.FirstOrDefault();
         }
 
