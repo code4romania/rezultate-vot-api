@@ -45,18 +45,25 @@ namespace ElectionResults.Core.Repositories
             var localities = await dbSet.OrderBy(l => l.Name).ToListAsync();
             if (ballotId.HasValue)
             {
-                var ids = await _dbContext.CandidateResults.Where(c => c.BallotId == ballotId.Value)
+                var ids = await _dbContext.Turnouts.Where(c => c.BallotId == ballotId.Value)
                     .Select(c => c.LocalityId).ToListAsync();
                 return localities.Where(l => ids.Any(i => i == l.LocalityId)).ToList();
             }
             return localities;
         }
 
-        public async Task<Result<List<Country>>> GetCountries()
+        public async Task<Result<List<Country>>> GetCountries(int? ballotId)
         {
-            return await _appCache.GetOrAddAsync(
+            var countries = await _appCache.GetOrAddAsync(
                 MemoryCache.Countries.Key, () => _dbContext.Countries.OrderBy(c => c.Name).ToListAsync(),
-                DateTimeOffset.Now.AddMinutes(MemoryCache.Counties.Minutes));
+                DateTimeOffset.Now.AddMinutes(MemoryCache.Countries.Minutes));
+            if (ballotId.HasValue)
+            {
+                var ids = await _dbContext.Turnouts.Where(c => c.BallotId == ballotId.Value)
+                    .Select(c => c.CountryId).Distinct().ToListAsync();
+                return countries.Where(l => ids.Any(i => i == l.Id)).ToList();
+            }
+            return countries;
         }
 
         public async Task<Result<Locality>> GetLocalityById(int? localityId, bool includeCounty = false)

@@ -139,7 +139,7 @@ namespace ElectionResults.Core.Elections
                 return dbWinners.Select(winner => WinnerToElectionMapWinner(winner, parties.ToList())).ToList();
             _appCache.Remove(MemoryCache.CreateWinnersKey(ballotId, null, ElectionDivision.Diaspora_Country));
             var winners = new List<ElectionMapWinner>();
-            var countries = await _territoryRepository.GetCountries();
+            var countries = await _territoryRepository.GetCountries(null);
             if (countries.IsFailure)
                 return Result.Failure<List<ElectionMapWinner>>(countries.Error);
             var ballot = await _dbContext.Ballots

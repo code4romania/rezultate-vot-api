@@ -151,11 +151,11 @@ namespace ElectionResults.API.Controllers
         }
 
         [HttpGet("countries")]
-        public async Task<ActionResult<List<LocationData>>> GetCountries()
+        public async Task<ActionResult<List<LocationData>>> GetCountries([FromQuery] int? ballotId)
         {
             try
             {
-                var result = await _territoryRepository.GetCountries();
+                var result = await _territoryRepository.GetCountries(ballotId);
                 if (result.IsSuccess)
                 {
                     return result.Value.Select(c => new LocationData
@@ -175,7 +175,7 @@ namespace ElectionResults.API.Controllers
 
         private DateTimeOffset GetExpirationDate(ElectionResultsQuery electionResultsQuery)
         {
-            if (electionResultsQuery.BallotId < 95) // ballot older than local elections in 2020
+            if (electionResultsQuery.BallotId < 110) // ballot older than parliament elections in 2020
             {
                 return DateTimeOffset.Now.AddDays(1);
             }
