@@ -29,15 +29,15 @@ namespace ElectionResults.Core.Elections
             // https://code4storage.blob.core.windows.net/results/pv_part_cnty_s_ab.csv
             // Parliament election
             _territoryCodes[(BallotType.Senate, ElectionDivision.County)] = "cnty_s"; // county
-            _territoryCodes[(BallotType.Senate, ElectionDivision.Diaspora_Country)] = "cntry_s"; // diaspora
-            _territoryCodes[(BallotType.Senate, ElectionDivision.Diaspora_Country)] = "cntry_sc"; // correspondence
+            _territoryCodes[(BallotType.Senate, ElectionDivision.Diaspora)] = "cnty_s_sr"; // diaspora
+            _territoryCodes[(BallotType.Senate, ElectionDivision.Diaspora)] = "cnty_sc_sr"; // correspondence
 
             _territoryCodes[(BallotType.House, ElectionDivision.County)] = "cnty_cd"; // county
-            _territoryCodes[(BallotType.House, ElectionDivision.Diaspora_Country)] = "cntry_cd"; // diaspora
-            _territoryCodes[(BallotType.House, ElectionDivision.Diaspora_Country)] = "cntry_cdc"; // correspondence
+            _territoryCodes[(BallotType.House, ElectionDivision.Diaspora)] = "cnty_cd_sr"; // diaspora
+            _territoryCodes[(BallotType.House, ElectionDivision.Diaspora)] = "cnty_cdc_sr"; // correspondence
         }
 
-        public Result<string> GetFileUrl(BallotType ballotType, ElectionDivision division, string countyShortName, int? siruta)
+        public Result<string> GetFileUrl(BallotType ballotType, ElectionDivision division, string shortName, int? siruta)
         {
             if (_territoryCodes.ContainsKey((ballotType, division)) == false)
             {
@@ -48,9 +48,9 @@ namespace ElectionResults.Core.Elections
             builder.Append("pv");
             builder.Append($"_{_settings.ResultsType}");
             builder.Append($"_{_territoryCodes[(ballotType, division)]}");
-            if (countyShortName.IsNotEmpty())
+            if (shortName.IsNotEmpty())
             {
-                builder.Append($"_{countyShortName.ToLower()}");
+                builder.Append($"_{shortName.ToLower()}");
             }
             if (siruta != null)
             {
