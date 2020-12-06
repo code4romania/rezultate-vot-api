@@ -313,6 +313,12 @@ namespace ElectionResults.Core.Elections
                         $"{ballot.BallotType}-diaspora", () => _resultsCrawler.AggregateDiasporaResults(query, ballot),
                         DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
                 }
+                if (query.Division == ElectionDivision.Diaspora_Country)
+                {
+                    return await _appCache.GetOrAddAsync(
+                        $"{ballot.BallotType}-diaspora_country-{query.CountryId}", () => _resultsCrawler.ImportCountryResults(query, ballot),
+                        DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
+                }
                 var county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
                 if (county.CountyId.IsCapitalCity())
                 {
