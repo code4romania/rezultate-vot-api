@@ -6,6 +6,7 @@ using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
+using ElectionResults.Core.Entities;
 using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using LazyCache;
@@ -91,6 +92,19 @@ namespace ElectionResults.API.Controllers
                 var result = await _appCache.GetOrAddAsync(
                     query.GetCacheKey(), () => _resultsAggregator.GetBallotResults(query),
                     expiration);
+                if (result.Value.Meta.Live)
+                {
+                    if (query.Division == ElectionDivision.National)
+                    {
+                        result.Value.Turnout.TotalVotes = _appCache.Get<int>(MemoryCache.NationalVotersCount);
+                        result.Value.Results.TotalVotes = _appCache.Get<int>(MemoryCache.NationalVotersCount);
+                    }
+                    if (query.Division == ElectionDivision.Diaspora)
+                    {
+                        result.Value.Turnout.TotalVotes = _appCache.Get<int>(MemoryCache.DiasporaVotersCount);
+                        result.Value.Results.TotalVotes = _appCache.Get<int>(MemoryCache.DiasporaVotersCount);
+                    }
+                }
                 var newsFeed = await _resultsAggregator.GetNewsFeed(query, result.Value.Meta.ElectionId);
                 result.Value.ElectionNews = newsFeed;
                 return result.Value;
