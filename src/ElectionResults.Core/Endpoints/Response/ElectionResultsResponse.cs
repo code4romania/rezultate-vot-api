@@ -17,5 +17,6 @@ namespace ElectionResults.Core.Endpoints.Response
         public int? TotalSeats { get; set; }
 
         public List<CandidateResponse> Candidates { get; set; }
+        public int CountedVotes { get; set; }
     }
 }

@@ -89,9 +89,7 @@ namespace ElectionResults.Core.Scheduler
                     }
                     var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.County, county.ShortName, null);
 
-                    var countyResults = await _appCache.GetOrAddAsync(
-                        $"{url}", () => Import(url.Value),
-                        DateTimeOffset.Now.AddMinutes(_liveElectionSettings.CsvCacheInMinutes));
+                    var countyResults = await Import(url.Value);
                     if (countyResults.IsSuccess)
                     {
                         Console.WriteLine($"Added {county.Name}");
@@ -217,7 +215,7 @@ namespace ElectionResults.Core.Scheduler
         {
             var readAsync = await csvParser.ReadAsync();
             var candidates = new List<CandidateResult>();
-            var index = 26;
+            var index = 25;
             while (true)
             {
                 try
