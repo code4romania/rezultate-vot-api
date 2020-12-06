@@ -188,7 +188,7 @@ namespace ElectionResults.API.Import
                     TotalVotes = totalDiasporaVotes
                 };
             }
-            _appCache.Add(MemoryCache.DiasporaVotersCount, totalDiasporaVotes);
+            _appCache.Add(MemoryCache.DiasporaTurnout, diasporaTurnout, DateTimeOffset.Now.AddMinutes(120));
             diasporaTurnout.TotalVotes = totalDiasporaVotes;
             dbContext.Update(diasporaTurnout);
         }
@@ -213,7 +213,7 @@ namespace ElectionResults.API.Import
 
             nationalTurnout.EligibleVoters = csvTurnouts.Sum(t => t.EnrolledVoters + t.ComplementaryList);
             nationalTurnout.TotalVotes = csvTurnouts.Sum(t => t.TotalVotes);
-            _appCache.Add(MemoryCache.NationalVotersCount, nationalTurnout.TotalVotes);
+            _appCache.Add(MemoryCache.NationalTurnout, nationalTurnout, DateTimeOffset.Now.AddMinutes(120));
             dbContext.Update(nationalTurnout);
         }
 
