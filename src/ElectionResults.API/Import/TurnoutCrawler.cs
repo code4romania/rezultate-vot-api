@@ -15,6 +15,7 @@ using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
+using LazyCache;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -27,15 +28,20 @@ namespace ElectionResults.API.Import
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly IFileDownloader _fileDownloader;
+        private readonly IAppCache _appCache;
         private List<County> _dbCounties;
         private List<Country> _dbCountries;
         private List<Locality> _localities;
         private LiveElectionSettings _settings;
 
-        public TurnoutCrawler(IServiceProvider serviceProvider, IOptions<LiveElectionSettings> options, IFileDownloader fileDownloader)
+        public TurnoutCrawler(IServiceProvider serviceProvider,
+            IOptions<LiveElectionSettings> options,
+            IFileDownloader fileDownloader,
+            IAppCache appCache)
         {
             _serviceProvider = serviceProvider;
             _fileDownloader = fileDownloader;
+            _appCache = appCache;
             _settings = options.Value;
         }
 
@@ -182,7 +188,7 @@ namespace ElectionResults.API.Import
                     TotalVotes = totalDiasporaVotes
                 };
             }
-
+            _appCache.Add(MemoryCache.DiasporaVotersCount, totalDiasporaVotes);
             diasporaTurnout.TotalVotes = totalDiasporaVotes;
             dbContext.Update(diasporaTurnout);
         }
@@ -207,8 +213,10 @@ namespace ElectionResults.API.Import
 
             nationalTurnout.EligibleVoters = csvTurnouts.Sum(t => t.EnrolledVoters + t.ComplementaryList);
             nationalTurnout.TotalVotes = csvTurnouts.Sum(t => t.TotalVotes);
+            _appCache.Add(MemoryCache.NationalVotersCount, nationalTurnout.TotalVotes);
             dbContext.Update(nationalTurnout);
         }
+
         private void UpdateLocalityTurnout(Ballot ballot, IGrouping<int, CsvTurnout> csvLocality, List<Turnout> turnoutsForBallot)
         {
             var dbLocality = _localities.FirstOrDefault(l => l.Siruta == csvLocality.Key);
