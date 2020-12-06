@@ -303,7 +303,9 @@ namespace ElectionResults.Core.Elections
             {
                 if (query.Division == ElectionDivision.National)
                 {
-                    return await _resultsCrawler.AggregateNationalResults(query, ballot);
+                    return await _appCache.GetOrAddAsync(
+                        $"{ballot.BallotType}-national", () => _resultsCrawler.AggregateNationalResults(query, ballot),
+                        DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
                 }
 
                 
