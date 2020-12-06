@@ -69,7 +69,7 @@ namespace ElectionResults.Core.Scheduler
 
         public async Task ImportAllResults()
         {
-          
+
         }
 
         public async Task<LiveElectionInfo> AggregateNationalResults(ElectionResultsQuery query, Ballot ballot)
@@ -85,7 +85,7 @@ namespace ElectionResults.Core.Scheduler
 
                 electionInfo.ValidVotes += capitalCityResults.ValidVotes;
                 electionInfo.NullVotes += capitalCityResults.NullVotes;
-               
+
                 foreach (var countyTurnout in turnouts.Where(t => t.Division == ElectionDivision.County))
                 {
                     var county = dbCounties.First(c => c.CountyId == countyTurnout.CountyId);
@@ -177,6 +177,37 @@ namespace ElectionResults.Core.Scheduler
             return electionInfo;
         }
 
+        public async Task<LiveElectionInfo> ImportLocalityResults(Ballot ballot, ElectionResultsQuery query)
+        {
+            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+            {
+                var county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
+                if (county == null)
+                {
+                    return LiveElectionInfo.Default;
+                }
+                var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.County, county.ShortName, null);
+                var stream = await _fileDownloader.Download(url.Value);
+                var pollingSections = await ExtractCandidateResultsFromCsv(stream);
+                var locality =
+                    await dbContext.Localities.FirstOrDefaultAsync(l => l.LocalityId == query.LocalityId);
+                var sectionsForLocality = pollingSections.Where(p => p.Siruta == locality.Siruta).ToList();
+                LiveElectionInfo electionInfo = new LiveElectionInfo();
+                foreach (var pollingSection in sectionsForLocality)
+                {
+                    electionInfo.ValidVotes += pollingSection.ValidVotes;
+                    electionInfo.NullVotes += pollingSection.NullVotes;
+                }
+                Console.WriteLine($"Added {county.Name}");
+                if (locality == null)
+                    return LiveElectionInfo.Default;
+
+                var candidateResults = sectionsForLocality.SelectMany(s => s.Candidates).ToList();
+                GroupResults(candidateResults, electionInfo);
+                return electionInfo;
+            }
+        }
+
         public async Task<LiveElectionInfo> GetCandidatesFromUrl(string url)
         {
             try
@@ -241,7 +272,48 @@ namespace ElectionResults.Core.Scheduler
                 }
             }
         }
-
+        private async Task<List<PollingSection>> ExtractCandidateResultsFromCsv(Stream csvStream)
+        {
+            List<CandidateResult> candidates;
+            List<PollingSection> pollingSections = new List<PollingSection>();
+            var csvContent = await ReadCsvContent(csvStream);
+            TextReader sr = new StringReader(csvContent);
+            var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
+            csvParser.Configuration.HeaderValidated = null;
+            csvParser.Configuration.MissingFieldFound = null;
+            candidates = await GetCandidates(csvParser);
+            while (true)
+            {
+                var result = await csvParser.ReadAsync();
+                if (!result)
+                    return pollingSections;
+                var index = 0;
+                var pollingSection = new PollingSection
+                {
+                    EligibleVoters = int.Parse(csvParser.GetField(_eligibleVotersIndex)),
+                    Voters = int.Parse(csvParser.GetField(_totalVotesIndex)),
+                    NullVotes = int.Parse(csvParser.GetField(_nullVotesIndex)),
+                    ValidVotes = int.Parse(csvParser.GetField(_validVotesIndex)),
+                    Siruta = int.Parse(csvParser.GetField(_sirutaIndex)),
+                    Country = csvParser.GetField(_countryNameIndex),
+                    Candidates = JsonConvert.DeserializeObject<List<CandidateResult>>(JsonConvert.SerializeObject(candidates))
+                };
+                pollingSections.Add(pollingSection);
+                for (int i = 25; i < 25 + candidates.Count; i++)
+                {
+                    try
+                    {
+                        var votes = csvParser.GetField(i);
+                        pollingSection.Candidates[index].Votes += int.Parse(votes);
+                        index++;
+                    }
+                    catch (Exception)
+                    {
+                        return pollingSections;
+                    }
+                }
+            }
+        }
         private async Task<List<CandidateResult>> GetCandidates(CsvReader csvParser)
         {
             var readAsync = await csvParser.ReadAsync();
@@ -274,4 +346,14 @@ namespace ElectionResults.Core.Scheduler
         }
     }
 
+    internal class PollingSection
+    {
+        public int EligibleVoters { get; set; }
+        public int Voters { get; set; }
+        public int NullVotes { get; set; }
+        public int ValidVotes { get; set; }
+        public int Siruta { get; set; }
+        public List<CandidateResult> Candidates { get; set; }
+        public string Country { get; set; }
+    }
 }
