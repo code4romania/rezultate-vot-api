@@ -29,12 +29,10 @@ namespace ElectionResults.Core.Elections
             // https://code4storage.blob.core.windows.net/results/pv_part_cnty_s_ab.csv
             // Parliament election
             _territoryCodes[(BallotType.Senate, ElectionDivision.County)] = "cnty_s"; // county
-            _territoryCodes[(BallotType.Senate, ElectionDivision.Diaspora)] = "cnty_s_sr"; // diaspora
-            _territoryCodes[(BallotType.Senate, ElectionDivision.Diaspora)] = "cnty_sc_sr"; // correspondence
+            _territoryCodes[(BallotType.Senate, ElectionDivision.Diaspora)] = "cnty_s_sr"; // division
 
             _territoryCodes[(BallotType.House, ElectionDivision.County)] = "cnty_cd"; // county
-            _territoryCodes[(BallotType.House, ElectionDivision.Diaspora)] = "cnty_cd_sr"; // diaspora
-            _territoryCodes[(BallotType.House, ElectionDivision.Diaspora)] = "cnty_cdc_sr"; // correspondence
+            _territoryCodes[(BallotType.House, ElectionDivision.Diaspora)] = "cnty_cd_sr"; // division
         }
 
         public Result<string> GetFileUrl(BallotType ballotType, ElectionDivision division, string shortName, int? siruta)
@@ -60,6 +58,13 @@ namespace ElectionResults.Core.Elections
             builder.Append(".csv");
             var url = builder.ToString();
             return url;
+        }
+
+        public Result<string> GetCorrespondenceUrl(BallotType ballotType, ElectionDivision division)
+        {
+            _territoryCodes[(BallotType.Senate, ElectionDivision.Diaspora)] = "cnty_sc_sr";
+            _territoryCodes[(BallotType.House, ElectionDivision.Diaspora)] = "cnty_cdc_sr";
+            return GetFileUrl(ballotType, division, null, null);
         }
     }
 }

@@ -307,7 +307,12 @@ namespace ElectionResults.Core.Elections
                         $"{ballot.BallotType}-national", () => _resultsCrawler.AggregateNationalResults(query, ballot),
                         DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
                 }
-
+                if (query.Division == ElectionDivision.Diaspora)
+                {
+                    return await _appCache.GetOrAddAsync(
+                        $"{ballot.BallotType}-diaspora", () => _resultsCrawler.AggregateDiasporaResults(query, ballot),
+                        DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
+                }
                 var county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
                 if (county.CountyId.IsCapitalCity())
                 {

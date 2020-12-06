@@ -39,6 +39,8 @@ namespace ElectionResults.Core.Scheduler
         private int _sirutaIndex;
         private List<Country> _dbCountries;
         private int _countryNameIndex;
+        private int _candidatesIndex;
+        private int _nullVotesIndex2;
 
         public ResultsCrawler(IFileDownloader fileDownloader,
             IOptions<LiveElectionSettings> options,
@@ -51,12 +53,30 @@ namespace ElectionResults.Core.Scheduler
             _appCache = appCache;
             _serviceProvider = serviceProvider;
             _liveElectionUrlBuilder = liveElectionUrlBuilder;
+            SetIndexesForNationalResults();
+        }
+
+        private void SetIndexesForNationalResults()
+        {
             _eligibleVotersIndex = 12;
             _totalVotesIndex = 16;
             _nullVotesIndex = 23;
             _validVotesIndex = 22;
             _sirutaIndex = 5;
             _countryNameIndex = 4;
+            _candidatesIndex = 25;
+        }
+
+        private void SetIndexesForCorrespondenceResults()
+        {
+            _eligibleVotersIndex = 12;
+            _totalVotesIndex = 13;
+            _nullVotesIndex = 15;
+            _nullVotesIndex2 = 21;
+            _validVotesIndex = 20;
+            _sirutaIndex = 5;
+            _countryNameIndex = 4;
+            _candidatesIndex = 22;
         }
 
         public async Task<Result<LiveElectionInfo>> Import(string url)
@@ -105,7 +125,10 @@ namespace ElectionResults.Core.Scheduler
                     }
                 }
 
-                GroupResults(results, electionInfo);
+                var diasporaResults = await AggregateDiasporaResults(query, ballot);
+                electionInfo.ValidVotes += diasporaResults.ValidVotes;
+                electionInfo.NullVotes += diasporaResults.NullVotes;
+                GroupResults(results.Concat(diasporaResults.Candidates).ToList(), electionInfo);
             }
 
             return electionInfo;
@@ -127,32 +150,24 @@ namespace ElectionResults.Core.Scheduler
         public async Task<LiveElectionInfo> AggregateDiasporaResults(ElectionResultsQuery query, Ballot ballot)
         {
             var electionInfo = new LiveElectionInfo();
-            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
-            {
-                var results = new List<CandidateResult>();
 
-                var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.Diaspora, null, null);
+            SetIndexesForNationalResults();
+            var diasporaUrl = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.Diaspora, null, null);
+            var diasporaResults = await _appCache.GetOrAddAsync(
+                $"{diasporaUrl}", () => Import(diasporaUrl.Value),
+                DateTimeOffset.Now.AddMinutes(_liveElectionSettings.CsvCacheInMinutes));
 
-                var diasporaResults = await _appCache.GetOrAddAsync(
-                    $"{url}", () => Import(url.Value),
-                    DateTimeOffset.Now.AddMinutes(_liveElectionSettings.CsvCacheInMinutes));
-                if (diasporaResults.IsSuccess)
-                {
-                    results.AddRange(diasporaResults.Value.Candidates);
-                    electionInfo.ValidVotes += diasporaResults.Value.ValidVotes;
-                    electionInfo.NullVotes += diasporaResults.Value.NullVotes;
-                }
+            electionInfo.ValidVotes += diasporaResults.Value.ValidVotes;
+            electionInfo.NullVotes += diasporaResults.Value.NullVotes;
+            SetIndexesForCorrespondenceResults();
+            var url = _liveElectionUrlBuilder.GetCorrespondenceUrl(ballot.BallotType, ElectionDivision.Diaspora);
+            var correspondenceResults = await _appCache.GetOrAddAsync(
+                $"{url}", () => Import(url.Value),
+                DateTimeOffset.Now.AddMinutes(_liveElectionSettings.CsvCacheInMinutes));
 
-                var grouped = results.GroupBy(c => c.Name).OrderByDescending(p => p.Sum(p => p.Votes)).ToList();
-                var candidateResults = grouped.Select(g =>
-                {
-                    var candidate = g.FirstOrDefault();
-                    candidate.Votes = g.Sum(c => c.Votes);
-                    return candidate;
-                }).ToList();
-                electionInfo.Candidates = candidateResults;
-                electionInfo.TotalVotes = candidateResults.Sum(c => c.Votes);
-            }
+            electionInfo.ValidVotes += correspondenceResults.Value.ValidVotes;
+            electionInfo.NullVotes += correspondenceResults.Value.NullVotes;
+            GroupResults(diasporaResults.Value.Candidates.Concat(correspondenceResults.Value.Candidates).ToList(), electionInfo);
 
             return electionInfo;
         }
@@ -255,9 +270,11 @@ namespace ElectionResults.Core.Scheduler
                 total += int.Parse(csvParser.GetField(_eligibleVotersIndex));
                 voted += int.Parse(csvParser.GetField(_totalVotesIndex));
                 nullVotes += int.Parse(csvParser.GetField(_nullVotesIndex));
+                if (_nullVotesIndex2 != 0)
+                    nullVotes += int.Parse(csvParser.GetField(_nullVotesIndex2));
                 valid += int.Parse(csvParser.GetField(_validVotesIndex));
                 siruta = int.Parse(csvParser.GetField(_sirutaIndex));
-                for (int i = 25; i < 25 + candidates.Count; i++)
+                for (int i = _candidatesIndex; i < _candidatesIndex + candidates.Count; i++)
                 {
                     try
                     {
@@ -299,7 +316,7 @@ namespace ElectionResults.Core.Scheduler
                     Candidates = JsonConvert.DeserializeObject<List<CandidateResult>>(JsonConvert.SerializeObject(candidates))
                 };
                 pollingSections.Add(pollingSection);
-                for (int i = 25; i < 25 + candidates.Count; i++)
+                for (int i = _candidatesIndex; i < _candidatesIndex + candidates.Count; i++)
                 {
                     try
                     {
@@ -318,7 +335,7 @@ namespace ElectionResults.Core.Scheduler
         {
             var readAsync = await csvParser.ReadAsync();
             var candidates = new List<CandidateResult>();
-            var index = 25;
+            var index = _candidatesIndex;
             while (true)
             {
                 try
