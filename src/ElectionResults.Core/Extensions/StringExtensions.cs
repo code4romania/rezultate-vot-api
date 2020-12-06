@@ -111,5 +111,32 @@ namespace ElectionResults.Core.Extensions
             Regex pattern = new Regex(@"[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+");
             return string.Join("_", pattern.Matches(str)).ToLower();
         }
+
+        public static string NormalizeCountryName(this string countryName)
+        {
+            return countryName.Replace("REPUBLICA ALBANIA", "Albania")
+                .Replace("REGATUL ARABIEI SAUDITE", "Arabia Saudita")
+                .Replace("REPUBLICA BELARUS", "Belarus")
+                .Replace("BOSNIA SI HERTEGOVINA", "Bosnia")
+                .Replace("REPUBLICA CEHA", "Cehia")
+                .Replace("REPUBLICA COREEA", "Coreea De Sud")
+                .Replace("REPUBLICA ELENA", "Grecia")
+                .Replace("REPUBLICA INDIA", "India")
+                .Replace("REPUBLICA INDONEZIA", "Indonezia")
+                .Replace("REGATUL HASEMIT AL IORDANIEI", "Iordania")
+                .Replace("REPUBLICA MACEDONIA DE NORD", "Macedonia")
+                .Replace("REGATUL UNIT AL MARII BRITANII SI IRLANDEI DE NORD", "Marea Britanie")
+                .Replace("REGATUL MAROC", "Maroc")
+                .Replace("REPUBLICA ISLAMICA PAKISTAN", "Pakistan")
+                .Replace("REPUBLICA PERU", "Peru")
+                .Replace("FEDERATIA RUSA", "Rusia")
+                .Replace("REPUBLICA SINGAPORE", "Singapore")
+                .Replace("REPUBLICA ARABA SIRIANA", "Siria")
+                .Replace("REPUBLICA SLOVACA", "Slovacia")
+                .Replace("REGATUL THAILANDEI", "Thailanda")
+                .Replace("REPUBLICA ORIENTALA A URUGUAYULUI", "Uruguay")
+                .Replace("REPUBLICA SOCIALISTA VIETNAM", "Vietnam");
+        }
+
     }
 }

@@ -475,6 +475,7 @@ namespace ElectionResults.Core.Scheduler
 
         public static LiveElectionInfo Default { get; } = new LiveElectionInfo();
         public bool Aggregated { get; set; }
+        public int Siruta { get; set; }
     }
 
     public class CsvTurnout
@@ -502,6 +503,9 @@ namespace ElectionResults.Core.Scheduler
 
         [Name("LT")]
         public int TotalVotes { get; set; }
+
+        [Name("LSC")]
+        public int MailVotes { get; set; }
 
         [Name("UM")]
         public int MobileBallot { get; set; }

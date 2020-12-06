@@ -11,6 +11,7 @@ using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
+using LazyCache;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -24,6 +25,7 @@ namespace ElectionResults.Core.Elections
         private readonly IWinnersAggregator _winnersAggregator;
         private readonly IElectionsRepository _electionRepository;
         private readonly ILiveElectionUrlBuilder _urlBuilder;
+        private readonly IAppCache _appCache;
         private readonly IResultsCrawler _resultsCrawler;
         private LiveElectionSettings _settings;
 
@@ -33,6 +35,7 @@ namespace ElectionResults.Core.Elections
             IElectionsRepository electionRepository,
             IOptions<LiveElectionSettings> options,
             ILiveElectionUrlBuilder urlBuilder,
+            IAppCache appCache,
             IResultsCrawler resultsCrawler)
         {
             _serviceProvider = serviceProvider;
@@ -40,6 +43,7 @@ namespace ElectionResults.Core.Elections
             _winnersAggregator = winnersAggregator;
             _electionRepository = electionRepository;
             _urlBuilder = urlBuilder;
+            _appCache = appCache;
             _resultsCrawler = resultsCrawler;
             _settings = options.Value;
         }
@@ -101,9 +105,9 @@ namespace ElectionResults.Core.Elections
                 {
                     divisionTurnout = new Turnout
                     {
-                        EligibleVoters = electionInfo.EligibleVoters,
+                        EligibleVoters = divisionTurnout.EligibleVoters,
                         CountedVotes = electionInfo.TotalVotes,
-                        TotalVotes = divisionTurnout?.TotalVotes ?? electionInfo.TotalVotes,
+                        TotalVotes = divisionTurnout.TotalVotes,
                         ValidVotes = electionInfo.ValidVotes,
                         NullVotes = electionInfo.NullVotes
                     };
@@ -216,7 +220,7 @@ namespace ElectionResults.Core.Elections
             return electionNews;
         }
 
-        private async Task<Turnout> GetDivisionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
+        public async Task<Turnout> GetDivisionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
         {
             if (ballot.Election.Category == ElectionCategory.Local && !ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
             {
@@ -297,12 +301,20 @@ namespace ElectionResults.Core.Elections
             LiveElectionInfo liveElectionInfo = new LiveElectionInfo();
             if (ballot.Election.Live)
             {
+                if (query.Division == ElectionDivision.National)
+                {
+                    return await _resultsCrawler.AggregateNationalResults(query, ballot);
+                }
+
+                
                 var county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
                 var url = _urlBuilder.GetFileUrl(ballot.BallotType, query.Division, county?.ShortName,
                     query.LocalityId);
                 if (url.IsFailure)
                     return LiveElectionInfo.Default;
-                var result = await _resultsCrawler.Import(url.Value);
+                var result = await _appCache.GetOrAddAsync(
+                    $"{url}", () => _resultsCrawler.Import(url.Value),
+                    DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
                 return result.Value;
             }
             if (ballot.Election.Category == ElectionCategory.Local && query.CountyId.GetValueOrDefault().IsCapitalCity() == false)
