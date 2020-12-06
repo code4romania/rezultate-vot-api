@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
@@ -12,7 +10,6 @@ using CsvHelper;
 using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Endpoints.Query;
-using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Infrastructure;
@@ -37,7 +34,6 @@ namespace ElectionResults.Core.Scheduler
         private int _nullVotesIndex;
         private int _validVotesIndex;
         private int _sirutaIndex;
-        private List<Country> _dbCountries;
         private int _countryNameIndex;
         private int _candidatesIndex;
         private int _nullVotesIndex2;
@@ -85,11 +81,6 @@ namespace ElectionResults.Core.Scheduler
             if (electionInfo.Candidates == null)
                 return Result.Failure<LiveElectionInfo>("File doesn't exist");
             return electionInfo;
-        }
-
-        public async Task ImportAllResults()
-        {
-
         }
 
         public async Task<LiveElectionInfo> AggregateNationalResults(ElectionResultsQuery query, Ballot ballot)
@@ -221,6 +212,43 @@ namespace ElectionResults.Core.Scheduler
                 GroupResults(candidateResults, electionInfo);
                 return electionInfo;
             }
+        }
+
+        public async Task<LiveElectionInfo> ImportCountryResults(ElectionResultsQuery query, Ballot ballot)
+        {
+            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+            {
+                var country = await dbContext.Countries.FirstOrDefaultAsync(c => c.Id == query.CountryId);
+                if (country == null)
+                {
+                    return LiveElectionInfo.Default;
+                }
+                LiveElectionInfo electionInfo = new LiveElectionInfo();
+                var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.Diaspora, null, null);
+                var diasporaResults = await GetDiasporaResults(url, country, electionInfo);
+                var correspondenceUrl = _liveElectionUrlBuilder.GetCorrespondenceUrl(ballot.BallotType, ElectionDivision.Diaspora);
+                var correspondenceResults = await GetDiasporaResults(correspondenceUrl, country, electionInfo);
+                GroupResults(diasporaResults.Concat(correspondenceResults).ToList(), electionInfo);
+                return electionInfo;
+            }
+        }
+
+        private async Task<List<CandidateResult>> GetDiasporaResults(Result<string> url, Country country, LiveElectionInfo electionInfo)
+        {
+            List<CandidateResult> candidateResults = new List<CandidateResult>();
+            var stream = await _fileDownloader.Download(url.Value);
+            var pollingSections = await ExtractCandidateResultsFromCsv(stream);
+            var sectionsForLocality = pollingSections.Where(p => p.Country.EqualsIgnoringAccent(country.Name)).ToList();
+            foreach (var pollingSection in sectionsForLocality)
+            {
+                electionInfo.ValidVotes += pollingSection.ValidVotes;
+                electionInfo.NullVotes += pollingSection.NullVotes;
+            }
+
+            Console.WriteLine($"Added {country.Name}");
+
+            candidateResults = sectionsForLocality.SelectMany(s => s.Candidates).ToList();
+            return candidateResults;
         }
 
         public async Task<LiveElectionInfo> GetCandidatesFromUrl(string url)
