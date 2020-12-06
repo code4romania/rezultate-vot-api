@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -80,6 +80,12 @@ namespace ElectionResults.Core.Scheduler
                 var dbCounties = await dbContext.Counties.ToListAsync();
                 var turnouts = await dbContext.Turnouts.Where(t => t.BallotId == ballot.BallotId).ToListAsync();
                 var results = new List<CandidateResult>();
+                var capitalCityResults = await ImportCapitalCityResults(ballot);
+                results.AddRange(capitalCityResults.Candidates);
+
+                electionInfo.ValidVotes += capitalCityResults.ValidVotes;
+                electionInfo.NullVotes += capitalCityResults.NullVotes;
+               
                 foreach (var countyTurnout in turnouts.Where(t => t.Division == ElectionDivision.County))
                 {
                     var county = dbCounties.First(c => c.CountyId == countyTurnout.CountyId);
@@ -99,18 +105,23 @@ namespace ElectionResults.Core.Scheduler
                     }
                 }
 
-                var grouped = results.GroupBy(c => c.Name).OrderByDescending(p => p.Sum(p => p.Votes)).ToList();
-                var candidateResults = grouped.Select(g =>
-                {
-                    var candidate = g.FirstOrDefault();
-                    candidate.Votes = g.Sum(c => c.Votes);
-                    return candidate;
-                }).ToList();
-                electionInfo.Candidates = candidateResults;
-                electionInfo.TotalVotes = candidateResults.Sum(c => c.Votes);
+                GroupResults(results, electionInfo);
             }
 
             return electionInfo;
+        }
+
+        private static void GroupResults(List<CandidateResult> results, LiveElectionInfo electionInfo)
+        {
+            var grouped = results.GroupBy(c => c.Name).OrderByDescending(p => p.Sum(p => p.Votes)).ToList();
+            var candidateResults = grouped.Select(g =>
+            {
+                var candidate = g.FirstOrDefault();
+                candidate.Votes = g.Sum(c => c.Votes);
+                return candidate;
+            }).ToList();
+            electionInfo.Candidates = candidateResults;
+            electionInfo.TotalVotes = candidateResults.Sum(c => c.Votes);
         }
 
         public async Task<LiveElectionInfo> AggregateDiasporaResults(ElectionResultsQuery query, Ballot ballot)
@@ -142,6 +153,26 @@ namespace ElectionResults.Core.Scheduler
                 electionInfo.Candidates = candidateResults;
                 electionInfo.TotalVotes = candidateResults.Sum(c => c.Votes);
             }
+
+            return electionInfo;
+        }
+
+        public async Task<LiveElectionInfo> ImportCapitalCityResults(Ballot ballot)
+        {
+            var electionInfo = new LiveElectionInfo();
+            var results = new List<CandidateResult>();
+            for (int sectorIndex = 1; sectorIndex <= 6; sectorIndex++)
+            {
+                var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.County, $"s{sectorIndex}", null);
+                var sectorResults = await Import(url.Value);
+                if (sectorResults.IsSuccess)
+                {
+                    results.AddRange(sectorResults.Value.Candidates);
+                    electionInfo.ValidVotes += sectorResults.Value.ValidVotes;
+                    electionInfo.NullVotes += sectorResults.Value.NullVotes;
+                }
+            }
+            GroupResults(results, electionInfo);
 
             return electionInfo;
         }

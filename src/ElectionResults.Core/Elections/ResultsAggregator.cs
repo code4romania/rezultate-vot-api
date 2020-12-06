@@ -308,8 +308,12 @@ namespace ElectionResults.Core.Elections
                         DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
                 }
 
-                
+
                 var county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
+                if (county.CountyId.IsCapitalCity())
+                {
+                    return await _resultsCrawler.ImportCapitalCityResults(ballot);
+                }
                 var url = _urlBuilder.GetFileUrl(ballot.BallotType, query.Division, county?.ShortName,
                     query.LocalityId);
                 if (url.IsFailure)
@@ -317,7 +321,9 @@ namespace ElectionResults.Core.Elections
                 var result = await _appCache.GetOrAddAsync(
                     $"{url}", () => _resultsCrawler.Import(url.Value),
                     DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
-                return result.Value;
+                if (result.IsSuccess)
+                    return result.Value;
+                return LiveElectionInfo.Default;
             }
             if (ballot.Election.Category == ElectionCategory.Local && query.CountyId.GetValueOrDefault().IsCapitalCity() == false)
             {
