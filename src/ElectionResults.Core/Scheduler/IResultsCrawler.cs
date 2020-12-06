@@ -12,5 +12,6 @@ namespace ElectionResults.Core.Scheduler
         Task<LiveElectionInfo> AggregateNationalResults(ElectionResultsQuery query, Ballot ballot);
         Task<LiveElectionInfo> AggregateDiasporaResults(ElectionResultsQuery query, Ballot ballot);
         Task<LiveElectionInfo> ImportCapitalCityResults(Ballot ballot);
+        Task<LiveElectionInfo> ImportLocalityResults(Ballot ballot, ElectionResultsQuery query);
     }
 }
