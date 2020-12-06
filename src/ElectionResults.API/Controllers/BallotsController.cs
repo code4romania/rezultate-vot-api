@@ -92,25 +92,6 @@ namespace ElectionResults.API.Controllers
                 var result = await _appCache.GetOrAddAsync(
                     query.GetCacheKey(), () => _resultsAggregator.GetBallotResults(query),
                     expiration);
-                if (result.Value.Meta.Live)
-                {
-                    if (query.Division == ElectionDivision.National)
-                    {
-                        var turnout = _appCache.Get<Turnout>(MemoryCache.NationalTurnout);
-                        result.Value.Turnout.TotalVotes = turnout.TotalVotes;
-                        result.Value.Turnout.EligibleVoters = turnout.EligibleVoters;
-                        result.Value.Results.EligibleVoters = turnout.EligibleVoters;
-                        result.Value.Results.TotalVotes = turnout.TotalVotes;
-                    }
-                    if (query.Division == ElectionDivision.Diaspora)
-                    {
-                        var turnout = _appCache.Get<Turnout>(MemoryCache.DiasporaTurnout);
-                        result.Value.Turnout.TotalVotes = turnout.TotalVotes;
-                        result.Value.Turnout.EligibleVoters = turnout.TotalVotes;
-                        result.Value.Results.EligibleVoters = turnout.TotalVotes;
-                        result.Value.Results.TotalVotes = turnout.TotalVotes;
-                    }
-                }
                 var newsFeed = await _resultsAggregator.GetNewsFeed(query, result.Value.Meta.ElectionId);
                 result.Value.ElectionNews = newsFeed;
                 return result.Value;
