@@ -96,13 +96,15 @@ namespace ElectionResults.API.Controllers
                 {
                     if (query.Division == ElectionDivision.National)
                     {
-                        result.Value.Turnout.TotalVotes = _appCache.Get<int>(MemoryCache.NationalVotersCount);
-                        result.Value.Results.TotalVotes = _appCache.Get<int>(MemoryCache.NationalVotersCount);
+                        var turnout = _appCache.Get<Turnout>(MemoryCache.NationalTurnout);
+                        result.Value.Turnout.TotalVotes = turnout.TotalVotes;
+                        result.Value.Results.EligibleVoters = turnout.EligibleVoters;
                     }
                     if (query.Division == ElectionDivision.Diaspora)
                     {
-                        result.Value.Turnout.TotalVotes = _appCache.Get<int>(MemoryCache.DiasporaVotersCount);
-                        result.Value.Results.TotalVotes = _appCache.Get<int>(MemoryCache.DiasporaVotersCount);
+                        var turnout = _appCache.Get<Turnout>(MemoryCache.DiasporaTurnout);
+                        result.Value.Turnout.TotalVotes = turnout.TotalVotes;
+                        result.Value.Results.EligibleVoters = turnout.EligibleVoters;
                     }
                 }
                 var newsFeed = await _resultsAggregator.GetNewsFeed(query, result.Value.Meta.ElectionId);
