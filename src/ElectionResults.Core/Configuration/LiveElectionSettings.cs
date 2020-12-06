@@ -15,5 +15,6 @@ namespace ElectionResults.Core.Configuration
         public int TurnoutIntervalInMinutes { get; set; }
 
         public int ResultsCacheInMinutes { get; set; }
+        public int CsvCacheInMinutes { get; set; }
     }
 }
