@@ -115,7 +115,7 @@ namespace ElectionResults.API.Import
             {
                 foreach (var localityTurnouts in county.GroupBy(c => c.Siruta))
                 {
-                    UpdateLocalityTurnout(ballot, localityTurnouts, turnoutsForBallot);
+                    UpdateLocalityTurnout(ballot, localityTurnouts, turnoutsForBallot, dbContext);
                 }
 
                 UpdateCountyTurnout(ballot, county, dbContext, turnoutsForBallot);
@@ -217,7 +217,7 @@ namespace ElectionResults.API.Import
             dbContext.Update(nationalTurnout);
         }
 
-        private void UpdateLocalityTurnout(Ballot ballot, IGrouping<int, CsvTurnout> csvLocality, List<Turnout> turnoutsForBallot)
+        private void UpdateLocalityTurnout(Ballot ballot, IGrouping<int, CsvTurnout> csvLocality, List<Turnout> turnoutsForBallot, ApplicationDbContext dbContext)
         {
             var dbLocality = _localities.FirstOrDefault(l => l.Siruta == csvLocality.Key);
             if (dbLocality == null)
@@ -238,6 +238,7 @@ namespace ElectionResults.API.Import
             turnout.PermanentListsVotes = csvLocality.Sum(c => c.LP);
             turnout.SpecialListsVotes = csvLocality.Sum(c => c.SpecialLists);
             turnout.CorrespondenceVotes = csvLocality.Sum(c => c.MobileBallot);
+            dbContext.Update(turnout);
         }
 
         private static Turnout CreateTurnout(County dbCounty, Locality dbLocality, Ballot ballot)
