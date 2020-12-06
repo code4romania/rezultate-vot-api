@@ -217,7 +217,7 @@ namespace ElectionResults.Core.Scheduler
         {
             var readAsync = await csvParser.ReadAsync();
             var candidates = new List<CandidateResult>();
-            var index = 26;
+            var index = 25;
             while (true)
             {
                 try
