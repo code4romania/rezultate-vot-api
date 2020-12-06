@@ -19,6 +19,9 @@ namespace ElectionResults.Core.Repositories
         public static readonly CacheSettings County = new CacheSettings("county", 60*24);
         
         public static readonly CacheSettings Countries = new CacheSettings("all_countries", 60*24);
+        
+        public const string NationalVotersCount = "national-total";
+        public const string DiasporaVotersCount = "diaspora-total";
 
         public static string CreateWinnersKey(int ballotId, int? countyId, ElectionDivision division)
         {
