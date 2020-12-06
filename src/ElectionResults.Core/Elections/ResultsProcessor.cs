@@ -22,6 +22,7 @@ namespace ElectionResults.Core.Elections
                 return results;
             }
             results.NullVotes = electionTurnout.NullVotes;
+            results.CountedVotes = electionTurnout.CountedVotes;
             results.TotalVotes = electionTurnout.TotalVotes;
             results.ValidVotes = electionTurnout.ValidVotes;
             results.EligibleVoters = electionTurnout.EligibleVoters;
