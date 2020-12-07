@@ -113,6 +113,24 @@ namespace ElectionResults.API.Import
         {
             foreach (var county in counties)
             {
+                if (county.Key == "B")
+                {
+                    var sectorSirutaMap = new Dictionary<string, int>();
+                    sectorSirutaMap["BUCURESTI SECTORUL 1"] = 179141;
+                    sectorSirutaMap["BUCURESTI SECTORUL 2"] = 179150;
+                    sectorSirutaMap["BUCURESTI SECTORUL 3"] = 179169;
+                    sectorSirutaMap["BUCURESTI SECTORUL 4"] = 179178;
+                    sectorSirutaMap["BUCURESTI SECTORUL 5"] = 179187;
+                    sectorSirutaMap["BUCURESTI SECTORUL 6"] = 179196;
+                    foreach (var localityTurnouts in county.GroupBy(c => c.Locality))
+                    {
+                        foreach (var localityTurnout in localityTurnouts)
+                        {
+                            localityTurnout.Siruta = sectorSirutaMap
+                                .FirstOrDefault(s => s.Key.EqualsIgnoringAccent(localityTurnout.Locality)).Value;
+                        }
+                    }
+                }
                 foreach (var localityTurnouts in county.GroupBy(c => c.Siruta))
                 {
                     UpdateLocalityTurnout(ballot, localityTurnouts, turnoutsForBallot, dbContext);

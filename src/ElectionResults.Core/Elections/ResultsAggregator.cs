@@ -322,9 +322,15 @@ namespace ElectionResults.Core.Elections
                 var county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
                 if (county.CountyId.IsCapitalCity())
                 {
-                    return await _resultsCrawler.ImportCapitalCityResults(ballot);
+                    int? index = null;
+                    if (query.Division == ElectionDivision.Locality)
+                    {
+                        var sector = await dbContext.Localities.FirstOrDefaultAsync(l => l.LocalityId == query.LocalityId);
+                        index = int.Parse(sector.Name.Split(" ").Last());
+                    }
+                    return await _resultsCrawler.ImportCapitalCityResults(ballot, index);
                 }
-
+             
                 if (query.Division == ElectionDivision.Locality)
                 {
                     return await _resultsCrawler.ImportLocalityResults(ballot, query);
