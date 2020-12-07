@@ -340,7 +340,7 @@ namespace ElectionResults.Core.Elections
                 if (url.IsFailure)
                     return LiveElectionInfo.Default;
                 var result = await _appCache.GetOrAddAsync(
-                    $"{url}", () => _resultsCrawler.Import(url.Value),
+                    $"{url}", () => _resultsCrawler.Import(url.Value, new CsvIndexes(CsvMode.National)),
                     DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
                 if (result.IsSuccess)
                     return result.Value;
