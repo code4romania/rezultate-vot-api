@@ -58,6 +58,7 @@ namespace ElectionResults.Core.Scheduler
             _totalVotesIndex = 16;
             _nullVotesIndex = 23;
             _validVotesIndex = 22;
+            _nullVotesIndex2 = 24;
             _sirutaIndex = 5;
             _countryNameIndex = 4;
             _candidatesIndex = 25;
