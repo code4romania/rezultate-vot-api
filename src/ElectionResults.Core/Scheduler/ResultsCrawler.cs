@@ -315,12 +315,16 @@ namespace ElectionResults.Core.Scheduler
                 {
                     EligibleVoters = int.Parse(csvParser.GetField(csvIndexes.EligibleVotersIndex)),
                     Voters = int.Parse(csvParser.GetField(csvIndexes.TotalVotesIndex)),
-                    NullVotes = int.Parse(csvParser.GetField(csvIndexes.NullVotesIndex)),
+                    NullVotes = int.Parse(csvParser.GetField(csvIndexes.NullVotesIndex)) ,
                     ValidVotes = int.Parse(csvParser.GetField(csvIndexes.ValidVotesIndex)),
                     Siruta = int.Parse(csvParser.GetField(csvIndexes.SirutaIndex)),
                     Country = csvParser.GetField(csvIndexes.CountryNameIndex),
                     Candidates = JsonConvert.DeserializeObject<List<CandidateResult>>(JsonConvert.SerializeObject(candidates))
                 };
+                if (csvIndexes.NullVotesIndex2 != 0)
+                {
+                    pollingSection.NullVotes += int.Parse(csvParser.GetField(csvIndexes.NullVotesIndex2));
+                }
                 pollingSections.Add(pollingSection);
                 for (int i = csvIndexes.CandidatesIndex; i < csvIndexes.CandidatesIndex + candidates.Count; i++)
                 {
