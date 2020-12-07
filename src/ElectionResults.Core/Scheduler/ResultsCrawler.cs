@@ -163,24 +163,36 @@ namespace ElectionResults.Core.Scheduler
             return electionInfo;
         }
 
-        public async Task<LiveElectionInfo> ImportCapitalCityResults(Ballot ballot)
+        public async Task<LiveElectionInfo> ImportCapitalCityResults(Ballot ballot, int? sector = null)
         {
             var electionInfo = new LiveElectionInfo();
             var results = new List<CandidateResult>();
-            for (int sectorIndex = 1; sectorIndex <= 6; sectorIndex++)
+            if (sector != null)
             {
-                var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.County, $"s{sectorIndex}", null);
-                var sectorResults = await Import(url.Value);
-                if (sectorResults.IsSuccess)
+                await GetResultsForSector(ballot, sector.Value, results, electionInfo);
+            }
+            else
+            {
+                for (int sectorIndex = 1; sectorIndex <= 6; sectorIndex++)
                 {
-                    results.AddRange(sectorResults.Value.Candidates);
-                    electionInfo.ValidVotes += sectorResults.Value.ValidVotes;
-                    electionInfo.NullVotes += sectorResults.Value.NullVotes;
+                    await GetResultsForSector(ballot, sectorIndex, results, electionInfo);
                 }
             }
             GroupResults(results, electionInfo);
 
             return electionInfo;
+        }
+
+        private async Task GetResultsForSector(Ballot ballot, int sectorIndex, List<CandidateResult> results, LiveElectionInfo electionInfo)
+        {
+            var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.County, $"s{sectorIndex}", null);
+            var sectorResults = await Import(url.Value);
+            if (sectorResults.IsSuccess)
+            {
+                results.AddRange(sectorResults.Value.Candidates);
+                electionInfo.ValidVotes += sectorResults.Value.ValidVotes;
+                electionInfo.NullVotes += sectorResults.Value.NullVotes;
+            }
         }
 
         public async Task<LiveElectionInfo> ImportLocalityResults(Ballot ballot, ElectionResultsQuery query)
@@ -233,6 +245,11 @@ namespace ElectionResults.Core.Scheduler
             }
         }
 
+        public Task<LiveElectionInfo> ImportCapitalCitySectorResults(Ballot ballot)
+        {
+            throw new NotImplementedException();
+        }
+
         private async Task<List<CandidateResult>> GetDiasporaResults(Result<string> url, Country country, LiveElectionInfo electionInfo)
         {
             List<CandidateResult> candidateResults = new List<CandidateResult>();
@@ -264,7 +281,6 @@ namespace ElectionResults.Core.Scheduler
                 return LiveElectionInfo.Default;
             }
         }
-
 
         private async Task<LiveElectionInfo> ExtractCandidatesFromCsv(Stream csvStream)
         {
