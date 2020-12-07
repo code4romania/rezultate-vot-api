@@ -29,14 +29,6 @@ namespace ElectionResults.Core.Scheduler
         private readonly IAppCache _appCache;
         private readonly IServiceProvider _serviceProvider;
         private readonly ILiveElectionUrlBuilder _liveElectionUrlBuilder;
-        private int _eligibleVotersIndex;
-        private int _totalVotesIndex;
-        private int _nullVotesIndex;
-        private int _validVotesIndex;
-        private int _sirutaIndex;
-        private int _countryNameIndex;
-        private int _candidatesIndex;
-        private int _nullVotesIndex2;
 
         public ResultsCrawler(IFileDownloader fileDownloader,
             IOptions<LiveElectionSettings> options,
@@ -49,36 +41,11 @@ namespace ElectionResults.Core.Scheduler
             _appCache = appCache;
             _serviceProvider = serviceProvider;
             _liveElectionUrlBuilder = liveElectionUrlBuilder;
-            SetIndexesForNationalResults();
         }
 
-        private void SetIndexesForNationalResults()
+        public async Task<Result<LiveElectionInfo>> Import(string url, CsvIndexes csvIndexes)
         {
-            _eligibleVotersIndex = 12;
-            _totalVotesIndex = 16;
-            _nullVotesIndex = 23;
-            _validVotesIndex = 22;
-            _nullVotesIndex2 = 24;
-            _sirutaIndex = 5;
-            _countryNameIndex = 4;
-            _candidatesIndex = 25;
-        }
-
-        private void SetIndexesForCorrespondenceResults()
-        {
-            _eligibleVotersIndex = 12;
-            _totalVotesIndex = 13;
-            _nullVotesIndex = 15;
-            _nullVotesIndex2 = 21;
-            _validVotesIndex = 20;
-            _sirutaIndex = 5;
-            _countryNameIndex = 4;
-            _candidatesIndex = 22;
-        }
-
-        public async Task<Result<LiveElectionInfo>> Import(string url)
-        {
-            var electionInfo = await GetCandidatesFromUrl(url);
+            var electionInfo = await GetCandidatesFromUrl(url, csvIndexes);
             if (electionInfo.Candidates == null)
                 return Result.Failure<LiveElectionInfo>("File doesn't exist");
             return electionInfo;
@@ -107,10 +74,9 @@ namespace ElectionResults.Core.Scheduler
                     }
                     var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.County, county.ShortName, null);
 
-                    var countyResults = await Import(url.Value);
+                    var countyResults = await Import(url.Value, new CsvIndexes(CsvMode.National));
                     if (countyResults.IsSuccess)
                     {
-                        Console.WriteLine($"Added {county.Name}");
                         results.AddRange(countyResults.Value.Candidates);
                         electionInfo.ValidVotes += countyResults.Value.ValidVotes;
                         electionInfo.NullVotes += countyResults.Value.NullVotes;
@@ -143,18 +109,16 @@ namespace ElectionResults.Core.Scheduler
         {
             var electionInfo = new LiveElectionInfo();
 
-            SetIndexesForNationalResults();
             var diasporaUrl = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.Diaspora, null, null);
             var diasporaResults = await _appCache.GetOrAddAsync(
-                $"{diasporaUrl}", () => Import(diasporaUrl.Value),
+                $"{diasporaUrl}", () => Import(diasporaUrl.Value, new CsvIndexes(CsvMode.Diaspora)),
                 DateTimeOffset.Now.AddMinutes(_liveElectionSettings.CsvCacheInMinutes));
 
             electionInfo.ValidVotes += diasporaResults.Value.ValidVotes;
             electionInfo.NullVotes += diasporaResults.Value.NullVotes;
-            SetIndexesForCorrespondenceResults();
             var url = _liveElectionUrlBuilder.GetCorrespondenceUrl(ballot.BallotType, ElectionDivision.Diaspora);
             var correspondenceResults = await _appCache.GetOrAddAsync(
-                $"{url}", () => Import(url.Value),
+                $"{url}", () => Import(url.Value, new CsvIndexes(CsvMode.Correspondence)),
                 DateTimeOffset.Now.AddMinutes(_liveElectionSettings.CsvCacheInMinutes));
 
             electionInfo.ValidVotes += correspondenceResults.Value.ValidVotes;
@@ -187,7 +151,7 @@ namespace ElectionResults.Core.Scheduler
         private async Task GetResultsForSector(Ballot ballot, int sectorIndex, List<CandidateResult> results, LiveElectionInfo electionInfo)
         {
             var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.County, $"s{sectorIndex}", null);
-            var sectorResults = await Import(url.Value);
+            var sectorResults = await Import(url.Value, new CsvIndexes(CsvMode.National));
             if (sectorResults.IsSuccess)
             {
                 results.AddRange(sectorResults.Value.Candidates);
@@ -207,7 +171,7 @@ namespace ElectionResults.Core.Scheduler
                 }
                 var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.County, county.ShortName, null);
                 var stream = await _fileDownloader.Download(url.Value);
-                var pollingSections = await ExtractCandidateResultsFromCsv(stream);
+                var pollingSections = await ExtractCandidateResultsFromCsv(stream, new CsvIndexes(CsvMode.National));
                 var locality =
                     await dbContext.Localities.FirstOrDefaultAsync(l => l.LocalityId == query.LocalityId);
                 var sectionsForLocality = pollingSections.Where(p => p.Siruta == locality.Siruta).ToList();
@@ -217,7 +181,6 @@ namespace ElectionResults.Core.Scheduler
                     electionInfo.ValidVotes += pollingSection.ValidVotes;
                     electionInfo.NullVotes += pollingSection.NullVotes;
                 }
-                Console.WriteLine($"Added {county.Name}");
                 if (locality == null)
                     return LiveElectionInfo.Default;
 
@@ -255,7 +218,7 @@ namespace ElectionResults.Core.Scheduler
         {
             List<CandidateResult> candidateResults = new List<CandidateResult>();
             var stream = await _fileDownloader.Download(url.Value);
-            var pollingSections = await ExtractCandidateResultsFromCsv(stream);
+            var pollingSections = await ExtractCandidateResultsFromCsv(stream, new CsvIndexes(CsvMode.National));
             var sectionsForLocality = pollingSections.Where(p => p.Country.EqualsIgnoringAccent(country.Name)).ToList();
             foreach (var pollingSection in sectionsForLocality)
             {
@@ -263,18 +226,16 @@ namespace ElectionResults.Core.Scheduler
                 electionInfo.NullVotes += pollingSection.NullVotes;
             }
 
-            Console.WriteLine($"Added {country.Name}");
-
             candidateResults = sectionsForLocality.SelectMany(s => s.Candidates).ToList();
             return candidateResults;
         }
 
-        public async Task<LiveElectionInfo> GetCandidatesFromUrl(string url)
+        public async Task<LiveElectionInfo> GetCandidatesFromUrl(string url, CsvIndexes csvIndexes)
         {
             try
             {
                 var stream = await _fileDownloader.Download(url);
-                var liveElectionInfo = await ExtractCandidatesFromCsv(stream);
+                var liveElectionInfo = await ExtractCandidatesFromCsv(stream, csvIndexes);
                 return liveElectionInfo;
             }
             catch
@@ -283,7 +244,7 @@ namespace ElectionResults.Core.Scheduler
             }
         }
 
-        private async Task<LiveElectionInfo> ExtractCandidatesFromCsv(Stream csvStream)
+        private async Task<LiveElectionInfo> ExtractCandidatesFromCsv(Stream csvStream, CsvIndexes csvIndexes)
         {
             List<CandidateResult> candidates;
             var csvContent = await ReadCsvContent(csvStream);
@@ -291,7 +252,7 @@ namespace ElectionResults.Core.Scheduler
             var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
             csvParser.Configuration.HeaderValidated = null;
             csvParser.Configuration.MissingFieldFound = null;
-            candidates = await GetCandidates(csvParser);
+            candidates = await GetCandidates(csvParser, csvIndexes);
             var nullVotes = 0;
             var total = 0;
             var voted = 0;
@@ -312,14 +273,14 @@ namespace ElectionResults.Core.Scheduler
                         Siruta = siruta
                     };
                 var index = 0;
-                total += int.Parse(csvParser.GetField(_eligibleVotersIndex));
-                voted += int.Parse(csvParser.GetField(_totalVotesIndex));
-                nullVotes += int.Parse(csvParser.GetField(_nullVotesIndex));
-                if (_nullVotesIndex2 != 0)
-                    nullVotes += int.Parse(csvParser.GetField(_nullVotesIndex2));
-                valid += int.Parse(csvParser.GetField(_validVotesIndex));
-                siruta = int.Parse(csvParser.GetField(_sirutaIndex));
-                for (int i = _candidatesIndex; i < _candidatesIndex + candidates.Count; i++)
+                total += int.Parse(csvParser.GetField(csvIndexes.EligibleVotersIndex));
+                voted += int.Parse(csvParser.GetField(csvIndexes.TotalVotesIndex));
+                nullVotes += int.Parse(csvParser.GetField(csvIndexes.NullVotesIndex));
+                if (csvIndexes.NullVotesIndex2 != 0)
+                    nullVotes += int.Parse(csvParser.GetField(csvIndexes.NullVotesIndex2));
+                valid += int.Parse(csvParser.GetField(csvIndexes.ValidVotesIndex));
+                siruta = int.Parse(csvParser.GetField(csvIndexes.SirutaIndex));
+                for (int i = csvIndexes.CandidatesIndex; i < csvIndexes.CandidatesIndex + candidates.Count; i++)
                 {
                     try
                     {
@@ -334,7 +295,7 @@ namespace ElectionResults.Core.Scheduler
                 }
             }
         }
-        private async Task<List<PollingSection>> ExtractCandidateResultsFromCsv(Stream csvStream)
+        private async Task<List<PollingSection>> ExtractCandidateResultsFromCsv(Stream csvStream, CsvIndexes csvIndexes)
         {
             List<CandidateResult> candidates;
             List<PollingSection> pollingSections = new List<PollingSection>();
@@ -343,7 +304,7 @@ namespace ElectionResults.Core.Scheduler
             var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
             csvParser.Configuration.HeaderValidated = null;
             csvParser.Configuration.MissingFieldFound = null;
-            candidates = await GetCandidates(csvParser);
+            candidates = await GetCandidates(csvParser, csvIndexes);
             while (true)
             {
                 var result = await csvParser.ReadAsync();
@@ -352,16 +313,20 @@ namespace ElectionResults.Core.Scheduler
                 var index = 0;
                 var pollingSection = new PollingSection
                 {
-                    EligibleVoters = int.Parse(csvParser.GetField(_eligibleVotersIndex)),
-                    Voters = int.Parse(csvParser.GetField(_totalVotesIndex)),
-                    NullVotes = int.Parse(csvParser.GetField(_nullVotesIndex)),
-                    ValidVotes = int.Parse(csvParser.GetField(_validVotesIndex)),
-                    Siruta = int.Parse(csvParser.GetField(_sirutaIndex)),
-                    Country = csvParser.GetField(_countryNameIndex),
+                    EligibleVoters = int.Parse(csvParser.GetField(csvIndexes.EligibleVotersIndex)),
+                    Voters = int.Parse(csvParser.GetField(csvIndexes.TotalVotesIndex)),
+                    NullVotes = int.Parse(csvParser.GetField(csvIndexes.NullVotesIndex)) ,
+                    ValidVotes = int.Parse(csvParser.GetField(csvIndexes.ValidVotesIndex)),
+                    Siruta = int.Parse(csvParser.GetField(csvIndexes.SirutaIndex)),
+                    Country = csvParser.GetField(csvIndexes.CountryNameIndex),
                     Candidates = JsonConvert.DeserializeObject<List<CandidateResult>>(JsonConvert.SerializeObject(candidates))
                 };
+                if (csvIndexes.NullVotesIndex2 != 0)
+                {
+                    pollingSection.NullVotes += int.Parse(csvParser.GetField(csvIndexes.NullVotesIndex2));
+                }
                 pollingSections.Add(pollingSection);
-                for (int i = _candidatesIndex; i < _candidatesIndex + candidates.Count; i++)
+                for (int i = csvIndexes.CandidatesIndex; i < csvIndexes.CandidatesIndex + candidates.Count; i++)
                 {
                     try
                     {
@@ -376,16 +341,19 @@ namespace ElectionResults.Core.Scheduler
                 }
             }
         }
-        private async Task<List<CandidateResult>> GetCandidates(CsvReader csvParser)
+        private async Task<List<CandidateResult>> GetCandidates(CsvReader csvParser, CsvIndexes csvIndexes)
         {
-            var readAsync = await csvParser.ReadAsync();
+            await csvParser.ReadAsync();
             var candidates = new List<CandidateResult>();
-            var index = _candidatesIndex;
+            var index = csvIndexes.CandidatesIndex;
+            await csvIndexes.Map(csvParser);
             while (true)
             {
                 try
                 {
                     var field = csvParser.GetField(index++);
+                    if (field == null)
+                        return candidates;
                     field = field.Replace("-voturi", "");
                     candidates.Add(new CandidateResult
                     {
