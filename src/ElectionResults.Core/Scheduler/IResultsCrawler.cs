@@ -7,7 +7,7 @@ namespace ElectionResults.Core.Scheduler
 {
     public interface IResultsCrawler
     {
-        Task<Result<LiveElectionInfo>> Import(string url);
+        Task<Result<LiveElectionInfo>> Import(string url, CsvIndexes csvIndexes);
         Task<LiveElectionInfo> AggregateNationalResults(ElectionResultsQuery query, Ballot ballot);
         Task<LiveElectionInfo> AggregateDiasporaResults(ElectionResultsQuery query, Ballot ballot);
         Task<LiveElectionInfo> ImportCapitalCityResults(Ballot ballot, int? index = null);
