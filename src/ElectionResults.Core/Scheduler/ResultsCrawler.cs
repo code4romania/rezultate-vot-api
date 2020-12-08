@@ -201,9 +201,9 @@ namespace ElectionResults.Core.Scheduler
                 }
                 LiveElectionInfo electionInfo = new LiveElectionInfo();
                 var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.Diaspora, null, null);
-                var diasporaResults = await GetDiasporaResults(url, country, electionInfo);
+                var diasporaResults = await GetDiasporaResults(url, country, electionInfo, new CsvIndexes(CsvMode.Diaspora));
                 var correspondenceUrl = _liveElectionUrlBuilder.GetCorrespondenceUrl(ballot.BallotType, ElectionDivision.Diaspora);
-                var correspondenceResults = await GetDiasporaResults(correspondenceUrl, country, electionInfo);
+                var correspondenceResults = await GetDiasporaResults(correspondenceUrl, country, electionInfo, new CsvIndexes(CsvMode.Correspondence));
                 GroupResults(diasporaResults.Concat(correspondenceResults).ToList(), electionInfo);
                 return electionInfo;
             }
@@ -214,11 +214,12 @@ namespace ElectionResults.Core.Scheduler
             throw new NotImplementedException();
         }
 
-        private async Task<List<CandidateResult>> GetDiasporaResults(Result<string> url, Country country, LiveElectionInfo electionInfo)
+        private async Task<List<CandidateResult>> GetDiasporaResults(Result<string> url, Country country,
+            LiveElectionInfo electionInfo, CsvIndexes csvIndexes)
         {
             List<CandidateResult> candidateResults = new List<CandidateResult>();
             var stream = await _fileDownloader.Download(url.Value);
-            var pollingSections = await ExtractCandidateResultsFromCsv(stream, new CsvIndexes(CsvMode.National));
+            var pollingSections = await ExtractCandidateResultsFromCsv(stream, csvIndexes);
             var sectionsForLocality = pollingSections.Where(p => p.Country.EqualsIgnoringAccent(country.Name)).ToList();
             foreach (var pollingSection in sectionsForLocality)
             {
