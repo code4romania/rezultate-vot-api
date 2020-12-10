@@ -13,13 +13,19 @@ namespace ElectionResults.Core.Elections
     public class LiveElectionUrlBuilder : ILiveElectionUrlBuilder
     {
         private readonly LiveElectionSettings _settings;
-        private readonly Dictionary<(BallotType, ElectionDivision), string> _territoryCodes = new Dictionary<(BallotType, ElectionDivision), string>();
+        private Dictionary<(BallotType, ElectionDivision), string> _territoryCodes;
 
         public LiveElectionUrlBuilder(IOptions<LiveElectionSettings> options)
         {
             _settings = options.Value;
 
             // Local elections
+            CreateDefaultCodes();
+        }
+
+        private void CreateDefaultCodes()
+        {
+            _territoryCodes = new Dictionary<(BallotType, ElectionDivision), string>();
             _territoryCodes[(BallotType.Mayor, ElectionDivision.Locality)] = "uat_p";
             _territoryCodes[(BallotType.LocalCouncil, ElectionDivision.Locality)] = "uat_cl";
             _territoryCodes[(BallotType.CountyCouncil, ElectionDivision.County)] = "cnty_cj";
@@ -64,7 +70,9 @@ namespace ElectionResults.Core.Elections
         {
             _territoryCodes[(BallotType.Senate, ElectionDivision.Diaspora)] = "cnty_sc_sr";
             _territoryCodes[(BallotType.House, ElectionDivision.Diaspora)] = "cnty_cdc_sr";
-            return GetFileUrl(ballotType, division, null, null);
+            var correspondenceUrl = GetFileUrl(ballotType, division, null, null);
+            CreateDefaultCodes();
+            return correspondenceUrl;
         }
     }
 }

@@ -23,7 +23,7 @@ namespace ElectionResults.Core.Scheduler
 
         public override async Task ProcessInScope(IServiceProvider serviceProvider)
         {
-            //await _resultsCrawler.ImportAll();
+            await _resultsCrawler.ImportAll();
         }
     }
 }
