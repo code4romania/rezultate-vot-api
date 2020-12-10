@@ -9,18 +9,21 @@ namespace ElectionResults.Core.Scheduler
     public class ScheduledTask : ScheduledProcessor
     {
         private readonly ITurnoutCrawler _turnoutCrawler;
+        private readonly IResultsCrawler _resultsCrawler;
 
         public ScheduledTask(IServiceScopeFactory serviceScopeFactory,
             ITurnoutCrawler turnoutCrawler,
+            IResultsCrawler resultsCrawler,
             IOptions<LiveElectionSettings> options)
             : base(serviceScopeFactory, options)
         {
             _turnoutCrawler = turnoutCrawler;
+            _resultsCrawler = resultsCrawler;
         }
 
         public override async Task ProcessInScope(IServiceProvider serviceProvider)
         {
-            await _turnoutCrawler.Import();
+            await _resultsCrawler.ImportAll();
         }
     }
 }

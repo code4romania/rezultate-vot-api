@@ -299,53 +299,7 @@ namespace ElectionResults.Core.Elections
             ApplicationDbContext dbContext)
         {
             LiveElectionInfo liveElectionInfo = new LiveElectionInfo();
-            if (ballot.Election.Live)
-            {
-                if (query.Division == ElectionDivision.National)
-                {
-                    return await _appCache.GetOrAddAsync(
-                        $"{ballot.BallotType}-national", () => _resultsCrawler.AggregateNationalResults(query, ballot),
-                        DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
-                }
-                if (query.Division == ElectionDivision.Diaspora)
-                {
-                    return await _appCache.GetOrAddAsync(
-                        $"{ballot.BallotType}-diaspora", () => _resultsCrawler.AggregateDiasporaResults(query, ballot),
-                        DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
-                }
-                if (query.Division == ElectionDivision.Diaspora_Country)
-                {
-                    return await _appCache.GetOrAddAsync(
-                        $"{ballot.BallotType}-diaspora_country-{query.CountryId}", () => _resultsCrawler.ImportCountryResults(query, ballot),
-                        DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
-                }
-                var county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
-                if (county.CountyId.IsCapitalCity())
-                {
-                    int? index = null;
-                    if (query.Division == ElectionDivision.Locality)
-                    {
-                        var sector = await dbContext.Localities.FirstOrDefaultAsync(l => l.LocalityId == query.LocalityId);
-                        index = int.Parse(sector.Name.Split(" ").Last());
-                    }
-                    return await _resultsCrawler.ImportCapitalCityResults(ballot, index);
-                }
-             
-                if (query.Division == ElectionDivision.Locality)
-                {
-                    return await _resultsCrawler.ImportLocalityResults(ballot, query);
-                }
-                var url = _urlBuilder.GetFileUrl(ballot.BallotType, query.Division, county?.ShortName,
-                    query.LocalityId);
-                if (url.IsFailure)
-                    return LiveElectionInfo.Default;
-                var result = await _appCache.GetOrAddAsync(
-                    $"{url}", () => _resultsCrawler.Import(url.Value, new CsvIndexes(CsvMode.National)),
-                    DateTimeOffset.Now.AddMinutes(_settings.CsvCacheInMinutes));
-                if (result.IsSuccess)
-                    return result.Value;
-                return LiveElectionInfo.Default;
-            }
+            
             if (ballot.Election.Category == ElectionCategory.Local && query.CountyId.GetValueOrDefault().IsCapitalCity() == false)
             {
                 if (!ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
