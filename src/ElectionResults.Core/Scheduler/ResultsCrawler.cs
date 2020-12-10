@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -87,9 +89,36 @@ namespace ElectionResults.Core.Scheduler
                 electionInfo.ValidVotes += diasporaResults.ValidVotes;
                 electionInfo.NullVotes += diasporaResults.NullVotes;
                 GroupResults(results.Concat(diasporaResults.Candidates).ToList(), electionInfo);
+                //PrepareCandidates(electionInfo.Candidates, query, ballot);
+                //await UpdateResults(dbContext, electionInfo.Candidates);
             }
 
             return electionInfo;
+        }
+
+        private void PrepareCandidates(List<CandidateResult> electionInfoCandidates, Turnout turnout)
+        {
+            foreach (var candidate in electionInfoCandidates)
+            {
+                candidate.BallotId = turnout.BallotId;
+                candidate.Division = turnout.Division;
+                candidate.CountryId = turnout.CountryId;
+                candidate.CountyId = turnout.CountyId;
+                candidate.LocalityId = turnout.LocalityId;
+            }
+        }
+
+        private void UpdateResults(ApplicationDbContext dbContext, LiveElectionInfo electionInfo, Turnout turnout)
+        {
+            PrepareCandidates(electionInfo.Candidates, turnout);
+
+            if (turnout != null)
+            {
+                turnout.ValidVotes = electionInfo.Candidates.Sum(c => c.Votes);
+                turnout.NullVotes = electionInfo.NullVotes;
+                dbContext.Update(turnout);
+            }
+            dbContext.CandidateResults.AddRange(electionInfo.Candidates);
         }
 
         private static void GroupResults(List<CandidateResult> results, LiveElectionInfo electionInfo)
@@ -170,7 +199,8 @@ namespace ElectionResults.Core.Scheduler
                     return LiveElectionInfo.Default;
                 }
                 var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.County, county.ShortName, null);
-                var stream = await _fileDownloader.Download(url.Value);
+                var stream = await _appCache.GetOrAddAsync(
+                    $"{url}", () => _fileDownloader.Download(url.Value));
                 var pollingSections = await ExtractCandidateResultsFromCsv(stream, new CsvIndexes(CsvMode.National));
                 var locality =
                     await dbContext.Localities.FirstOrDefaultAsync(l => l.LocalityId == query.LocalityId);
@@ -186,6 +216,7 @@ namespace ElectionResults.Core.Scheduler
 
                 var candidateResults = sectionsForLocality.SelectMany(s => s.Candidates).ToList();
                 GroupResults(candidateResults, electionInfo);
+
                 return electionInfo;
             }
         }
@@ -209,9 +240,82 @@ namespace ElectionResults.Core.Scheduler
             }
         }
 
-        public Task<LiveElectionInfo> ImportCapitalCitySectorResults(Ballot ballot)
+        public class Watcher
         {
-            throw new NotImplementedException();
+            static Dictionary<string, Stopwatch> _watches = new Dictionary<string, Stopwatch>();
+
+            public static void Start(string name)
+            {
+                _watches[name] = Stopwatch.StartNew();
+            }
+
+            public static void Stop(string name)
+            {
+                if (_watches.ContainsKey(name))
+                {
+                    _watches[name].Stop();
+                    Console.WriteLine($"{name}: {_watches[name].ElapsedMilliseconds}ms");
+                }
+            }
+        }
+
+        public async Task ImportAll()
+        {
+            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+            {
+                var ballots = await dbContext.Ballots.Where(b => b.Election.Live).ToListAsync();
+                foreach (var ballot in ballots)
+                {
+                    var allTurnouts = await dbContext.Turnouts
+                        .Where(t => t.BallotId == ballot.BallotId)
+                        .ToListAsync();
+                    var countyTurnouts = allTurnouts.Where(t =>
+                        t.Division == ElectionDivision.County && t.BallotId == ballot.BallotId).ToList();
+                    var allCounties = await dbContext.Counties.ToListAsync();
+                    var pollingSectionsByCounty = new List<PollingSection>();
+                    foreach (var countyTurnout in countyTurnouts.Where(c => c.CountyId != Consts.CapitalCity))
+                    {
+                        var county = allCounties.FirstOrDefault(c => c.CountyId == countyTurnout.CountyId);
+                        Console.WriteLine(county.Name);
+                        var url = _liveElectionUrlBuilder.GetFileUrl(ballot.BallotType, ElectionDivision.County, county.ShortName, null);
+                        var stream = await _appCache.GetOrAddAsync(
+                            $"{url}", () => _fileDownloader.Download(url.Value));
+                        var pollingSections = await ExtractCandidateResultsFromCsv(stream, new CsvIndexes(CsvMode.National));
+                        pollingSectionsByCounty.AddRange(pollingSections);
+                        stream.Seek(0, SeekOrigin.Begin);
+                        var countyElectionInfo = await ExtractCandidatesFromCsv(stream, new CsvIndexes(CsvMode.National));
+                        var turnout = allTurnouts.FirstOrDefault(t => t.CountyId == county.CountyId && t.BallotId == ballot.BallotId && t.Division == ElectionDivision.County);
+                        UpdateResults(dbContext, countyElectionInfo, turnout);
+                    }
+
+                    Console.WriteLine("done");
+                    Console.WriteLine();
+                    var allLocalities = await dbContext.Localities.ToListAsync();
+                    foreach (var county in allCounties.Where(c => c.CountyId != Consts.CapitalCity))
+                    {
+                        Console.WriteLine(county.Name);
+                        foreach (var locality in allLocalities.Where(l => l.CountyId == county.CountyId && allTurnouts.Any(t => t.LocalityId == l.LocalityId)))
+                        {
+                            var sectionsForLocality = pollingSectionsByCounty.Where(p => p.Siruta == locality.Siruta).ToList();
+                            LiveElectionInfo electionInfo = new LiveElectionInfo();
+                            foreach (var pollingSection in sectionsForLocality)
+                            {
+                                electionInfo.ValidVotes += pollingSection.ValidVotes;
+                                electionInfo.NullVotes += pollingSection.NullVotes;
+                            }
+
+                            var candidateResults = sectionsForLocality.SelectMany(s => s.Candidates).ToList();
+                            GroupResults(candidateResults, electionInfo);
+                            var turnout = allTurnouts.FirstOrDefault(t => t.LocalityId == locality.LocalityId && t.BallotId == ballot.BallotId);
+                            UpdateResults(dbContext, electionInfo, turnout);
+
+                        }
+                    }
+                    Watcher.Start(ballot.BallotId.ToString());
+                    await dbContext.SaveChangesAsync();
+                    Watcher.Stop(ballot.BallotId.ToString());
+                }
+            }
         }
 
         private async Task<List<CandidateResult>> GetDiasporaResults(Result<string> url, Country country,
@@ -296,6 +400,7 @@ namespace ElectionResults.Core.Scheduler
                 }
             }
         }
+
         private async Task<List<PollingSection>> ExtractCandidateResultsFromCsv(Stream csvStream, CsvIndexes csvIndexes)
         {
             List<CandidateResult> candidates;
@@ -316,7 +421,7 @@ namespace ElectionResults.Core.Scheduler
                 {
                     EligibleVoters = int.Parse(csvParser.GetField(csvIndexes.EligibleVotersIndex)),
                     Voters = int.Parse(csvParser.GetField(csvIndexes.TotalVotesIndex)),
-                    NullVotes = int.Parse(csvParser.GetField(csvIndexes.NullVotesIndex)) ,
+                    NullVotes = int.Parse(csvParser.GetField(csvIndexes.NullVotesIndex)),
                     ValidVotes = int.Parse(csvParser.GetField(csvIndexes.ValidVotesIndex)),
                     Siruta = int.Parse(csvParser.GetField(csvIndexes.SirutaIndex)),
                     Country = csvParser.GetField(csvIndexes.CountryNameIndex),

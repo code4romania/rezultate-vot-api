@@ -299,7 +299,7 @@ namespace ElectionResults.Core.Elections
             ApplicationDbContext dbContext)
         {
             LiveElectionInfo liveElectionInfo = new LiveElectionInfo();
-            if (ballot.Election.Live)
+            /*if (ballot.Election.Live)
             {
                 if (query.Division == ElectionDivision.National)
                 {
@@ -345,7 +345,7 @@ namespace ElectionResults.Core.Elections
                 if (result.IsSuccess)
                     return result.Value;
                 return LiveElectionInfo.Default;
-            }
+            }*/
             if (ballot.Election.Category == ElectionCategory.Local && query.CountyId.GetValueOrDefault().IsCapitalCity() == false)
             {
                 if (!ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
