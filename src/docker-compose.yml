@@ -3,13 +3,14 @@
 services:
   rezultatevot.api:
     image: rezultatevot
-    restrart: always
+    restart: always
     build:
       context: .
       dockerfile: ./ElectionResults.API/Dockerfile
     environment:
       - ASPNETCORE_URLS=http://+:80
       - ASPNETCORE_ENVIRONMENT=Staging
+      - ScheduleTaskEnabled=false
     ports:
       - 80:80
       - 443:443
