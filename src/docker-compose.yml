@@ -3,6 +3,7 @@
 services:
   rezultatevot.api:
     image: rezultatevot
+    restrart: always
     build:
       context: .
       dockerfile: ./ElectionResults.API/Dockerfile
@@ -12,3 +13,7 @@ services:
     ports:
       - 80:80
       - 443:443
+    deploy:
+      resources:
+        limits:
+          memory: 350M
