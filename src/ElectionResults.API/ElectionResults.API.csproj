@@ -6,6 +6,9 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <LibraryRestore>false</LibraryRestore>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="3.5.1.9" />
     <PackageReference Include="CSharpFunctionalExtensions" Version="2.11.7" />
