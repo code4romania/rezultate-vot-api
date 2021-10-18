@@ -42,18 +42,21 @@ namespace ElectionResults.Core.Elections
                         Name = "DA",
                         ShortName = "DA",
                         Votes = candidates.FirstOrDefault().YesVotes,
+                        PartyColor = Consts.ReferendumYesColor,
                     },
                     new CandidateResponse
                     {
                         Name = "NU",
                         ShortName = "NU",
                         Votes = candidates.FirstOrDefault().NoVotes,
+                        PartyColor = Consts.ReferendumNoColor,
                     },
                     new CandidateResponse
                     {
                         Name = "NU AU VOTAT",
                         ShortName = "NU AU VOTAT",
                         Votes = (results.EligibleVoters - results.TotalVotes).GetValueOrDefault(),
+                        PartyColor = Consts.ReferendumNoneColor,
                     }
                 };
             }
