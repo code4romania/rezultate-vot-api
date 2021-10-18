@@ -330,6 +330,7 @@ namespace ElectionResults.Core.Elections
                     electionMapWinner.Winner.Name = "NU AU VOTAT";
                     electionMapWinner.Winner.ShortName = "NU AU VOTAT";
                     electionMapWinner.Winner.Votes = turnoutForDivision.EligibleVoters - turnoutForDivision.TotalVotes;
+                    electionMapWinner.Winner.PartyColor = Consts.ReferendumNoneColor;
                 }
                 else
                 {
@@ -338,12 +339,14 @@ namespace ElectionResults.Core.Elections
                         electionMapWinner.Winner.Name = "DA";
                         electionMapWinner.Winner.ShortName = "DA";
                         electionMapWinner.Winner.Votes = winner.YesVotes;
+                        electionMapWinner.Winner.PartyColor = Consts.ReferendumYesColor;
                     }
                     else
                     {
                         electionMapWinner.Winner.Name = "NU";
                         electionMapWinner.Winner.ShortName = "NU";
                         electionMapWinner.Winner.Votes = winner.NoVotes;
+                        electionMapWinner.Winner.PartyColor = Consts.ReferendumNoColor;
                     }
                 }
             }
