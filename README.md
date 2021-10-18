@@ -22,7 +22,7 @@ This project is built by amazing volunteers and you can be one of them! Here's a
 If you would like to suggest new functionality, open an Issue and mark it as a __[Feature request]__. Please be specific about why you think this functionality will be of use. If you can, please include some visual description of what you would like the UI to look like, if you are suggesting new UI elements. 
 
 ## Built With
-
+.Net Core 3.1
 
 
 ## Repos and projects
@@ -31,13 +31,25 @@ Client App - https://github.com/code4romania/rezultate-vot-client
 
 ## Deployment
 
-Guide users through getting your code up and running on their own system. In this section you can talk about:
-1. Installation process
-2. Software dependencies
-3. Latest releases
-4. API references
+1. install [.NetCore 3.1](https://dotnet.microsoft.com/download/dotnet/3.1)
+    * (optional) install [.NET for VSCode](https://dotnet.microsoft.com/download/dotnet/sdk-for-vs-code)
 
-Describe and show how to build your code and run the tests.
+2. run the following console command from the `src` folder:
+    ```sh
+    src> dotnet restore
+    ```
+    If this fails with `error NU1100: Unable to resolve 'ExcelToJsonParser'` you might need to run first `dotnet nuget add source --name nuget.org https://api.nuget.org/v3/index.json`
+
+3. run the following console command from the `ElectionResults.API` folder:
+    ```sh
+    src\ElectionResults.API> dotnet run
+    ```
+
+4. browse to indicated address: http://localhost:5000/swagger (production api: https://api.rezultatevot.ro/swagger)
+
+## Testing out the API
+
+Use the [Swagger UI](https://api.rezultatevot.ro/swagger) to understand the endpoints and routes. The API endpoints are public and do not require Authorization.
 
 ## Feedback
 
