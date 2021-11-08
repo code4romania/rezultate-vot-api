@@ -1,0 +1,56 @@
+on:
+  push:
+    branches:
+      - develop
+
+name: Build & Deploy API Staging
+
+env:
+  IMAGE_NAME: code4romania/rezultate-vot-api
+
+jobs:
+  build-parser:
+    name: Build API container
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkoout
+        uses: actions/checkout@v2
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: ./src
+          file: src/ElectionResults.API/Dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
+          push: true
+          tags: ${{ env.DOCKER_IMAGE_BASE }}:${{ env.GITHUB_SHA }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+
+      - name: Update and restart API
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.STAGING_SERVER_IP }}
+          username: ${{ secrets.STAGING_SERVER_SSH_USERNAME }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          script: "/home/ubuntu/restart.sh"
