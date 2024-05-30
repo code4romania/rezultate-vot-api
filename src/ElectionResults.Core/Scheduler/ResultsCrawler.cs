@@ -422,13 +422,10 @@ namespace ElectionResults.Core.Scheduler
 
         private async Task<LiveElectionInfo> ExtractCandidatesFromCsv(Stream csvStream, CsvIndexes csvIndexes)
         {
-            List<CandidateResult> candidates;
             var csvContent = await ReadCsvContent(csvStream);
             TextReader sr = new StringReader(csvContent);
             var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
-            csvParser.Configuration.HeaderValidated = null;
-            csvParser.Configuration.MissingFieldFound = null;
-            candidates = await GetCandidates(csvParser, csvIndexes);
+            var candidates = await GetCandidates(csvParser, csvIndexes);
             var nullVotes = 0;
             var total = 0;
             var voted = 0;
@@ -479,8 +476,6 @@ namespace ElectionResults.Core.Scheduler
             var csvContent = await ReadCsvContent(csvStream);
             TextReader sr = new StringReader(csvContent);
             var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
-            csvParser.Configuration.HeaderValidated = null;
-            csvParser.Configuration.MissingFieldFound = null;
             candidates = await GetCandidates(csvParser, csvIndexes);
             while (true)
             {

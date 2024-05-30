@@ -67,10 +67,8 @@ namespace ElectionResults.API.Import
                 var csvContent = await ReadCsvContent(csvStream);
                 TextReader sr = new StringReader(csvContent);
                 var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
-                csvParser.Configuration.HeaderValidated = null;
-                csvParser.Configuration.MissingFieldFound = null;
                 var turnouts = csvParser.GetRecords<CsvTurnout>().ToList();
-                using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+                await using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
                 {
                     EntityFrameworkManager.ContextFactory = context => dbContext;
                     _dbCounties = await dbContext.Counties.ToListAsync();
