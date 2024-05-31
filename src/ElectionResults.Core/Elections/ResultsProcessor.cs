@@ -32,7 +32,7 @@ namespace ElectionResults.Core.Elections
             {
                 if (results.ValidVotes == 0)
                 {
-                    results.ValidVotes = results.TotalVotes - results.ValidVotes;
+                    results.ValidVotes = results.TotalVotes - results.NullVotes;
                 }
 
                 results.Candidates = new List<CandidateResponse>
