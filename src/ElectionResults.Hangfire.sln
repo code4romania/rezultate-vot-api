@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ElectionResults.Hangfire", "ElectionResults.Hangfire\ElectionResults.Hangfire.csproj", "{0CA27FDA-F616-40A0-A17A-CE046C4D0911}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ElectionResults.Core", "ElectionResults.Core\ElectionResults.Core.csproj", "{4CA52788-1BD0-4C8D-B6CD-D40EE3BEB173}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0CA27FDA-F616-40A0-A17A-CE046C4D0911}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CA27FDA-F616-40A0-A17A-CE046C4D0911}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CA27FDA-F616-40A0-A17A-CE046C4D0911}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CA27FDA-F616-40A0-A17A-CE046C4D0911}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4CA52788-1BD0-4C8D-B6CD-D40EE3BEB173}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4CA52788-1BD0-4C8D-B6CD-D40EE3BEB173}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4CA52788-1BD0-4C8D-B6CD-D40EE3BEB173}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4CA52788-1BD0-4C8D-B6CD-D40EE3BEB173}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {94FE2A38-A9EE-4D82-B85A-678747CC62B7}
+	EndGlobalSection
+EndGlobal

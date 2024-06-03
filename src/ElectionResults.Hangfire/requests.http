@@ -1,0 +1,8 @@
+# For more info on HTTP files go to https://aka.ms/vs/httpfile
+GET https://prezenta.roaep.ro/locale27092020/data/json/simpv/lists/counties.json
+
+###
+
+GET https://prezenta.roaep.ro/locale27092020/data/json/sicpv/pv/pv_ab_prov.json
+
+###
