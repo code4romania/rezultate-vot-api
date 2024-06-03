@@ -43,9 +43,10 @@ namespace ElectionResults.Core.Scheduler
             return liveElectionInfo;
         }
 
-        public async Task DownloadFiles()
+        public Task DownloadFiles()
         {
-           // await DownloadCandidates();
+            return Task.CompletedTask;
+            // await DownloadCandidates();
         }
 
         private async Task DownloadCandidates()
@@ -257,13 +258,10 @@ namespace ElectionResults.Core.Scheduler
 
         private async Task<LiveElectionInfo> ExtractCandidatesFromCsv(Stream csvStream)
         {
-            List<CandidateResult> candidates;
             var csvContent = await ReadCsvContent(csvStream);
             TextReader sr = new StringReader(csvContent);
             var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
-            csvParser.Configuration.HeaderValidated = null;
-            csvParser.Configuration.MissingFieldFound = null;
-            candidates = await GetCandidates(csvParser);
+            var candidates = await GetCandidates(csvParser);
             var nullVotes = 0;
             var total = 0;
             var voted = 0;
@@ -332,10 +330,8 @@ namespace ElectionResults.Core.Scheduler
                 var csvContent = await ReadCsvContent(csvStream);
                 TextReader sr = new StringReader(csvContent);
                 var csvParser = new CsvReader(sr, CultureInfo.CurrentCulture);
-                csvParser.Configuration.HeaderValidated = null;
-                csvParser.Configuration.MissingFieldFound = null;
                 var turnouts = csvParser.GetRecords<CsvTurnout>().ToList();
-                using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+                await using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
                 {
                     EntityFrameworkManager.ContextFactory = context => dbContext;
                     var localities = await dbContext.Localities.ToListAsync();

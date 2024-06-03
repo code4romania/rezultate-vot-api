@@ -48,13 +48,11 @@ namespace ElectionResults.API
 
             services
                 .AddMvc()
-                .SetCompatibilityVersion(CompatibilityVersion.Latest)
-
                 .AddJsonOptions(options =>
                 {
-                    options.JsonSerializerOptions.IgnoreNullValues = true;
+                    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(new SnakeCaseNamingPolicy()));
-                }); ;
+                });
             services.AddLazyCache();
             RegisterDependencies(services, Configuration);
             services.AddSwaggerGen(c =>
@@ -63,7 +61,7 @@ namespace ElectionResults.API
             });
             services.AddDbContextPool<ApplicationDbContext>(options =>
             {
-                options.UseMySQL(Configuration["ConnectionStrings:DefaultConnection"]
+                options.UseMySQL(Configuration["ConnectionStrings:DefaultConnection"]!
                    );
             });
 
@@ -81,7 +79,7 @@ namespace ElectionResults.API
                     });
             });
 
-            if (Configuration["ScheduleTaskEnabled"].ToLower().Equals("true")) //excuse the primitive syntax
+            if (Configuration["ScheduleTaskEnabled"]!.ToLower().Equals("true")) //excuse the primitive syntax
                 services.AddHostedService<ScheduledTask>();
         }
 
@@ -151,7 +149,7 @@ namespace ElectionResults.API
             }
             catch (Exception e)
             {
-                Console.WriteLine(3);
+                Console.WriteLine(e);
             }
         }
     }

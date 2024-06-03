@@ -1,31 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <UserSecretsId>0a7d747b-d86b-44b1-8e0f-69bc4c568730</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="AWSSDK.S3" Version="3.5.1.9" />
-    <PackageReference Include="CSharpFunctionalExtensions" Version="2.11.7" />
-    <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="2.1.76" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="3.1.8">
+    <PackageReference Include="AWSSDK.S3" Version="3.7.308.6" />
+    <PackageReference Include="CSharpFunctionalExtensions" Version="2.42.0" />
+    <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="2.1.175" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.6">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Options" Version="3.1.8" />
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.4" />
-    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="3.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="3.1.8" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="3.1.8" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="3.1.8" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.8">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.6">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="3.1.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ElectionResults.Core\ElectionResults.Core.csproj" />

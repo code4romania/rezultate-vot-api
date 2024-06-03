@@ -17,7 +17,7 @@ namespace ElectionResults.Core.Scheduler
         public int CountryNameIndex { get; set; }
         public int CandidatesIndex { get; set; }
         public int NullVotesIndex2 { get; set; }
-        public CsvMode CsvMode { get; set; }
+        private CsvMode CsvMode { get; set; }
         public CsvIndexes(CsvMode csvMode)
         {
             if (csvMode == CsvMode.National || csvMode == CsvMode.Diaspora)
@@ -29,7 +29,8 @@ namespace ElectionResults.Core.Scheduler
 
             CsvMode = csvMode;
         }
-        public void SetIndexesForNationalResults()
+
+        private void SetIndexesForNationalResults()
         {
             EligibleVotersIndex = 12;
             TotalVotesIndex = 16;
@@ -40,7 +41,7 @@ namespace ElectionResults.Core.Scheduler
             CandidatesIndex = 25;
         }
 
-        public void SetIndexesForCorrespondenceResults()
+        private void SetIndexesForCorrespondenceResults()
         {
             EligibleVotersIndex = 12;
             TotalVotesIndex = 13;
@@ -52,7 +53,7 @@ namespace ElectionResults.Core.Scheduler
             CandidatesIndex = 22;
         }
 
-        public async Task Map(CsvReader csvParser)
+        public Task Map(CsvReader csvParser)
         {
             var index = 0;
             while (index < CandidatesIndex)
@@ -124,6 +125,8 @@ namespace ElectionResults.Core.Scheduler
                 }
                 index++;
             }
+
+            return Task.CompletedTask;
         }
     }
 }
