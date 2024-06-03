@@ -12,5 +12,5 @@ public interface IRoAepApi
     Task<LocalityModel[]> ListLocalities([AliasAs("electionRound")] string electionRound, [AliasAs("countyCode")] string countyCode);
 
     [Get("/{electionRound}/data/json/sicpv/pv/pv_{countyCode}_{stageCode}.json")]
-    Task<dynamic> GetPVForCounty([AliasAs("electionRound")] string electionRound, [AliasAs("countyCode")] string countyCode, [AliasAs("stageCode")] Stage stage);
+    Task<PVResultsModel> GetPVForCounty([AliasAs("electionRound")] string electionRound, [AliasAs("countyCode")] string countyCode, [AliasAs("stageCode")] Stage stage);
 }
