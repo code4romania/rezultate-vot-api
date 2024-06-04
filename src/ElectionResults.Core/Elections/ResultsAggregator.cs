@@ -8,7 +8,6 @@ using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
-using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using ElectionResults.Core.Scheduler;
 using LazyCache;

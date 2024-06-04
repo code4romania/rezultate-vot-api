@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using CSharpFunctionalExtensions;
+﻿using CSharpFunctionalExtensions;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 

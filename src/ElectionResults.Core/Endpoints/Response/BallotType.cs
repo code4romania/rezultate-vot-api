@@ -2,16 +2,16 @@
 {
     public enum BallotType
     {
-        Referendum,
-        President,
-        Senate,
-        House,
-        LocalCouncil,
-        CountyCouncil,
-        Mayor,
-        EuropeanParliament,
-        CountyCouncilPresident,
-        CapitalCityMayor,
-        CapitalCityCouncil,
+        Referendum = 0,
+        President = 1,
+        Senate = 2,
+        House = 3,
+        LocalCouncil = 4,
+        CountyCouncil = 5,
+        Mayor = 6,
+        EuropeanParliament = 7,
+        CountyCouncilPresident = 8,
+        CapitalCityMayor = 9,
+        CapitalCityCouncil = 10,
     }
 }

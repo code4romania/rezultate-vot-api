@@ -5,7 +5,6 @@ using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
-using ElectionResults.Core.Repositories;
 using Microsoft.Extensions.Options;
 
 namespace ElectionResults.Core.Elections

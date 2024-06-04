@@ -28,10 +28,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Requests\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\ElectionResults.Core\ElectionResults.Core.csproj" />
     </ItemGroup>
 

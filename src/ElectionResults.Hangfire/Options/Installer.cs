@@ -8,7 +8,7 @@ public static class Installer
         builder.Services.AddOptions();
 
         builder.Services.Configure<HangfireDashboardOptions>(builder.Configuration.GetSection(HangfireDashboardOptions.SectionKey));
-        builder.Services.Configure<RoAepOptions>(builder.Configuration.GetSection(RoAepOptions.SectionKey));
+        builder.Services.Configure<CrawlerOptions>(builder.Configuration.GetSection(CrawlerOptions.SectionKey));
         builder.Services.Configure<VoteMonitorOptions>(builder.Configuration.GetSection(VoteMonitorOptions.SectionKey));
 
         return builder;

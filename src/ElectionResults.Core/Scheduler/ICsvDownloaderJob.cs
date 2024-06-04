@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using ElectionResults.Core.Entities;
+﻿using System.Threading.Tasks;
 
 namespace ElectionResults.Core.Scheduler
 {

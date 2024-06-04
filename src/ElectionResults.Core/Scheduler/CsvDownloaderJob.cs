@@ -101,7 +101,9 @@ namespace ElectionResults.Core.Scheduler
             {
                 var data = await GetCountyResults(county);
                 var localities = county.Localities.Where(l => l.Siruta > 0).ToList();
+
                 List<JsonCandidateModel> list = new List<JsonCandidateModel>();
+
                 if (ballot.BallotType == BallotType.LocalCouncil)
                     list = data.Stages.FINAL.scopes.UAT.Categories.CL.Table.OrderBy(c => c.uat_name).ToList();
                 else if (ballot.BallotType == BallotType.Mayor)
@@ -145,8 +147,7 @@ namespace ElectionResults.Core.Scheduler
         private async Task UpdateLocalityCandidates(List<Locality> localities, JsonCandidateModel jsonLocality,
             ApplicationDbContext dbContext, County county, Ballot ballot, List<Party> parties)
         {
-            var locality =
-                localities.FirstOrDefault(l => l.Siruta == jsonLocality.uat_siruta);
+            var locality = localities.FirstOrDefault(l => l.Siruta == jsonLocality.uat_siruta);
             if (locality == null)
             {
                 Console.WriteLine($"Siruta not found for {jsonLocality.uat_name} - {jsonLocality.uat_siruta}");
@@ -166,12 +167,14 @@ namespace ElectionResults.Core.Scheduler
         private static Turnout GetTurnout(Field[] fields)
         {
             var turnout = new Turnout();
+
             turnout.EligibleVoters = fields.FirstOrDefault(f => f.Name == "a")?.Value ?? 0;
             turnout.ValidVotes = fields.FirstOrDefault(f => f.Name == "c")?.Value ?? 0;
             turnout.NullVotes = fields.FirstOrDefault(f => f.Name == "d")?.Value ?? 0;
             turnout.PermanentListsVotes = fields.FirstOrDefault(f => f.Name == "b1")?.Value ?? 0;
             turnout.SuplimentaryVotes = fields.FirstOrDefault(f => f.Name == "b3")?.Value ?? 0;
             turnout.VotesByMail = fields.FirstOrDefault(f => f.Name == "b4")?.Value ?? 0;
+
             turnout.TotalVotes = turnout.ValidVotes + turnout.NullVotes;
             return turnout;
         }

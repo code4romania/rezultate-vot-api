@@ -26,7 +26,7 @@ public static class Installer
             })
             .ConfigureHttpClient((sp, client) =>
             {
-                var roAepOptions = sp.GetService<IOptions<RoAepOptions>>()!;
+                var roAepOptions = sp.GetService<IOptions<CrawlerOptions>>()!;
                 client.BaseAddress = new Uri(roAepOptions.Value.ApiUrl);
             });
 

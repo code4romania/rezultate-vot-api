@@ -41,29 +41,28 @@ builder.Services.AddLogging(logging =>
     logging.AddSerilog(logger);
 });
 
-
-builder.Services
-    .AddHealthChecks()
-    .AddHangfire(name: "hangfire", setup: options => { options.MinimumAvailableServers = 1; });
-
 builder.Services.AddHangfire((sp, config) =>
 {
     config
         .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
+        .UseSerilogLogProvider()
+        .UseColouredConsoleLogProvider()
         .UseInMemoryStorage();
 
     config.UseActivator(new ContainerJobActivator(sp));
-    config.UseFilter(new AutomaticRetryAttribute { Attempts = 5 });
-
-    config.UseSerilogLogProvider();
+    config.UseFilter(new AutomaticRetryAttribute { Attempts = 3 });
 });
 
 builder.Services.AddHangfireServer(options =>
 {
-    options.WorkerCount = 5;
+    options.WorkerCount = 10;
 });
+
+builder.Services
+    .AddHealthChecks()
+    .AddHangfire(name: "hangfire", setup: options => { options.MinimumAvailableServers = 1; });
 
 
 var app = builder.Build();

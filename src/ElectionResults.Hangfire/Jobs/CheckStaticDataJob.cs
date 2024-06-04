@@ -1,16 +1,14 @@
-﻿using System.Text.Json;
-using ElectionResults.Core.Entities;
+﻿using ElectionResults.Core.Entities;
 using ElectionResults.Core.Repositories;
 using ElectionResults.Hangfire.Apis.RoAep;
 using ElectionResults.Hangfire.Apis.RoAep.Models;
 using ElectionResults.Hangfire.Extensions;
 using Z.EntityFramework.Plus;
-using Diacritics;
 
 namespace ElectionResults.Hangfire.Jobs;
-public class CheckStaticDataJob(IRoAepApi api, ApplicationDbContext context, ILogger<CheckStaticDataJob> logger) : ICheckStaticDataJob
+public class CheckStaticDataJob(IRoAepApi api, ApplicationDbContext context, ILogger<CheckStaticDataJob> logger)
 {
-    public async Task Run(string electionRoundId, CancellationToken ct = default)
+    public async Task Run(string electionRoundId, bool hasDiaspora, CancellationToken ct = default)
     {
         var counties = await api.ListCounties(electionRoundId);
         var existingCounties = (await context.Counties.FromCacheAsync(ct, CacheKeys.Counties)).ToList();
@@ -18,13 +16,27 @@ public class CheckStaticDataJob(IRoAepApi api, ApplicationDbContext context, ILo
 
         foreach (var county in counties)
         {
-            var localities = await api.ListLocalities(electionRoundId, county.Code);
-
-            var countyId = existingCounties.First(dbCounty => CountiesAreEqual(dbCounty, county)).CountyId;
-
-            foreach (var locality in localities)
+            if (county.Code.InvariantEquals("B"))
             {
-                CheckLocality(county, existingLocalities.Where(l => l.CountyId == countyId).ToList(), locality);
+                var localities = await api.ListLocalities(electionRoundId, county.Code);
+
+                var countyId = existingCounties.First(dbCounty => CountiesAreEqual(dbCounty, county)).CountyId;
+
+                foreach (var locality in localities)
+                {
+                    CheckLocality(county, existingLocalities.Where(l => l.CountyId == countyId).ToList(), locality);
+                }
+            }
+            else
+            {
+                var uats = await api.ListUats(electionRoundId, county.Code);
+
+                var countyId = existingCounties.First(dbCounty => CountiesAreEqual(dbCounty, county)).CountyId;
+
+                foreach (var uat in uats)
+                {
+                    CheckUat(county, existingLocalities.Where(l => l.CountyId == countyId).ToList(), uat);
+                }
             }
         }
     }
@@ -39,22 +51,22 @@ public class CheckStaticDataJob(IRoAepApi api, ApplicationDbContext context, ILo
         return dbCounty.Name.InvariantEquals(county.Name) && dbCounty.ShortName.InvariantEquals(county.Code);
     }
 
-    private static bool LocalitiesAreEqual(Locality dbLocality, LocalityModel locality)
+    private void CheckUat(CountyModel county, List<Locality> existingUats, UatModel uat)
     {
-        if (locality.Name.ToUpper().StartsWith("BUCUREŞTI"))
-        {
-            return dbLocality.Name.InvariantEquals(locality.Name.Replace("BUCUREŞTI", "").Trim());
-        }
-        return dbLocality.Name.InvariantEquals(locality.Name);
-    }
+        var uatExists = existingUats.Any(bdUat => bdUat.Siruta == uat.Siruta);
 
+        if (!uatExists)
+        {
+            logger.LogWarning("{countyCode} - UAT not exists {@uat}", county.Code, uat);
+        }
+    }
     private void CheckLocality(CountyModel county, List<Locality> existingLocalities, LocalityModel locality)
     {
-        var localityExists = existingLocalities.Any(x => LocalitiesAreEqual(x, locality));
+        var localityExits = existingLocalities.Any(dbLocality => dbLocality.Siruta.ToString() == locality.Code);
 
-        if (!localityExists)
+        if (!localityExits)
         {
-            logger.LogWarning("{countyCode} - Locality not exists {@locality}", county.Code, locality);
+            logger.LogWarning("{countyCode} - UAT not exists {@uat}", county.Code, locality);
         }
     }
 }

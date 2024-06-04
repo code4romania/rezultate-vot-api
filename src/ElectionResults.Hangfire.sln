@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ElectionResults.Hangfire", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ElectionResults.Core", "ElectionResults.Core\ElectionResults.Core.csproj", "{4CA52788-1BD0-4C8D-B6CD-D40EE3BEB173}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ElectionResults.Hangfire.UnitTests", "ElectionResults.Hangfire.UnitTests\ElectionResults.Hangfire.UnitTests.csproj", "{CFE71D53-E7B2-4E80-AAF6-FAC9EF020064}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{4CA52788-1BD0-4C8D-B6CD-D40EE3BEB173}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4CA52788-1BD0-4C8D-B6CD-D40EE3BEB173}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4CA52788-1BD0-4C8D-B6CD-D40EE3BEB173}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CFE71D53-E7B2-4E80-AAF6-FAC9EF020064}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CFE71D53-E7B2-4E80-AAF6-FAC9EF020064}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CFE71D53-E7B2-4E80-AAF6-FAC9EF020064}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CFE71D53-E7B2-4E80-AAF6-FAC9EF020064}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
