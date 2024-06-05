@@ -21,7 +21,10 @@ namespace ElectionResults.Core.Elections
         private readonly IPartiesRepository _partiesRepository;
         private readonly ITerritoryRepository _territoryRepository;
 
-        public WinnersAggregator(ApplicationDbContext dbContext, IAppCache appCache, IPartiesRepository partiesRepository, ITerritoryRepository territoryRepository)
+        public WinnersAggregator(ApplicationDbContext dbContext,
+            IAppCache appCache,
+            IPartiesRepository partiesRepository,
+            ITerritoryRepository territoryRepository)
         {
             _dbContext = dbContext;
             _appCache = appCache;
@@ -32,73 +35,75 @@ namespace ElectionResults.Core.Elections
         public async Task<Result<List<Winner>>> GetLocalityCityHallWinnersByCounty(int ballotId, int countyId, bool takeOnlyWinner = true)
         {
             var dbWinners = await GetWinners(ballotId, countyId, ElectionDivision.Locality);
+
             if (dbWinners.Count > 0)
+            {
                 return dbWinners;
+            }
+
             _appCache.Remove(MemoryCache.CreateWinnersKey(ballotId, countyId, ElectionDivision.Locality));
-            var localities = await _dbContext.Localities.Where(l => l.CountyId == countyId).ToListAsync();
+
+            var localities = await _dbContext
+                .Localities
+                .Where(l => l.CountyId == countyId).ToListAsync();
 
             var candidateResultsForCounty = await _dbContext.CandidateResults
                 .Include(c => c.Ballot)
                 .Include(c => c.Party)
-                .Where(c => c.BallotId == ballotId && c.Division == ElectionDivision.Locality).ToListAsync();
-            var turnouts = await _dbContext.Turnouts
-                .Where(c => c.BallotId == ballotId &&
-                            c.Division == ElectionDivision.Locality)
+                .Where(c => c.BallotId == ballotId && c.Division == ElectionDivision.Locality)
                 .ToListAsync();
+
+            var turnouts = await _dbContext.Turnouts
+                .Where(c => c.BallotId == ballotId && c.Division == ElectionDivision.Locality)
+                .ToListAsync();
+
             List<Winner> winningCandidates = new List<Winner>();
+
             foreach (var locality in localities)
             {
                 var results = candidateResultsForCounty
                     .Where(c => c.LocalityId == locality.LocalityId)
                     .OrderByDescending(c => c.Votes).ToList();
-                var localityWinner = results
-                    .FirstOrDefault();
-                var turnoutForLocality = turnouts
-                    .FirstOrDefault(c => c.LocalityId == locality.LocalityId);
+
+                var localityWinner = results.FirstOrDefault();
+
+                var turnoutForLocality = turnouts.FirstOrDefault(c => c.LocalityId == locality.LocalityId);
+
                 if (localityWinner != null)
                 {
                     if (takeOnlyWinner)
                     {
-                        winningCandidates.Add(CreateWinner(ballotId, countyId, localityWinner, turnoutForLocality, ElectionDivision.Locality));
+                        winningCandidates.Add(Winner.Create(ballotId, countyId, localityWinner, turnoutForLocality, ElectionDivision.Locality));
                     }
                     else
                     {
                         foreach (var candidateResult in results)
                         {
-                            winningCandidates.Add(CreateWinner(ballotId, countyId, candidateResult, turnoutForLocality, ElectionDivision.Locality));
+                            winningCandidates.Add(Winner.Create(ballotId, countyId, candidateResult, turnoutForLocality, ElectionDivision.Locality));
                         }
                     }
                 }
             }
 
             await SaveWinners(winningCandidates);
+
             return Result.Success(winningCandidates);
         }
 
-        private static Winner CreateWinner(int ballotId, int? countyId, CandidateResult localityWinner, Turnout turnoutForLocality, ElectionDivision division)
-        {
-            var winner = new Winner
-            {
-                BallotId = ballotId,
-                CandidateId = localityWinner.Id,
-                CountyId = countyId,
-                Division = division,
-                Name = localityWinner.Name,
-                PartyId = localityWinner.PartyId,
-                TurnoutId = turnoutForLocality?.Id,
-            };
-            return winner;
-        }
 
         private async Task<List<Winner>> GetWinners(int ballotId, int? countyId, ElectionDivision division)
         {
             var query = CreateWinnersQuery()
                 .Where(w => w.BallotId == ballotId
                             && w.Division == division
-                            && w.CountyId == countyId).ToListAsync();
+                            && w.CountyId == countyId)
+                .ToListAsync();
+
             var winnersKey = MemoryCache.CreateWinnersKey(ballotId, countyId, division);
-            var winners = await _appCache.GetOrAddAsync(winnersKey,
-                () => query, DateTimeOffset.Now.AddMinutes(10));
+
+            var winners = await _appCache
+                .GetOrAddAsync(winnersKey, () => query, DateTimeOffset.Now.AddMinutes(10));
+
             return winners;
         }
 
@@ -106,8 +111,15 @@ namespace ElectionResults.Core.Elections
         {
             var parties = await _partiesRepository.GetAllParties();
             var winners = await GetLocalityCityHallWinnersByCounty(ballotId, countyId);
+
             if (winners.IsSuccess)
-                return winners.Value.Select(w => WinnerToElectionMapWinner(w, parties)).ToList();
+            {
+                return winners
+                    .Value
+                    .Select(w => WinnerToElectionMapWinner(w, parties))
+                    .ToList();
+            }
+
             return Result.Failure<List<ElectionMapWinner>>(winners.Error);
         }
 
@@ -123,9 +135,17 @@ namespace ElectionResults.Core.Elections
 
         private static ElectionMapWinner WinnerToElectionMapWinner(Winner winner, IEnumerable<Party> parties)
         {
-            var electionMapWinner = CreateElectionMapWinner(winner.Candidate.LocalityId ?? winner.CountyId ?? winner.LocalityId ?? winner.CountryId, winner.Ballot, winner.Candidate, winner.Turnout);
+            var divisionId = winner.Candidate.LocalityId ?? winner.CountyId ?? winner.LocalityId ?? winner.CountryId;
+
+            var electionMapWinner = CreateElectionMapWinner(divisionId, winner.Ballot, winner.Candidate, winner.Turnout);
+
             if (electionMapWinner.Winner.PartyColor.IsEmpty())
-                electionMapWinner.Winner.PartyColor = parties.ToList().GetMatchingParty(winner.Candidate.ShortName)?.Color ?? Consts.IndependentCandidateColor;
+            {
+                electionMapWinner.Winner.PartyColor =
+                    parties.ToList().GetMatchingParty(winner.Candidate.ShortName)?.Color ??
+                    Consts.IndependentCandidateColor;
+            }
+
             return electionMapWinner;
         }
 

@@ -11,7 +11,6 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["ElectionResults.API/ElectionResults.API.csproj", "ElectionResults.API/"]
 COPY ["ElectionResults.Core/ElectionResults.Core.csproj", "ElectionResults.Core/"]
-COPY ["ElectionResults.Importer/ElectionResults.Importer.csproj", "ElectionResults.Importer/"]
 RUN dotnet restore "./ElectionResults.API/ElectionResults.API.csproj"
 COPY . .
 WORKDIR "/src/ElectionResults.API"

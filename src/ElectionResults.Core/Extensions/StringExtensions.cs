@@ -1,25 +1,10 @@
-﻿using System;
-using System.Globalization;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
+﻿using System.Globalization;
 using Diacritics.Extensions;
 
 namespace ElectionResults.Core.Extensions
 {
     public static class StringExtensions
     {
-        public static string Sha256(this string input)
-        {
-            using (var sha = SHA256.Create())
-            {
-                var bytes = Encoding.UTF8.GetBytes(input);
-                var hash = sha.ComputeHash(bytes);
-
-                return Convert.ToBase64String(hash);
-            }
-        }
         public static bool IsParty(this string partyName)
         {
             if (partyName.IsEmpty())
@@ -63,78 +48,6 @@ namespace ElectionResults.Core.Extensions
             return string.IsNullOrWhiteSpace(value);
         }
 
-        public static string GetPartyShortName(this string name, string shortName)
-        {
-            if (shortName == null)
-            {
-                var partyName = name.ToLower();
-                if (partyName.StartsWith("partidul ") || partyName.StartsWith("conventia ")
-                                                      || partyName.StartsWith("uniunea ")
-                                                      || partyName.StartsWith("asociatia ")
-                                                      || partyName.StartsWith("blocul ")
-                                                      || partyName.StartsWith("alianta "))
-                {
-                    return GetInitials(name);
-                }
-
-                return name;
-            }
-
-            if (shortName.ToLower() == "ci")
-                return name;
-            return name?.ToUpper();
-        }
-
-        private static string GetInitials(this string party)
-        {
-            var words = party.Split(' ');
-            string partyName = "";
-            if (party.StartsWith("ALIANTA ELECTORALA ("))
-            {
-                var strings = party.Split("ALIANTA ELECTORALA (");
-                return strings[1].Trim(')', ' ');
-            }
-            if (words.Count() > 5)
-                return party.ToUpper();
-            foreach (var word in words)
-            {
-                if (word.Length > 3)
-                    partyName += word.Trim('+', '(', ')', '.', '"').ToUpper()[0];
-            }
-
-            return partyName;
-        }
-        public static string ToSnakeCase(this string str)
-        {
-            Regex pattern = new Regex(@"[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+");
-            return string.Join("_", pattern.Matches(str)).ToLower();
-        }
-
-        public static string NormalizeCountryName(this string countryName)
-        {
-            return countryName.Replace("REPUBLICA ALBANIA", "Albania")
-                .Replace("REGATUL ARABIEI SAUDITE", "Arabia Saudita")
-                .Replace("REPUBLICA BELARUS", "Belarus")
-                .Replace("BOSNIA SI HERTEGOVINA", "Bosnia")
-                .Replace("REPUBLICA CEHA", "Cehia")
-                .Replace("REPUBLICA COREEA", "Coreea De Sud")
-                .Replace("REPUBLICA ELENA", "Grecia")
-                .Replace("REPUBLICA INDIA", "India")
-                .Replace("REPUBLICA INDONEZIA", "Indonezia")
-                .Replace("REGATUL HASEMIT AL IORDANIEI", "Iordania")
-                .Replace("REPUBLICA MACEDONIA DE NORD", "Macedonia")
-                .Replace("REGATUL UNIT AL MARII BRITANII SI IRLANDEI DE NORD", "Marea Britanie")
-                .Replace("REGATUL MAROC", "Maroc")
-                .Replace("REPUBLICA ISLAMICA PAKISTAN", "Pakistan")
-                .Replace("REPUBLICA PERU", "Peru")
-                .Replace("FEDERATIA RUSA", "Rusia")
-                .Replace("REPUBLICA SINGAPORE", "Singapore")
-                .Replace("REPUBLICA ARABA SIRIANA", "Siria")
-                .Replace("REPUBLICA SLOVACA", "Slovacia")
-                .Replace("REGATUL THAILANDEI", "Thailanda")
-                .Replace("REPUBLICA ORIENTALA A URUGUAYULUI", "Uruguay")
-                .Replace("REPUBLICA SOCIALISTA VIETNAM", "Vietnam");
-        }
 
     }
 }

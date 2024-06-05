@@ -1,4 +1,5 @@
 ﻿using ElectionResults.Core.Endpoints.Response;
+using ElectionResults.Hangfire.Apis.RoAep.Models;
 
 namespace ElectionResults.Hangfire.Options;
 
@@ -9,6 +10,7 @@ public class ElectionRoundConfig
     public string CronExpression { get; set; }
     public ElectionCategory Category { get; set; }
     public int ElectionRoundId { get; set; }
+    public StageCode Stage { get; set; }
 }
 
 public class CrawlerOptions

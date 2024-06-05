@@ -11,8 +11,8 @@ public class CheckStaticDataJob(IRoAepApi api, ApplicationDbContext context, ILo
     public async Task Run(string electionRoundId, bool hasDiaspora, CancellationToken ct = default)
     {
         var counties = await api.ListCounties(electionRoundId);
-        var existingCounties = (await context.Counties.FromCacheAsync(ct, CacheKeys.Counties)).ToList();
-        var existingLocalities = (await context.Localities.FromCacheAsync(ct, CacheKeys.Localities)).ToList();
+        var existingCounties = (await context.Counties.FromCacheAsync(ct, CacheKeys.RoCounties)).ToList();
+        var existingLocalities = (await context.Localities.FromCacheAsync(ct, CacheKeys.RoLocalities)).ToList();
 
         foreach (var county in counties)
         {

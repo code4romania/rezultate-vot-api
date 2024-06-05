@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Serilog.Exceptions;
 using Serilog.Exceptions.Core;
 using Serilog.Exceptions.Refit.Destructurers;
+using ElectionResults.Hangfire.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,8 @@ builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
     options.UseMySQL(builder.Configuration["ConnectionStrings:DefaultConnection"]!);
 });
 
+builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
+builder.Services.AddScoped(typeof(IReadRepository<>), typeof(EfRepository<>));
 
 builder.Services.AddLogging(logging =>
 {

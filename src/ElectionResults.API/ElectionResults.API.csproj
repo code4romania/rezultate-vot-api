@@ -33,6 +33,8 @@
     <None Include="wwwroot\*" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Import\" />
+    <Folder Include="Options\" />
     <Folder Include="wwwroot\lib\" />
     <Folder Include="wwwroot\upload\" />
   </ItemGroup>
