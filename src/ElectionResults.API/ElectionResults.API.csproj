@@ -5,6 +5,7 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="AspNetCore.HealthChecks.MySql" Version="8.0.1" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.308.6" />
     <PackageReference Include="CSharpFunctionalExtensions" Version="2.42.0" />
     <PackageReference Include="Microsoft.Web.LibraryManager.Build" Version="2.1.175" />

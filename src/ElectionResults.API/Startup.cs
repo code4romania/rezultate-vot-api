@@ -57,9 +57,12 @@ namespace ElectionResults.API
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Rezultate Vot API", Version = "v1" });
             });
+
+            var connectionString = Configuration["ConnectionStrings:DefaultConnection"]!;
+
             services.AddDbContextPool<ApplicationDbContext>(options =>
             {
-                options.UseMySQL(Configuration["ConnectionStrings:DefaultConnection"]!);
+                options.UseMySQL(connectionString);
             });
 
             services.AddLazyCache();
@@ -74,6 +77,8 @@ namespace ElectionResults.API
                             .AllowAnyOrigin();
                     });
             });
+
+            services.AddHealthChecks().AddMySql(name: "domain-db", connectionString: connectionString);
         }
 
         private static void RegisterDependencies(IServiceCollection services, IConfiguration configuration)
@@ -115,6 +120,7 @@ namespace ElectionResults.API
 
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseHealthChecks("/health");
 
             app.UseEndpoints(endpoints =>
             {
