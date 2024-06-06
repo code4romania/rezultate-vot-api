@@ -50,13 +50,3 @@ variable "enable_execute_command" {
   type        = bool
   default     = false
 }
-
-variable "seed_admin_email" {
-  description = "Initial administrator email"
-  type        = string
-}
-
-variable "seed_admin_phone" {
-  description = "Initial administrator phone"
-  type        = string
-}
