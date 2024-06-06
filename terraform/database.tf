@@ -34,7 +34,7 @@ resource "aws_db_instance" "main" {
 
   maintenance_window = "Fri:04:45-Fri:06:00"
 
-  performance_insights_enabled          = true
+  performance_insights_enabled          = false
   performance_insights_retention_period = 7
 
   db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
