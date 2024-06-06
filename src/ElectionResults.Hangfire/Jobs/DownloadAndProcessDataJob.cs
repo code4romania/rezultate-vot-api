@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using ElectionResults.Hangfire.Extensions;
 using ElectionResults.Hangfire.Repository;
 using Z.EntityFramework.Plus;
-using System.Diagnostics.Metrics;
 using Hangfire;
 
 namespace ElectionResults.Hangfire.Jobs;
@@ -30,18 +29,26 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
         }
 
         var counties = (await context.Counties.FromCacheAsync(ct, CacheKeys.RoCounties)).ToList();
+        var countries = context.Countries.FromCache(CacheKeys.Countries).ToList();
+        var localities = context.Localities.FromCache(CacheKeys.RoLocalities).ToList();
+
+        var ballots = await context
+            .Ballots
+            .Where(b => b.ElectionId == electionRound.ElectionId)
+            .ToListAsync(cancellationToken: ct);
 
         // Stages are registered by their priority, subsequent stages should override the data!
+        // From ROAEP advice:  daca nu intereseaza separarea datelor din PV in cele 3 categorii (provizorii, partiale si finale), se pot acesa doar endpoint-urile de partiale, pentru ca acela contin toate datele in ultima versiunea. 
         StageCode[] stages =
         [
-            StageCode.PROV,
+            //StageCode.PROV,
             StageCode.PART,
-            StageCode.FINAL
+            //StageCode.FINAL
         ];
 
         foreach (var stageCode in stages)
         {
-            await ProcessStage(electionRound, electionRoundKey, stageCode, hasDiaspora, counties, ct);
+            await ProcessStage(electionRound, electionRoundKey, stageCode, hasDiaspora, ballots, countries, counties, localities, ct);
         }
     }
 
@@ -49,7 +56,10 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
         string electionRoundKey,
         StageCode stageCode,
         bool hasDiaspora,
+        List<Ballot> ballots,
+        List<Country> countries,
         List<County> counties,
+        List<Locality> localities,
         CancellationToken ct)
     {
         var countiesResults = new Dictionary<string, Dictionary<ScopeCode, ScopeModel>>();
@@ -77,13 +87,6 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
             }
         }
 
-        var countries = context.Countries.FromCache(CacheKeys.Countries).ToList();
-        var localities = context.Localities.FromCache(CacheKeys.RoLocalities).ToList();
-
-        var ballots = await context
-            .Ballots
-            .Where(b => b.ElectionId == electionRound.ElectionId)
-            .ToListAsync(cancellationToken: ct);
 
         foreach (var ballot in ballots)
         {
