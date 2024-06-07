@@ -1,0 +1,19 @@
+name: Build and push hangfire image to registry
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+
+jobs:
+  build-hangfire:
+    uses: code4romania/.github/.github/workflows/build-push-image.yml@main
+    with:
+      images: code4romania/rezultate-vot-hangfire
+      dockerfile: ./api/src/Vote.Monitor.Hangfire/Dockerfile
+      context: ./api
+    secrets:
+      username: ${{ secrets.DOCKER_HUB_USERNAME }}
+      token: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
