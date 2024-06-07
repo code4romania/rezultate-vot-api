@@ -3,18 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
-using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
-using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
-using ElectionResults.Core.Scheduler;
-using LazyCache;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace ElectionResults.Core.Elections
 {
@@ -24,28 +19,16 @@ namespace ElectionResults.Core.Elections
         private readonly IPartiesRepository _partiesRepository;
         private readonly IWinnersAggregator _winnersAggregator;
         private readonly IElectionsRepository _electionRepository;
-        private readonly ILiveElectionUrlBuilder _urlBuilder;
-        private readonly IAppCache _appCache;
-        private readonly IResultsCrawler _resultsCrawler;
-        private LiveElectionSettings _settings;
 
         public ResultsAggregator(IServiceProvider serviceProvider,
             IPartiesRepository partiesRepository,
             IWinnersAggregator winnersAggregator,
-            IElectionsRepository electionRepository,
-            IOptions<LiveElectionSettings> options,
-            ILiveElectionUrlBuilder urlBuilder,
-            IAppCache appCache,
-            IResultsCrawler resultsCrawler)
+            IElectionsRepository electionRepository)
         {
             _serviceProvider = serviceProvider;
             _partiesRepository = partiesRepository;
             _winnersAggregator = winnersAggregator;
             _electionRepository = electionRepository;
-            _urlBuilder = urlBuilder;
-            _appCache = appCache;
-            _resultsCrawler = resultsCrawler;
-            _settings = options.Value;
         }
 
         public async Task<Result<List<ElectionMeta>>> GetAllBallots()
@@ -79,6 +62,8 @@ namespace ElectionResults.Core.Elections
                     .AsNoTracking()
                     .Include(b => b.Election)
                     .FirstOrDefault(e => e.BallotId == query.BallotId);
+
+                // ASTA E BUCURESTI ?
                 if (query.CountyId != null
                     && query.CountyId.Value.IsCapitalCity()
                     && query.Division == ElectionDivision.County
@@ -86,21 +71,31 @@ namespace ElectionResults.Core.Elections
                 {
                     BallotType ballotType = ballot.BallotType;
                     if (ballot.BallotType == BallotType.Mayor)
+                    {
                         ballotType = BallotType.CountyCouncilPresident;
+                    }
+
                     if (ballot.BallotType == BallotType.LocalCouncil)
+                    {
                         ballotType = BallotType.CountyCouncil;
+                    }
+
                     ballot = dbContext.Ballots
                         .AsNoTracking()
                         .Include(b => b.Election)
                         .FirstOrDefault(e => e.ElectionId == ballot.ElectionId && e.BallotType == ballotType);
                 }
+
                 if (ballot == null)
+                {
                     throw new Exception($"No results found for ballot id {query.BallotId}");
+                }
+
                 var electionResponse = new ElectionResponse();
 
-                var divisionTurnout =
-                    await GetDivisionTurnout(query, dbContext, ballot);
+                var divisionTurnout = await GetDivisionTurnout(query, dbContext, ballot);
                 var electionInfo = await GetCandidatesFromDb(query, ballot, dbContext);
+
                 if (electionInfo.TotalVotes > 0)
                 {
                     divisionTurnout = new Turnout
@@ -229,27 +224,29 @@ namespace ElectionResults.Core.Elections
 
             var turnouts = await dbContext.Turnouts
                 .Where(t =>
-                    t.BallotId == ballot.BallotId &&
-                    t.CountyId == query.CountyId &&
-                    t.CountryId == query.CountryId &&
-                    t.Division == query.Division &&
-                    t.LocalityId == query.LocalityId).ToListAsync();
+                    t.BallotId == ballot.BallotId
+                    && t.CountyId == query.CountyId
+                    && t.CountryId == query.CountryId
+                    && t.Division == query.Division
+                    && t.LocalityId == query.LocalityId)
+                .ToListAsync();
+
             if (turnouts.Count > 0 && query.Division == ElectionDivision.Diaspora_Country)
             {
-                var turnout = AggregateTurnouts(turnouts);
-                turnout.BallotId = ballot.BallotId;
+                var turnout = AggregateTurnouts(ballot.BallotId, turnouts);
                 return turnout;
             }
+
             if (turnouts.Count == 0 && query.Division == ElectionDivision.Diaspora)
             {
                 turnouts = await dbContext.Turnouts
-                    .Where(t =>
-                        t.BallotId == ballot.BallotId &&
-                        t.CountyId == null &&
-                        t.Division == ElectionDivision.Diaspora_Country &&
-                        t.LocalityId == null).ToListAsync();
-                var turnout = AggregateTurnouts(turnouts);
-                turnout.BallotId = ballot.BallotId;
+                    .Where(t => t.BallotId == ballot.BallotId
+                                && t.CountyId == null
+                                && t.Division == ElectionDivision.Diaspora_Country
+                                && t.LocalityId == null)
+                    .ToListAsync();
+
+                var turnout = AggregateTurnouts(ballot.BallotId, turnouts);
                 return turnout;
             }
             return turnouts.FirstOrDefault();
@@ -259,39 +256,39 @@ namespace ElectionResults.Core.Elections
             Ballot ballot, ApplicationDbContext dbContext)
         {
             IQueryable<Turnout> queryable = dbContext.Turnouts
-                .Where(t =>
-                    t.BallotId == ballot.BallotId);
+                .Where(t => t.BallotId == ballot.BallotId);
+
             if (ballot.BallotType == BallotType.CountyCouncilPresident || ballot.BallotType == BallotType.CountyCouncil)
             {
                 queryable = queryable
-                    .Where(t =>
-                        t.Division == ElectionDivision.County);
+                    .Where(t => t.Division == ElectionDivision.County);
             }
             else
             {
                 queryable = queryable
-                    .Where(t =>
-                        t.Division == ElectionDivision.Locality);
+                    .Where(t => t.Division == ElectionDivision.Locality);
             }
 
-
             if (query.CountyId != null)
+            {
                 queryable = queryable.Where(c => c.CountyId == query.CountyId);
+            }
 
             var turnoutsForCounty = await queryable.ToListAsync();
 
-            var turnout = AggregateTurnouts(turnoutsForCounty);
-            turnout.BallotId = ballot.BallotId;
+            var turnout = AggregateTurnouts(ballot.BallotId, turnoutsForCounty);
             return turnout;
         }
 
-        private static Turnout AggregateTurnouts(List<Turnout> turnouts)
+        private static Turnout AggregateTurnouts(int ballotBallotId, List<Turnout> turnouts)
         {
-            Turnout turnout = new Turnout();
-            turnout.EligibleVoters = turnouts.Sum(c => c.EligibleVoters);
-            turnout.TotalVotes = turnouts.Sum(c => c.TotalVotes);
-            turnout.ValidVotes = turnouts.Sum(c => c.ValidVotes);
-            turnout.NullVotes = turnouts.Sum(c => c.NullVotes);
+            var totalVotes = turnouts.Sum(c => c.TotalVotes);
+            var eligibleVoters = turnouts.Sum(c => c.EligibleVoters);
+            var validVotes = turnouts.Sum(c => c.ValidVotes);
+            var nullVotes = turnouts.Sum(c => c.NullVotes);
+
+            Turnout turnout = Turnout.New(ballotBallotId, totalVotes, eligibleVoters, validVotes, nullVotes);
+            
             return turnout;
         }
 
@@ -299,7 +296,7 @@ namespace ElectionResults.Core.Elections
             ApplicationDbContext dbContext)
         {
             LiveElectionInfo liveElectionInfo = new LiveElectionInfo();
-            
+
             if (ballot.Election.Category == ElectionCategory.Local && query.CountyId.GetValueOrDefault().IsCapitalCity() == false)
             {
                 if (!ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
@@ -307,6 +304,7 @@ namespace ElectionResults.Core.Elections
                     var aggregatedVotes = await RetrieveAggregatedVotes(dbContext, query, ballot);
                     liveElectionInfo.Candidates = aggregatedVotes;
                     liveElectionInfo.Aggregated = true;
+
                     return liveElectionInfo;
                 }
             }
@@ -327,7 +325,9 @@ namespace ElectionResults.Core.Elections
                     er.CountyId == query.CountyId &&
                     er.CountryId == query.CountryId &&
                     er.LocalityId == query.LocalityId);
+
             var results = await resultsQuery.ToListAsync();
+
             if (query.Division == ElectionDivision.Diaspora_Country)
             {
                 results = results.GroupBy(r => r.Name).Select(r =>
@@ -337,6 +337,7 @@ namespace ElectionResults.Core.Elections
                     return candidate;
                 }).ToList();
             }
+
             return results;
         }
 
@@ -394,7 +395,7 @@ namespace ElectionResults.Core.Elections
                 ElectionId = ballot.ElectionId,
                 BallotId = ballot.BallotId,
                 Live = ballot.Election.Live,
-                Stage = _settings.ResultsType
+                Stage = ballot.Election.Live? "prov": "final"
             };
         }
 
@@ -438,5 +439,14 @@ namespace ElectionResults.Core.Elections
             var minorities = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
             return minorities;
         }
+    }
+
+    internal class LiveElectionInfo
+    {
+        public int TotalVotes { get; set; }
+        public int ValidVotes { get; set; }
+        public int NullVotes { get; set; }
+        public bool Aggregated { get; set; }
+        public List<CandidateResult> Candidates { get; set; }
     }
 }

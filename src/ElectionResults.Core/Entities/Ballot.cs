@@ -6,7 +6,7 @@ using ElectionResults.Core.Endpoints.Response;
 namespace ElectionResults.Core.Entities
 {
     [Table("ballots")]
-    public class Ballot
+    public class Ballot : IAmEntity
     {
         [Key]
         public int BallotId { get; set; }

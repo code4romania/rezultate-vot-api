@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace ElectionResults.Core.Entities
 {
     [Table("turnouts")]
-    public class Turnout
+    public class Turnout : IAmEntity
     {
         [Key]
         public int Id { get; set; }
@@ -46,11 +46,126 @@ namespace ElectionResults.Core.Entities
         public int PermanentListsVotes { get; set; }
         public int SpecialListsVotes { get; set; }
         public int SuplimentaryVotes { get; set; }
-        
+
         [ForeignKey(nameof(Country))]
         public int? CountryId { get; set; }
 
         [NotMapped]
         public int CountedVotes { get; set; }
+        public static Turnout CreateForDiasporaCountry(Ballot ballot,
+            Country country,
+            int totalNumberOfEligibleVoters,
+            int totalNumberOfVotes,
+            int numberOfValidVotes,
+            int numberOfNullVotes)
+        {
+            return new()
+            {
+                Division = ElectionDivision.Diaspora_Country,
+                CountryId = country.Id,
+                BallotId = ballot.BallotId,
+                TotalVotes = totalNumberOfVotes,
+                EligibleVoters = totalNumberOfEligibleVoters,
+                ValidVotes = numberOfValidVotes,
+                NullVotes = numberOfNullVotes,
+            };
+        }
+
+        public void Update(int totalNumberOfEligibleVoters,
+            int totalNumberOfVotes,
+            int numberOfValidVotes,
+            int numberOfNullVotes)
+        {
+            TotalVotes = totalNumberOfVotes;
+            EligibleVoters = totalNumberOfEligibleVoters;
+            ValidVotes = numberOfValidVotes;
+            NullVotes = numberOfNullVotes;
+        }
+
+        public static Turnout New(int ballotBallotId, int totalNumberOfVotes, int totalNumberOfEligibleVoters, int validVotes, int nullVotes)
+        {
+            return new()
+            {
+                BallotId = ballotBallotId,
+                TotalVotes = totalNumberOfVotes,
+                EligibleVoters = totalNumberOfEligibleVoters,
+                ValidVotes = validVotes,
+                NullVotes = nullVotes
+            };
+        }
+
+        public static Turnout CreateForDiaspora(Ballot ballot,
+            int totalNumberOfEligibleVoters,
+            int totalNumberOfVotes,
+            int numberOfValidVotes,
+            int numberOfNullVotes)
+        {
+            return new()
+            {
+                Division = ElectionDivision.Diaspora,
+                BallotId = ballot.BallotId,
+                TotalVotes = totalNumberOfVotes,
+                EligibleVoters = totalNumberOfEligibleVoters,
+                ValidVotes = numberOfValidVotes,
+                NullVotes = numberOfNullVotes,
+            };
+        }
+
+        public static Turnout CreateForUat(Ballot ballot,
+            County county,
+            Locality locality,
+            int totalNumberOfEligibleVoters,
+            int totalNumberOfVotes,
+            int numberOfValidVotes,
+            int numberOfNullVotes)
+        {
+            return new()
+            {
+                Division = ElectionDivision.Locality,
+                CountyId = county.CountyId,
+                LocalityId = locality.LocalityId,
+                BallotId = ballot.BallotId,
+                TotalVotes = totalNumberOfVotes,
+                EligibleVoters = totalNumberOfEligibleVoters,
+                ValidVotes = numberOfValidVotes,
+                NullVotes = numberOfNullVotes,
+            };
+        }
+
+        public static Turnout CreateForCounty(Ballot ballot,
+            County county,
+            int totalNumberOfEligibleVoters,
+            int totalNumberOfVotes,
+            int numberOfValidVotes,
+            int numberOfNullVotes)
+        {
+            return new()
+            {
+                Division = ElectionDivision.County,
+                CountyId = county.CountyId,
+                BallotId = ballot.BallotId,
+                TotalVotes = totalNumberOfVotes,
+                EligibleVoters = totalNumberOfEligibleVoters,
+                ValidVotes = numberOfValidVotes,
+                NullVotes = numberOfNullVotes,
+            };
+        }
+
+        public static Turnout CreateForRomania(Ballot ballot,
+            int totalNumberOfEligibleVoters,
+            int totalNumberOfVotes,
+            int numberOfValidVotes,
+            int numberOfNullVotes)
+        {
+            return new()
+            {
+                Division = ElectionDivision.National,
+                BallotId = ballot.BallotId,
+                TotalVotes = totalNumberOfVotes,
+                EligibleVoters = totalNumberOfEligibleVoters,
+                ValidVotes = numberOfValidVotes,
+                NullVotes = numberOfNullVotes,
+            };
+        }
     }
 }

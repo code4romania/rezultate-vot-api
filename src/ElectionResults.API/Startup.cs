@@ -1,17 +1,15 @@
 using System;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using ElectionResults.API.Import;
+using ElectionResults.API.Converters;
+using ElectionResults.API.Options;
 using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Elections;
-using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
-using ElectionResults.Core.Scheduler;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,12 +57,13 @@ namespace ElectionResults.API
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Rezultate Vot API", Version = "v1" });
             });
+
+            var connectionString = Configuration["ConnectionStrings:DefaultConnection"]!;
+
             services.AddDbContextPool<ApplicationDbContext>(options =>
             {
-                options.UseMySQL(Configuration["ConnectionStrings:DefaultConnection"]!
-                   );
+                options.UseMySQL(connectionString);
             });
-
 
             services.AddLazyCache();
             services.AddCors(options =>
@@ -79,20 +78,15 @@ namespace ElectionResults.API
                     });
             });
 
-            if (Configuration["ScheduleTaskEnabled"]!.ToLower().Equals("true")) //excuse the primitive syntax
-                services.AddHostedService<ScheduledTask>();
+            services.AddHealthChecks().AddMySql(name: "domain-db", connectionString: connectionString);
         }
 
         private static void RegisterDependencies(IServiceCollection services, IConfiguration configuration)
         {
-            services.AddTransient<IFileDownloader, FileDownloader>();
-            services.AddTransient<IResultsCrawler, ResultsCrawler>();
             services.AddTransient<IResultsAggregator, ResultsAggregator>();
+
             services.AddTransient<IAuthorsRepository, AuthorsRepository>();
-            services.AddTransient<ICsvDownloaderJob, CsvDownloaderJob>();
-            services.AddTransient<ITurnoutCrawler, TurnoutCrawler>();
             services.AddTransient<IWinnersAggregator, WinnersAggregator>();
-            services.AddTransient<ILiveElectionUrlBuilder, LiveElectionUrlBuilder>();
 
             services.AddTransient<IArticleRepository, ArticleRepository>();
             services.AddTransient<IElectionsRepository, ElectionsRepository>();
@@ -100,8 +94,8 @@ namespace ElectionResults.API
             services.AddTransient<IPicturesRepository, PicturesRepository>();
             services.AddTransient<IBallotsRepository, BallotsRepository>();
             services.AddTransient<IPartiesRepository, PartiesRepository>();
-            services.Configure<AWSS3Settings>(configuration.GetSection("S3Bucket"));
-            services.Configure<LiveElectionSettings>(configuration.GetSection("LiveElectionSettings"));
+            services.Configure<AWSS3Settings>(configuration.GetSection(AWSS3Settings.SectionKey));
+            services.Configure<MemoryCacheSettings>(configuration.GetSection(MemoryCacheSettings.SectionKey));
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context, ILoggerFactory loggerFactory)
@@ -126,6 +120,7 @@ namespace ElectionResults.API
 
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseHealthChecks("/health");
 
             app.UseEndpoints(endpoints =>
             {
@@ -133,6 +128,7 @@ namespace ElectionResults.API
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapRazorPages();
+
                 if (env.IsProduction())
                 {
                     endpoints.MapGet("/Identity/Account/Register", context => Task.Factory.StartNew(() => context.Response.Redirect("/Identity/Account/Login", true)));
