@@ -10,7 +10,6 @@ public class ElectionRoundConfig
     public string CronExpression { get; set; }
     public ElectionCategory Category { get; set; }
     public int ElectionRoundId { get; set; }
-    public StageCode Stage { get; set; }
 }
 
 public class CrawlerOptions

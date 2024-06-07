@@ -141,7 +141,7 @@ namespace ElectionResults.Core.Entities
         {
             return new()
             {
-                Division = ElectionDivision.Locality,
+                Division = ElectionDivision.County,
                 CountyId = county.CountyId,
                 BallotId = ballot.BallotId,
                 TotalVotes = totalNumberOfVotes,

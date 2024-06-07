@@ -28,7 +28,7 @@ public static class Installer
         {
             backgroundJobClient.Enqueue<CheckStaticDataJob>(x => x.Run(electionRoundConfig.Key, electionRoundConfig.HasDiaspora, CancellationToken.None));
 
-            recurringJobManager.AddOrUpdate<DownloadAndProcessDataJob>($"{electionRoundConfig.Key}-data-processor", x => x.Run(electionRoundConfig.Key, electionRoundConfig.ElectionRoundId, electionRoundConfig.HasDiaspora, CancellationToken.None), electionRoundConfig.CronExpression);
+            recurringJobManager.AddOrUpdate<DownloadAndProcessDataJob>($"{electionRoundConfig.Key}-data-processor", x => x.Run(electionRoundConfig.Key, electionRoundConfig.ElectionRoundId, electionRoundConfig.HasDiaspora), electionRoundConfig.CronExpression);
         }
 
         return app;

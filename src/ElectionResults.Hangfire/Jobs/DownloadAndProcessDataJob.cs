@@ -6,7 +6,6 @@ using ElectionResults.Hangfire.Apis.RoAep;
 using ElectionResults.Hangfire.Apis.RoAep.Models;
 using Microsoft.EntityFrameworkCore;
 using ElectionResults.Hangfire.Extensions;
-using ElectionResults.Hangfire.Repository;
 using Z.EntityFramework.Plus;
 using Hangfire;
 
@@ -15,12 +14,11 @@ namespace ElectionResults.Hangfire.Jobs;
 [DisableConcurrentExecution(timeoutInSeconds: 10 * 60)]
 public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
     ApplicationDbContext context,
-    IRepository<Turnout> turnoutRepository,
     ILogger<DownloadAndProcessDataJob> logger)
 {
     private const string DiasporaCountyCode = "SR";
 
-    public async Task Run(string electionRoundKey, int electionRoundId, bool hasDiaspora, CancellationToken ct)
+    public async Task Run(string electionRoundKey, int electionRoundId, bool hasDiaspora)
     {
         var electionRound = context.Elections.FirstOrDefault(x => x.ElectionId == electionRoundId);
         if (electionRound == null)
@@ -28,14 +26,14 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
             throw new ArgumentException($"Election round {electionRoundId} does not exist!");
         }
 
-        var counties = (await context.Counties.FromCacheAsync(ct, CacheKeys.RoCounties)).ToList();
+        var counties = (await context.Counties.FromCacheAsync(CacheKeys.RoCounties)).ToList();
         var countries = context.Countries.FromCache(CacheKeys.Countries).ToList();
         var localities = context.Localities.FromCache(CacheKeys.RoLocalities).ToList();
 
         var ballots = await context
             .Ballots
             .Where(b => b.ElectionId == electionRound.ElectionId)
-            .ToListAsync(cancellationToken: ct);
+            .ToListAsync();
 
         // Stages are registered by their priority, subsequent stages should override the data!
         // From ROAEP advice:  daca nu intereseaza separarea datelor din PV in cele 3 categorii (provizorii, partiale si finale), se pot acesa doar endpoint-urile de partiale, pentru ca acela contin toate datele in ultima versiunea. 
@@ -48,7 +46,7 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
 
         foreach (var stageCode in stages)
         {
-            await ProcessStage(electionRound, electionRoundKey, stageCode, hasDiaspora, ballots, countries, counties, localities, ct);
+            await ProcessStage(electionRound, electionRoundKey, stageCode, hasDiaspora, ballots, countries, counties, localities);
         }
     }
 
@@ -59,8 +57,7 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
         List<Ballot> ballots,
         List<Country> countries,
         List<County> counties,
-        List<Locality> localities,
-        CancellationToken ct)
+        List<Locality> localities)
     {
         var countiesResults = new Dictionary<string, Dictionary<ScopeCode, ScopeModel>>();
 
@@ -87,13 +84,12 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
             }
         }
 
-
         foreach (var ballot in ballots)
         {
             var turnoutsForBallot = await context
                 .Turnouts
                 .Where(t => t.BallotId == ballot.BallotId)
-                .ToListAsync(ct);
+                .ToListAsync();
 
             if (hasDiaspora && diasporaResult is not null)
             {
@@ -104,7 +100,6 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
             {
                 var county = counties.First(x => x.ShortName == countyResult.Key);
                 var countyLocalities = localities.Where(x => x.CountyId == county.CountyId).ToList();
-
                 UpdateCountyTurnout(countyResult.Value[ScopeCode.CNTY].Categories, ballot, turnoutsForBallot, county);
                 UpdateLocalitiesTurnouts(countyResult.Value[ScopeCode.UAT].Categories, ballot, turnoutsForBallot, county, countyLocalities);
             }
@@ -117,7 +112,7 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
             }
         }
 
-        await turnoutRepository.BulkSaveChangesAsync(ct);
+        context.SaveChanges();
     }
 
     private (bool hasValue, Dictionary<CategoryCode, CategoryModel> data) GetStageScopeCategoriesData(string electionRoundKey,
@@ -217,12 +212,11 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
             if (countryTurnout == null)
             {
                 countryTurnout = Turnout.CreateForDiasporaCountry(ballot, dbCountry, eligibleVoters, totalVotes, numberOfValidVotes, numberOfNullVotes);
-                turnoutRepository.AddAsync(countryTurnout);
+                context.Turnouts.AddAsync(countryTurnout);
             }
             else
             {
                 countryTurnout.Update(eligibleVoters, totalVotes, numberOfValidVotes, numberOfNullVotes);
-                turnoutRepository.UpdateAsync(countryTurnout);
             }
 
             totalDiasporaEligibleVoters = turnout.Fields.TryGetTotalNumberOfEligibleVoters();
@@ -235,12 +229,11 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
         if (diasporaTurnout == null)
         {
             diasporaTurnout = Turnout.CreateForDiaspora(ballot, totalDiasporaEligibleVoters, totalDiasporaTotalVotes, totalDiasporaNumberOfValidVotes, totalDiasporaNumberOfNullVotes);
-            turnoutRepository.AddAsync(diasporaTurnout);
+            context.Turnouts.AddAsync(diasporaTurnout);
         }
         else
         {
             diasporaTurnout.Update(totalDiasporaEligibleVoters, totalDiasporaTotalVotes, totalDiasporaNumberOfValidVotes, totalDiasporaNumberOfNullVotes);
-            turnoutRepository.UpdateAsync(diasporaTurnout);
         }
     }
 
@@ -275,12 +268,11 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
             if (turnout == null)
             {
                 turnout = Turnout.CreateForUat(ballot, county, locality, totalNumberOfEligibleVoters, totalNumberOfVotes, numberOfValidVotes, numberOfNullVotes);
-                turnoutRepository.AddAsync(turnout);
+                context.Turnouts.AddAsync(turnout);
             }
             else
             {
                 turnout.Update(totalNumberOfEligibleVoters, totalNumberOfVotes, numberOfValidVotes, numberOfNullVotes);
-                turnoutRepository.UpdateAsync(turnout);
             }
         }
     }
@@ -320,12 +312,11 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
         if (turnout == null)
         {
             turnout = Turnout.CreateForCounty(ballot, county, totalNumberOfEligibleVoters, totalNumberOfVotes, numberOfValidVotes, numberOfNullVotes);
-            turnoutRepository.AddAsync(turnout);
+            context.Turnouts.Add(turnout);
         }
         else
         {
             turnout.Update(totalNumberOfEligibleVoters, totalNumberOfVotes, numberOfValidVotes, numberOfNullVotes);
-            turnoutRepository.UpdateAsync(turnout);
         }
     }
 
@@ -363,12 +354,11 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
         if (turnout == null)
         {
             turnout = Turnout.CreateForRomania(ballot, totalNumberOfEligibleVoters, totalNumberOfVotes, numberOfValidVotes, numberOfNullVotes);
-            turnoutRepository.AddAsync(turnout);
+            context.Turnouts.AddAsync(turnout);
         }
         else
         {
             turnout.Update(totalNumberOfEligibleVoters, totalNumberOfVotes, numberOfValidVotes, numberOfNullVotes);
-            turnoutRepository.UpdateAsync(turnout);
         }
     }
 
@@ -389,26 +379,37 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
         {
             case BallotType.Referendum:
                 throw new ArgumentException("Not known yet");
+
             case BallotType.President:
                 throw new ArgumentException("Not known yet");
+
             case BallotType.Senate:
                 throw new ArgumentException("Not known yet");
+
             case BallotType.House:
                 throw new ArgumentException("Not known yet");
+
             case BallotType.LocalCouncil:
                 return CategoryCode.CL;
+
             case BallotType.CountyCouncil:
                 return CategoryCode.CJ;
+
             case BallotType.Mayor:
                 return CategoryCode.P;
+
             case BallotType.EuropeanParliament:
                 return CategoryCode.EUP;
+
             case BallotType.CountyCouncilPresident:
-                return CategoryCode.PCJ;
+                return CategoryCode.P;
+
             case BallotType.CapitalCityMayor:
                 throw new ArgumentException("Not known yet");
+
             case BallotType.CapitalCityCouncil:
                 throw new ArgumentException("Not known yet");
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(ballotType), ballotType, null);
         }

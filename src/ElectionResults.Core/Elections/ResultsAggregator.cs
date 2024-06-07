@@ -74,6 +74,7 @@ namespace ElectionResults.Core.Elections
                     {
                         ballotType = BallotType.CountyCouncilPresident;
                     }
+
                     if (ballot.BallotType == BallotType.LocalCouncil)
                     {
                         ballotType = BallotType.CountyCouncil;
