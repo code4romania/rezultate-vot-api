@@ -19,6 +19,11 @@ variable "domain_name" {
   type        = string
 }
 
+variable "hangfire_domain_name" {
+  description = "Domain name used by the application. Must belong to the Route 53 zone defined in `route_53_zone_id`."
+  type        = string
+}
+
 variable "route_53_zone_id" {
   type = string
 }

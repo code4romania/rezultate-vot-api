@@ -17,8 +17,8 @@ module "ecs_hangfire" {
   lb_dns_name             = aws_lb.main.dns_name
   lb_zone_id              = aws_lb.main.zone_id
   lb_vpc_id               = aws_vpc.main.id
-  lb_listener_arn         = aws_lb_listener.http.arn
-  lb_hosts                = ["hangfire.${var.domain_name}"]
+  lb_listener_arn         = aws_lb_listener.https.arn
+  lb_hosts                = [var.hangfire_domain_name]
   lb_domain_zone_id       = data.aws_route53_zone.main.zone_id
   lb_health_check_enabled = true
   lb_path                 = "/health"
