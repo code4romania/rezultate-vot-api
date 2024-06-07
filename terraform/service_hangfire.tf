@@ -89,7 +89,7 @@ module "ecs_hangfire" {
       value = "locale27092020"
     },
     {
-      name  = "HangfireDashboard__IsSecured"
+      name  = "HangfireDashboard__IsSecuredDashboard"
       value = tostring(false)
     }
   ]
