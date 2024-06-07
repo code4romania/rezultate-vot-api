@@ -1,6 +1,6 @@
 # A record
 resource "aws_route53_record" "ipv4" {
-  count = length(var.lb_hosts)
+  count = var.lb_domain_zone_id != null ? length(var.lb_hosts) : 0
 
   zone_id = var.lb_domain_zone_id
   name    = var.lb_hosts[count.index]
@@ -15,7 +15,7 @@ resource "aws_route53_record" "ipv4" {
 
 # AAAA record
 resource "aws_route53_record" "ipv6" {
-  count = length(var.lb_hosts)
+  count = var.lb_domain_zone_id != null ? length(var.lb_hosts) : 0
 
   zone_id = var.lb_domain_zone_id
   name    = var.lb_hosts[count.index]
