@@ -12,7 +12,7 @@ jobs:
     uses: code4romania/.github/.github/workflows/build-push-image.yml@main
     with:
       images: code4romania/rezultate-vot-hangfire
-      dockerfile: ./src/ElectionResoults.Hangfire/Dockerfile
+      dockerfile: ./src/ElectionResults.Hangfire/Dockerfile
       context: ./src
     secrets:
       username: ${{ secrets.DOCKER_HUB_USERNAME }}
