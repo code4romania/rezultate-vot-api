@@ -88,6 +88,10 @@ module "ecs_hangfire" {
       name  = "Crawler__ElectionRounds__0__Key"
       value = "locale27092020"
     },
+    {
+      name  = "HangfireDashboard__IsSecured"
+      value = tostring(false)
+    }
   ]
 
   secrets = [
