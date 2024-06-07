@@ -15,7 +15,7 @@ public static class HangfireExtensions
         {
             app.UseHangfireDashboard("/hangfire", new DashboardOptions
             {
-                DashboardTitle = "Vote.Monitor.Hangfire",
+                DashboardTitle = "ElectionResults.Hangfire",
                 Authorization = new[]
                 {
                     new HangfireCustomBasicAuthenticationFilter{
