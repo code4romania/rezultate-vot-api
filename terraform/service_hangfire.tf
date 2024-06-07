@@ -90,7 +90,7 @@ module "ecs_hangfire" {
     },
     {
       name  = "HangfireDashboard__IsSecuredDashboard"
-      value = tostring(false)
+      value = tostring(true)
     }
   ]
 
