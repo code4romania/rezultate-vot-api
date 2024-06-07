@@ -5,9 +5,13 @@ locals {
   images = {
     api = {
       image = "code4romania/rezultate-vot-api"
-      tag   = "1.1.0-rc.2"
+      tag   = "1.1.0-rc.3"
     }
 
+    hangfire = {
+      image = "code4romania/rezultate-vot-hangfire"
+      tag   = "1.1.0-rc.3"
+    }
   }
 
   ecs = {
