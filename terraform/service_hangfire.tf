@@ -5,7 +5,7 @@ module "ecs_hangfire" {
     module.ecs_cluster
   ]
 
-  name         = "hangfire-${var.env}"
+  name         = "rezultatevot-hangfire-${var.env}"
   cluster_name = module.ecs_cluster.cluster_name
   min_capacity = 1
   max_capacity = 1
