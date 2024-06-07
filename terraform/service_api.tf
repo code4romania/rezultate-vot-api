@@ -79,6 +79,6 @@ module "ecs_api" {
 
   allowed_secrets = [
     aws_secretsmanager_secret.rds.arn,
-    aws_secretsmanager_secret.iam_hotfix,
+    aws_secretsmanager_secret.iam_hotfix.arn,
   ]
 }
