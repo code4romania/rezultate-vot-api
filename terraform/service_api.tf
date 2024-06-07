@@ -5,7 +5,7 @@ module "ecs_api" {
     module.ecs_cluster
   ]
 
-  name         = "api-${var.env}"
+  name         = "rezultatevot-api-${var.env}"
   cluster_name = module.ecs_cluster.cluster_name
   min_capacity = 1
   max_capacity = 1
