@@ -395,7 +395,7 @@ namespace ElectionResults.Core.Elections
                 ElectionId = ballot.ElectionId,
                 BallotId = ballot.BallotId,
                 Live = ballot.Election.Live,
-                Stage = "I DON'T KNOW"
+                Stage = ballot.Election.Live? "prov": "final"
             };
         }
 
