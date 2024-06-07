@@ -2,16 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using ElectionResults.Core.Configuration;
+using ElectionResults.API.Options;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
-using ElectionResults.Core.Entities;
 using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using LazyCache;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ElectionResults.API.Controllers
@@ -20,23 +18,20 @@ namespace ElectionResults.API.Controllers
     [Route("api")]
     public class BallotsController : ControllerBase
     {
-        private readonly ILogger<BallotsController> _logger;
         private readonly IResultsAggregator _resultsAggregator;
         private readonly IAppCache _appCache;
         private readonly ITerritoryRepository _territoryRepository;
-        private readonly LiveElectionSettings _settings;
+        private readonly MemoryCacheSettings _cacheSettings;
 
-        public BallotsController(ILogger<BallotsController> logger,
-            IResultsAggregator resultsAggregator,
+        public BallotsController(IResultsAggregator resultsAggregator,
             IAppCache appCache,
             ITerritoryRepository territoryRepository,
-            IOptions<LiveElectionSettings> settings)
+            IOptions<MemoryCacheSettings> cacheSettings)
         {
-            _logger = logger;
             _resultsAggregator = resultsAggregator;
             _appCache = appCache;
             _territoryRepository = territoryRepository;
-            _settings = settings.Value;
+            _cacheSettings = cacheSettings.Value;
         }
 
         [HttpGet("ballots")]
@@ -45,8 +40,12 @@ namespace ElectionResults.API.Controllers
             var result = await _appCache.GetOrAddAsync(
                 "ballots", () => _resultsAggregator.GetAllBallots(),
                 DateTimeOffset.Now.AddMinutes(120));
+
             if (result.IsSuccess)
+            {
                 return result.Value;
+            }
+
             return StatusCode(500, result.Error);
         }
 
@@ -56,16 +55,26 @@ namespace ElectionResults.API.Controllers
             try
             {
                 query.BallotId = ballotId;
+
                 if (query.LocalityId == 0)
+                {
                     query.LocalityId = null;
+                }
+
                 if (query.CountyId == 0)
+                {
                     query.CountyId = null;
+                }
+
                 if (query.Round == 0)
+                {
                     query.Round = null;
+                }
 
                 var result = await _appCache.GetOrAddAsync(
                     query.GetCacheKey(), () => _resultsAggregator.GetBallotCandidates(query),
                     DateTimeOffset.Now.AddMinutes(query.GetCacheDurationInMinutes()));
+
                 return result.Value;
             }
             catch (Exception e)
@@ -82,18 +91,29 @@ namespace ElectionResults.API.Controllers
             try
             {
                 if (query.LocalityId == 0)
+                {
                     query.LocalityId = null;
+                }
+
                 if (query.CountyId == 0)
+                {
                     query.CountyId = null;
+                }
+
                 if (query.Round == 0)
+                {
                     query.Round = null;
+                }
 
                 var expiration = GetExpirationDate(query);
+
                 var result = await _appCache.GetOrAddAsync(
                     query.GetCacheKey(), () => _resultsAggregator.GetBallotResults(query),
                     expiration);
+
                 var newsFeed = await _resultsAggregator.GetNewsFeed(query, result.Value.Meta.ElectionId);
                 result.Value.ElectionNews = newsFeed;
+
                 return result.Value;
             }
             catch (Exception e)
@@ -176,11 +196,11 @@ namespace ElectionResults.API.Controllers
 
         private DateTimeOffset GetExpirationDate(ElectionResultsQuery electionResultsQuery)
         {
-            if (electionResultsQuery.BallotId < 110) // ballot older than parliament elections in 2020
+            if (electionResultsQuery.BallotId <= 110) // ballot older than parliament elections in 2020
             {
                 return DateTimeOffset.Now.AddDays(1);
             }
-            return DateTimeOffset.Now.AddMinutes(_settings.ResultsCacheInMinutes);
+            return DateTimeOffset.Now.AddMinutes(_cacheSettings.ResultsCacheInMinutes);
         }
     }
 }

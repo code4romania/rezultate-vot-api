@@ -2,10 +2,10 @@
 {
     public enum ElectionCategory
     {
-        Referendum,
-        Presidential,
-        Local,
-        Parliament,
-        EuropeanParliament,
+        Referendum = 0,
+        Presidential = 1,
+        Local = 2,
+        Parliament = 3,
+        EuropeanParliament = 4
     }
 }

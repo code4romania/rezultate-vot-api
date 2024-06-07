@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace ElectionResults.Core.Entities
 {
     [Table("winners")]
-    public class Winner
+    public class Winner : IAmEntity
     {
         [Key]
         public int Id { get; set; }
@@ -44,5 +44,26 @@ namespace ElectionResults.Core.Entities
         public int? LocalityId { get; set; }
 
         public Ballot Ballot { get; set; }
+
+
+        public static Winner Create(int ballotId,
+            int? countyId,
+            CandidateResult localityWinner,
+            Turnout turnoutForLocality,
+            ElectionDivision division)
+        {
+            var winner = new Winner
+            {
+                BallotId = ballotId,
+                CandidateId = localityWinner.Id,
+                CountyId = countyId,
+                Division = division,
+                Name = localityWinner.Name,
+                PartyId = localityWinner.PartyId,
+                TurnoutId = turnoutForLocality?.Id,
+            };
+
+            return winner;
+        }
     }
 }

@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace ElectionResults.Core.Entities
 {
     [Table("articles")]
-    public class Article
+    public class Article: IAmEntity
     {
         public int Id { get; set; }
 

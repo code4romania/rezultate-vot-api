@@ -3,7 +3,7 @@
 namespace ElectionResults.Core.Entities
 {
     [Table("authors")]
-    public class Author
+    public class Author : IAmEntity
     {
         public int Id { get; set; }
 
