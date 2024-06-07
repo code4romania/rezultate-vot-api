@@ -57,6 +57,10 @@ module "ecs_api" {
       value = var.env
     },
     {
+      name  = "ASPNETCORE_URLS",
+      value = "http://+:80"
+    },
+    {
       name  = "S3Bucket__BucketName"
       value = data.aws_s3_bucket.uploads.bucket
     },

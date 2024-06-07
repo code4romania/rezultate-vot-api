@@ -57,6 +57,10 @@ module "ecs_hangfire" {
       value = var.env
     },
     {
+      name  = "ASPNETCORE_URLS",
+      value = "http://+:80"
+    },
+    {
       name  = "HangfireDashboard__IsSecured"
       value = tostring(true)
     },
