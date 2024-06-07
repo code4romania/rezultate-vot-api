@@ -103,6 +103,7 @@ module "ecs_hangfire" {
 
   allowed_secrets = [
     aws_secretsmanager_secret.rds.arn,
+    aws_secretsmanager_secret.hangfire_credentials.arn,
   ]
 }
 
