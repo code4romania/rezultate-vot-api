@@ -1,6 +1,9 @@
-﻿namespace ElectionResults.Hangfire.Apis.VoteMonitor;
+﻿using Refit;
+
+namespace ElectionResults.Hangfire.Apis.VoteMonitor;
 
 public interface IVoteMonitorApi
 {
-    Task<VoteMonitoringStatsModel> GetStatistics();
+    [Get("/api/statistics/overview")]
+    Task<VoteMonitoringStatsModel> GetStatistics([AliasAs("electionRoundIds")] Guid electionRoundId);
 }

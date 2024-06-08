@@ -9,7 +9,8 @@ public static class Installer
     public static IServiceCollection RegisterJobs(this IServiceCollection services)
     {
         services.AddScoped<CheckStaticDataJob>();
-        services.AddScoped<DownloadAndProcessDataJob>();
+        services.AddScoped<DownloadAndProcessTurnoutResultsJob>();
+        services.AddScoped<DownloadVoteMonitorStatisticsJob>();
 
         return services;
     }
@@ -23,13 +24,20 @@ public static class Installer
         var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
         var backgroundJobClient = scope.ServiceProvider.GetRequiredService<IBackgroundJobClient>();
 
-        var roAepOptions = app.Services.GetRequiredService<IOptions<CrawlerOptions>>()!;
-        foreach (var electionRoundConfig in roAepOptions.Value.ElectionRounds)
+        var crawlerOptions = app.Services.GetRequiredService<IOptions<CrawlerOptions>>()!;
+
+
+        foreach (var electionRoundConfig in crawlerOptions.Value.ElectionRounds)
         {
             backgroundJobClient.Enqueue<CheckStaticDataJob>(x => x.Run(electionRoundConfig.Key, electionRoundConfig.HasDiaspora, CancellationToken.None));
 
-            recurringJobManager.AddOrUpdate<DownloadAndProcessDataJob>($"{electionRoundConfig.Key}-data-processor", x => x.Run(electionRoundConfig.Key, electionRoundConfig.ElectionRoundId, electionRoundConfig.HasDiaspora), electionRoundConfig.CronExpression);
+            recurringJobManager.AddOrUpdate<DownloadAndProcessTurnoutResultsJob>($"{electionRoundConfig.Key}-data-processor", x => x.Run(electionRoundConfig.Key, electionRoundConfig.ElectionRoundId, electionRoundConfig.HasDiaspora), electionRoundConfig.CronExpression);
         }
+        var electionRoundIds = crawlerOptions.Value.ElectionRounds.Select(x => x.ElectionRoundId).ToList();
+        var voteMonitorElectionRoundId = crawlerOptions.Value.ElectionRoundId;
+
+        recurringJobManager
+            .AddOrUpdate<DownloadVoteMonitorStatisticsJob>("vote-monitor-statistics", x => x.Run(electionRoundIds, voteMonitorElectionRoundId, CancellationToken.None), "*/15 * * * *");
 
         return app;
     }

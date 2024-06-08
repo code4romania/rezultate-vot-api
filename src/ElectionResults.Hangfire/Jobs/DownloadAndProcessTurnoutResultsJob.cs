@@ -7,14 +7,12 @@ using ElectionResults.Hangfire.Apis.RoAep.Models;
 using Microsoft.EntityFrameworkCore;
 using ElectionResults.Hangfire.Extensions;
 using Z.EntityFramework.Plus;
-using Hangfire;
 
 namespace ElectionResults.Hangfire.Jobs;
 
-[DisableConcurrentExecution(timeoutInSeconds: 10 * 60)]
-public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
+public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
     ApplicationDbContext context,
-    ILogger<DownloadAndProcessDataJob> logger)
+    ILogger<DownloadAndProcessTurnoutResultsJob> logger)
 {
     private const string DiasporaCountyCode = "SR";
 
@@ -36,7 +34,7 @@ public class DownloadAndProcessDataJob(IRoAepApi roAepApi,
             .ToListAsync();
 
         // Stages are registered by their priority, subsequent stages should override the data!
-        // From ROAEP advice:  daca nu intereseaza separarea datelor din PV in cele 3 categorii (provizorii, partiale si finale), se pot acesa doar endpoint-urile de partiale, pentru ca acela contin toate datele in ultima versiunea. 
+        // From ROAEP advice: daca nu intereseaza separarea datelor din PV in cele 3 categorii (provizorii, partiale si finale), se pot acesa doar endpoint-urile de partiale, pentru ca acela contin toate datele in ultima versiunea. 
         StageCode[] stages =
         [
             //StageCode.PROV,
