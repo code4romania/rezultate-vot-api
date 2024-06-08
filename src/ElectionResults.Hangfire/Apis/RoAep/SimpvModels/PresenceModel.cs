@@ -110,7 +110,7 @@ public class PrecinctElement
     public PrecinctPrecinct Precinct { get; set; }
 
     [JsonPropertyName("locality")]
-    public Locality Locality { get; set; }
+    public LocalityModel Locality { get; set; }
 
     [JsonPropertyName("uat")]
     public Uat Uat { get; set; }
@@ -137,7 +137,7 @@ public enum Medium
     U
 };
 
-public class Locality
+public class LocalityModel
 {
     [JsonPropertyName("id")]
     public long Id { get; set; }

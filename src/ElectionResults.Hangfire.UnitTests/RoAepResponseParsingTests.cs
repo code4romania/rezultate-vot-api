@@ -2,6 +2,7 @@
 using System.Text.Json.Serialization;
 using ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 using ElectionResults.Hangfire.Apis.RoAep.SimpvModels;
+using ElectionResults.Hangfire.Extensions;
 
 namespace ElectionResults.Hangfire.UnitTests;
 
@@ -48,12 +49,25 @@ public class RoAepResponseParsingTests
         var result = JsonSerializer.Deserialize<PresenceModel>(json, new JsonSerializerOptions()
         {
             NumberHandling = JsonNumberHandling.AllowReadingFromString,
-            Converters = {  }
+            Converters = { }
         });
 
         result.Should().NotBeNull();
 
         result.County.Should().NotBeEmpty();
         result.Precinct.Should().NotBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("CICEU - MIHĂIEŞTI", "CICEU-MIHĂIEŞTI")]
+    [InlineData("CICEU - MIHĂIEŞTI", "CICeU-MIHĂIEŞTI")]
+    [InlineData("CICEU - MIHĂIEŞTI", "CICeU - MIHĂIEŞTI")]
+    [InlineData("CICEU - MIHĂIEŞTI", "CICeU -  MIHĂIEŞTI")]
+    [InlineData("CICEU - MIHĂIEŞTI", "CICeU MIHĂIEŞTI")]
+    [InlineData("CICEU-MIHĂIEŞTI", "CICeU MIHĂIEŞTI")]
+    [InlineData("CICEU-MIHĂIeŞTI", "CICeU MIHĂIEŞTI")]
+    public void ShouldMatchWeirdChars(string str1, string str2)
+    {
+        str1.GenerateSlug().Should().Be(str2.GenerateSlug());
     }
 }

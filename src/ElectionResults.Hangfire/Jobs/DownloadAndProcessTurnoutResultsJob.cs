@@ -316,6 +316,8 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         {
             turnout.Update(totalNumberOfEligibleVoters, totalNumberOfVotes, numberOfValidVotes, numberOfNullVotes);
         }
+
+        //var winners =  countyResult.Value.Votes.
     }
 
     private void UpdateNationalTurnout(Dictionary<CategoryCode, CategoryModel> countryData,
