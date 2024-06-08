@@ -8,8 +8,10 @@ public static class Installer
 {
     public static IServiceCollection RegisterJobs(this IServiceCollection services)
     {
-        services.AddScoped<CheckStaticDataJob>();
-        services.AddScoped<DownloadAndProcessDataJob>();
+        services.AddScoped<SeedData>();
+        services.AddScoped<DownloadAndProcessTurnoutResultsJob>();
+        services.AddScoped<DownloadAndProcessWinnersResultsJob>();
+        services.AddScoped<DownloadVoteMonitorStatisticsJob>();
 
         return services;
     }
@@ -23,13 +25,19 @@ public static class Installer
         var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
         var backgroundJobClient = scope.ServiceProvider.GetRequiredService<IBackgroundJobClient>();
 
-        var roAepOptions = app.Services.GetRequiredService<IOptions<CrawlerOptions>>()!;
-        foreach (var electionRoundConfig in roAepOptions.Value.ElectionRounds)
-        {
-            backgroundJobClient.Enqueue<CheckStaticDataJob>(x => x.Run(electionRoundConfig.Key, electionRoundConfig.HasDiaspora, CancellationToken.None));
+        var crawlerOptions = app.Services.GetRequiredService<IOptions<CrawlerOptions>>()!;
 
-            recurringJobManager.AddOrUpdate<DownloadAndProcessDataJob>($"{electionRoundConfig.Key}-data-processor", x => x.Run(electionRoundConfig.Key, electionRoundConfig.ElectionRoundId, electionRoundConfig.HasDiaspora), electionRoundConfig.CronExpression);
-        }
+        backgroundJobClient.Enqueue<SeedData>(x => x.Run(CancellationToken.None));
+
+        recurringJobManager.AddOrUpdate<DownloadAndProcessTurnoutResultsJob>($"locale09062024-data-processor", x => x.Run("locale09062024", 50, false), "*/5 * * * *");
+
+        recurringJobManager.AddOrUpdate<DownloadAndProcessTurnoutResultsJob>($"europarlamentare09062024-data-processor", x => x.Run("europarlamentare09062024", 51, true), "*/5 * * * *");
+
+        var electionRoundIds = crawlerOptions.Value.ElectionRounds.Select(x => x.ElectionRoundId).ToList();
+        var voteMonitorElectionRoundId = crawlerOptions.Value.ElectionRoundId;
+
+        recurringJobManager
+            .AddOrUpdate<DownloadVoteMonitorStatisticsJob>("vote-monitor-statistics", x => x.Run(electionRoundIds, voteMonitorElectionRoundId, CancellationToken.None), "*/15 * * * *");
 
         return app;
     }

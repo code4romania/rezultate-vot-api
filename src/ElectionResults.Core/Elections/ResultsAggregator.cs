@@ -56,97 +56,95 @@ namespace ElectionResults.Core.Elections
 
         public async Task<Result<ElectionResponse>> GetBallotResults(ElectionResultsQuery query)
         {
-            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
+            await using var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>();
+            var ballot = dbContext.Ballots
+                .AsNoTracking()
+                .Include(b => b.Election)
+                .FirstOrDefault(e => e.BallotId == query.BallotId);
+
+            // ASTA E BUCURESTI ?
+            //if (query.CountyId != null
+            //    && query.CountyId.Value.IsCapitalCity()
+            //    && query.Division == ElectionDivision.County
+            //    && ballot.Date.Year == 2020)
+            //{
+            //    BallotType ballotType = ballot.BallotType;
+            //    if (ballot.BallotType == BallotType.Mayor)
+            //    {
+            //        ballotType = BallotType.CountyCouncilPresident;
+            //    }
+
+            //    if (ballot.BallotType == BallotType.LocalCouncil)
+            //    {
+            //        ballotType = BallotType.CountyCouncil;
+            //    }
+
+            //    ballot = dbContext.Ballots
+            //        .AsNoTracking()
+            //        .Include(b => b.Election)
+            //        .FirstOrDefault(e => e.ElectionId == ballot.ElectionId && e.BallotType == ballotType);
+            //}
+
+            if (ballot == null)
             {
-                var ballot = dbContext.Ballots
-                    .AsNoTracking()
-                    .Include(b => b.Election)
-                    .FirstOrDefault(e => e.BallotId == query.BallotId);
-
-                // ASTA E BUCURESTI ?
-                if (query.CountyId != null
-                    && query.CountyId.Value.IsCapitalCity()
-                    && query.Division == ElectionDivision.County
-                    && ballot.Date.Year == 2020)
-                {
-                    BallotType ballotType = ballot.BallotType;
-                    if (ballot.BallotType == BallotType.Mayor)
-                    {
-                        ballotType = BallotType.CountyCouncilPresident;
-                    }
-
-                    if (ballot.BallotType == BallotType.LocalCouncil)
-                    {
-                        ballotType = BallotType.CountyCouncil;
-                    }
-
-                    ballot = dbContext.Ballots
-                        .AsNoTracking()
-                        .Include(b => b.Election)
-                        .FirstOrDefault(e => e.ElectionId == ballot.ElectionId && e.BallotType == ballotType);
-                }
-
-                if (ballot == null)
-                {
-                    throw new Exception($"No results found for ballot id {query.BallotId}");
-                }
-
-                var electionResponse = new ElectionResponse();
-
-                var divisionTurnout = await GetDivisionTurnout(query, dbContext, ballot);
-                var electionInfo = await GetCandidatesFromDb(query, ballot, dbContext);
-
-                if (electionInfo.TotalVotes > 0)
-                {
-                    divisionTurnout = new Turnout
-                    {
-                        EligibleVoters = divisionTurnout.EligibleVoters,
-                        CountedVotes = electionInfo.ValidVotes + electionInfo.NullVotes,
-                        TotalVotes = divisionTurnout.TotalVotes,
-                        ValidVotes = electionInfo.ValidVotes,
-                        NullVotes = electionInfo.NullVotes
-                    };
-                }
-                ElectionResultsResponse results;
-                if (divisionTurnout == null)
-                {
-                    results = new ElectionResultsResponse
-                    {
-                        TotalVotes = 0,
-                        EligibleVoters = 0,
-                        NullVotes = 0,
-                        ValidVotes = 0,
-                        Candidates = new List<CandidateResponse>()
-                    };
-                }
-                else
-                {
-                    var parties = await _partiesRepository.GetAllParties();
-                    results = ResultsProcessor.PopulateElectionResults(divisionTurnout, ballot, electionInfo.Candidates, parties.ToList());
-                }
-
-                electionResponse.Aggregated = electionInfo.Aggregated;
-                electionResponse.Results = results;
-                electionResponse.Observation = await dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
-                if (divisionTurnout != null)
-                {
-                    electionResponse.Turnout = new ElectionTurnout
-                    {
-                        TotalVotes = divisionTurnout.TotalVotes,
-                        EligibleVoters = divisionTurnout.EligibleVoters,
-                    };
-                    if (query.Division == ElectionDivision.Diaspora ||
-                        query.Division == ElectionDivision.Diaspora_Country)
-                    {
-                        electionResponse.Turnout.EligibleVoters = electionResponse.Turnout.TotalVotes;
-                    }
-                }
-
-                electionResponse.Scope = await CreateElectionScope(dbContext, query);
-                electionResponse.Meta = CreateElectionMeta(ballot);
-                electionResponse.ElectionNews = await GetElectionNews(dbContext, ballot.BallotId, ballot.ElectionId);
-                return electionResponse;
+                throw new Exception($"No results found for ballot id {query.BallotId}");
             }
+
+            var electionResponse = new ElectionResponse();
+
+            var divisionTurnout = await GetDivisionTurnout(query, dbContext, ballot);
+            var electionInfo = await GetCandidatesFromDb(query, ballot, dbContext);
+
+            if (electionInfo.TotalVotes > 0)
+            {
+                divisionTurnout = new Turnout
+                {
+                    EligibleVoters = divisionTurnout.EligibleVoters,
+                    CountedVotes = electionInfo.ValidVotes + electionInfo.NullVotes,
+                    TotalVotes = divisionTurnout.TotalVotes,
+                    ValidVotes = electionInfo.ValidVotes,
+                    NullVotes = electionInfo.NullVotes
+                };
+            }
+            ElectionResultsResponse results;
+            if (divisionTurnout == null)
+            {
+                results = new ElectionResultsResponse
+                {
+                    TotalVotes = 0,
+                    EligibleVoters = 0,
+                    NullVotes = 0,
+                    ValidVotes = 0,
+                    Candidates = new List<CandidateResponse>()
+                };
+            }
+            else
+            {
+                var parties = await _partiesRepository.GetAllParties();
+                results = ResultsProcessor.PopulateElectionResults(divisionTurnout, ballot, electionInfo.Candidates, parties.ToList());
+            }
+
+            electionResponse.Aggregated = electionInfo.Aggregated;
+            electionResponse.Results = results;
+            electionResponse.Observation = await dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
+            if (divisionTurnout != null)
+            {
+                electionResponse.Turnout = new ElectionTurnout
+                {
+                    TotalVotes = divisionTurnout.TotalVotes,
+                    EligibleVoters = divisionTurnout.EligibleVoters,
+                };
+                if (query.Division == ElectionDivision.Diaspora ||
+                    query.Division == ElectionDivision.Diaspora_Country)
+                {
+                    electionResponse.Turnout.EligibleVoters = electionResponse.Turnout.TotalVotes;
+                }
+            }
+
+            electionResponse.Scope = await CreateElectionScope(dbContext, query);
+            electionResponse.Meta = CreateElectionMeta(ballot);
+            electionResponse.ElectionNews = await GetElectionNews(dbContext, ballot.BallotId, ballot.ElectionId);
+            return electionResponse;
         }
 
         private async Task<ElectionScope> CreateElectionScope(ApplicationDbContext dbContext, ElectionResultsQuery query)

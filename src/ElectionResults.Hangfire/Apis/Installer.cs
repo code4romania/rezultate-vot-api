@@ -35,8 +35,9 @@ public static class Installer
             .AddRefitClient<IVoteMonitorApi>()
             .ConfigureHttpClient((sp, client) =>
             {
-                var voteMonitorOptions = sp.GetService<IOptions<VoteMonitorOptions>>()!;
-                client.BaseAddress = new Uri(voteMonitorOptions.Value.ApiUrl);
+                var voteMonitorOptions = sp.GetService<IOptions<CrawlerOptions>>()!;
+                client.BaseAddress = new Uri(voteMonitorOptions.Value.VoteMonitorUrl);
+                client.DefaultRequestHeaders.Add("x-vote-monitor-api-key", voteMonitorOptions.Value.ApiKey);
             });
 
         return services;
