@@ -60,3 +60,14 @@ variable "uploads_bucket" {
   description = "S3 bucket used to store uploaded files"
   type        = string
 }
+
+variable "crawler_election_round_uuid" {
+  description = "Election round UUID for crwal election results from MV"
+  type        = string
+  
+}
+
+variable "crawler_api_key" {
+  description = "API key for crawler from MV"
+  type        = string
+}
