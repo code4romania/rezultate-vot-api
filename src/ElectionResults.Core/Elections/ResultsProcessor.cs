@@ -81,6 +81,7 @@ namespace ElectionResults.Core.Elections
                     Name = c.GetCandidateName(ballot),
                     Votes = c.Votes,
                     PartyColor = c.GetPartyColor(),
+                    PartyName = c.Party?.Name,
                     PartyLogo = c.Party?.LogoUrl,
                     Seats = c.TotalSeats != 0 ? c.TotalSeats : c.Seats1 + c.Seats2,
                     TotalSeats = c.TotalSeats != 0 ? c.TotalSeats : c.Seats1 + c.Seats2

@@ -7,6 +7,7 @@ using ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 using ElectionResults.Hangfire.Apis.RoAep.SimpvModels;
 using ElectionResults.Hangfire.Extensions;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Concurrent;
 using System.Globalization;
 using Z.EntityFramework.Plus;
 
@@ -132,44 +133,43 @@ public class SeedData(IRoAepApi api, ApplicationDbContext context, ILogger<SeedD
         List<(bool resolved, string countyName, string localityName, int CountyId, int LocalityId)> allUats,
         List<Country> countries)
     {
-        using (var reader = new StreamReader("candidati_euro_07.06.2024.csv"))
-        using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+        using var reader = new StreamReader("candidati_euro_07.06.2024.csv");
+        using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+        await csv.ReadAsync();
+        csv.ReadHeader();
+
+        var records = csv.GetRecords<EuroParlamentareCsvModel>().ToList();
+
+        var candidateResults = new ConcurrentBag<CandidateResult>();
+
+        Parallel.ForEach(records, record =>
         {
-            csv.Read();
-            csv.ReadHeader();
-
-            var records = csv.GetRecords<EuroParlamentareCsvModel>().ToList();
-
-            var candidateResults = new List<CandidateResult>();
-
-            foreach (var record in records)
+            try
             {
-                try
+                int countyId = 0;
+                foreach (var uat in allUats)
                 {
-                    int countyId = 0;
-                    foreach (var uat in allUats)
-                    {
-                        var canditateResult = CreateCandidateResult(record, ballot, parties, uat.LocalityId, uat.CountyId, ElectionDivision.Locality);
+                    var candidateResult = CreateCandidateResult(record, ballot, parties, uat.LocalityId, uat.CountyId);
 
-                        candidateResults.Add(canditateResult);
-                    }
-
-                    foreach(var country in countries)
-                    {
-                        var canditateResult = CreateCandidateResult(record, ballot, parties, country.Id);
-
-                        candidateResults.Add(canditateResult);
-                    }
-
+                    candidateResults.Add(candidateResult);
                 }
-                catch (Exception ex)
+
+                foreach (var country in countries)
                 {
-                    logger.LogError(ex, "Failed processing {@record}", record);
+                    var candidateResult = CreateCandidateResult(record, ballot, parties, country.Id);
+
+                    candidateResults.Add(candidateResult);
                 }
+
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed processing {@record}", record);
             }
 
-            await context.BulkInsertAsync(candidateResults);
-        }
+        });
+
+        await context.BulkInsertAsync(candidateResults);
     }
 
     private BallotType MapBallotType(string tip)
