@@ -2,17 +2,14 @@
 
 namespace ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 
-public class UatModel
+public class CountryModel
 {
     [JsonPropertyName("id")]
-    public int Id { get; set; }
-
-    [JsonPropertyName("county_id")]
-    public long CountyId { get; set; }
+    public long Id { get; set; }
 
     [JsonPropertyName("name")]
     public string Name { get; set; }
 
-    [JsonPropertyName("siruta")]
-    public long Siruta { get; set; }
+    [JsonPropertyName("code")]
+    public string Code { get; set; }
 }

@@ -293,7 +293,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         // It could happen that table is empty.
         if (!countyResults[category].Table.Any())
         {
-            logger.LogWarning("No data for {category}  {ballotType} in response for {countyCode}",
+            logger.LogWarning("No data for {category} {ballotType} in response for {countyCode}",
                 category, ballot.BallotType, county.ShortName);
             return;
         }
