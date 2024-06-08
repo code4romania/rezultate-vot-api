@@ -8,6 +8,7 @@ using ElectionResults.Hangfire.Apis.RoAep.SimpvModels;
 using ElectionResults.Hangfire.Extensions;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
 using System.Globalization;
 using Z.EntityFramework.Plus;
 
@@ -17,8 +18,8 @@ public class SeedData(IRoAepApi api, ApplicationDbContext context, ILogger<SeedD
     public async Task Run(CancellationToken ct = default)
     {
         var existingCounties = (await context.Counties.FromCacheAsync(ct, CacheKeys.RoCounties)).ToList();
-        var existingLocalities = (await context.Localities.FromCacheAsync(ct, CacheKeys.RoLocalities)).ToList();  
-        
+        var existingLocalities = (await context.Localities.FromCacheAsync(ct, CacheKeys.RoLocalities)).ToList();
+
         var existingCountries = (await context.Countries.FromCacheAsync(ct, CacheKeys.Countries)).ToList();
 
         var allUats = new List<(bool resolved, string countyName, string localityName, int CountyId, int LocalityId)>();
@@ -72,7 +73,7 @@ public class SeedData(IRoAepApi api, ApplicationDbContext context, ILogger<SeedD
         await ImportDateForEuroParlamentare(parties, euroParlamentareBallot, allUats, existingCountries);
     }
 
-    private async Task ImportDateForLocale(List<Party> parties, List<Ballot> ballots, List<(bool resolved, string countyName, string localityName, int CountyId, int LocalityId)> allUats )
+    private async Task ImportDateForLocale(List<Party> parties, List<Ballot> ballots, List<(bool resolved, string countyName, string localityName, int CountyId, int LocalityId)> allUats)
     {
 
         using (var reader = new StreamReader("candidati_locale_07.06.2024.csv"))
@@ -127,7 +128,7 @@ public class SeedData(IRoAepApi api, ApplicationDbContext context, ILogger<SeedD
             await context.BulkInsertAsync(candidateResults);
         }
     }
-    
+
     private async Task ImportDateForEuroParlamentare(List<Party> parties,
         Ballot ballot,
         List<(bool resolved, string countyName, string localityName, int CountyId, int LocalityId)> allUats,
@@ -140,27 +141,26 @@ public class SeedData(IRoAepApi api, ApplicationDbContext context, ILogger<SeedD
 
         var records = csv.GetRecords<EuroParlamentareCsvModel>().ToList();
 
-        var candidateResults = new ConcurrentBag<CandidateResult>();
+        var turnouts = new ConcurrentBag<Turnout>();
 
         Parallel.ForEach(records, record =>
         {
             try
             {
-                int countyId = 0;
                 foreach (var uat in allUats)
                 {
-                    var candidateResult = CreateCandidateResult(record, ballot, parties, uat.LocalityId, uat.CountyId);
+                    var uatTurnout = CreateTurnout(ballot, uat.LocalityId, uat.CountyId, null);
 
-                    candidateResults.Add(candidateResult);
+                    turnouts.Add(uatTurnout);
                 }
 
                 foreach (var country in countries)
                 {
-                    var candidateResult = CreateCandidateResult(record, ballot, parties, country.Id);
-
-                    candidateResults.Add(candidateResult);
+                    var countryTurnout = CreateTurnout(ballot, null, null, country.Id);
+                    turnouts.Add(countryTurnout);
                 }
-
+                var romaniaTurnout = CreateTurnout(ballot, null, null, null);
+                turnouts.Add(romaniaTurnout);
             }
             catch (Exception ex)
             {
@@ -169,7 +169,7 @@ public class SeedData(IRoAepApi api, ApplicationDbContext context, ILogger<SeedD
 
         });
 
-        await context.BulkInsertAsync(candidateResults);
+        await context.BulkInsertAsync(turnouts);
     }
 
     private BallotType MapBallotType(string tip)
@@ -246,8 +246,21 @@ public class SeedData(IRoAepApi api, ApplicationDbContext context, ILogger<SeedD
         }
 
         return candidateResult;
-    }  
-    
+    }
+
+    private static Turnout CreateTurnout(Ballot ballot, int? localityId, int? countyId, int? countryId)
+    {
+        var turnout = new Turnout
+        {
+            BallotId = ballot.BallotId,
+            CountyId = countyId,
+            LocalityId = localityId,
+        };
+
+        return turnout;
+    }
+
+
     private static CandidateResult CreateCandidateResult(EuroParlamentareCsvModel record, Ballot ballot, List<Party> parties,
            int? localityId, int countyId, ElectionDivision division = ElectionDivision.Locality)
     {
