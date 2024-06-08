@@ -69,12 +69,8 @@ module "ecs_hangfire" {
       value = "https://prezenta.roaep.ro"
     },
     {
-      name  = "Crawler__ElectionRounds__0__Category"
-      value = "Local"
-    },
-    {
       name  = "Crawler__ElectionRounds__0__CronExpression"
-      value = "*/10 * * * *"
+      value = "*/5 * * * *"
     },
     {
       name  = "Crawler__ElectionRounds__0__ElectionRoundId"
@@ -89,8 +85,28 @@ module "ecs_hangfire" {
       value = "locale27092020"
     },
     {
+      name  = "Crawler__ElectionRounds__1__CronExpression"
+      value = "*/5 * * * *"
+    },
+    {
+      name  = "Crawler__ElectionRounds__1__ElectionRoundId"
+      value = "51"
+    },
+    {
+      name  = "Crawler__ElectionRounds__1__HasDiaspora"
+      value = tostring(true)
+    },
+    {
+      name  = "Crawler__ElectionRounds__1__Key"
+      value = "europarlamentare09062024"
+    },
+    {
       name  = "HangfireDashboard__IsSecuredDashboard"
       value = tostring(true)
+    },
+    {
+      name  = "Crawler__VoteMonitorUrl"
+      value = "https://api.votemonitor.org"
     }
   ]
 
@@ -106,7 +122,16 @@ module "ecs_hangfire" {
     {
       name      = "HangfireDashboard__Password"
       valueFrom = "${aws_secretsmanager_secret.hangfire_credentials.arn}:password::"
+    },
+     {
+      name      = "Crawler__ApiKey"
+      valueFrom = var.crawler_api_key
+    },
+    {
+      name      = "Crawler__ElectionRoundId"
+      valueFrom = var.crawler_election_round_uuid
     }
+
   ]
 
   allowed_secrets = [
@@ -140,3 +165,4 @@ resource "aws_secretsmanager_secret_version" "hangfire_credentials" {
     password = random_password.hangfire_password.result
   })
 }
+
