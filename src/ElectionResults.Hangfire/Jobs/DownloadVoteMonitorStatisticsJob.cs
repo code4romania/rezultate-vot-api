@@ -21,7 +21,8 @@ public class DownloadVoteMonitorStatisticsJob(IVoteMonitorApi api, ApplicationDb
                     .Observations
                     .Where(o => o.BallotId == ballot.BallotId)
                     .FirstOrDefaultAsync(ct);
-
+                
+                // during this elections Romanian counties are on level2
                 if (observation == null)
                 {
                     dbContext.Observations.Add(Observation.Create(ballot, voteMonitoringStats.StartedForms,

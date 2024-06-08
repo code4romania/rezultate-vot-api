@@ -1,4 +1,4 @@
-﻿namespace ElectionResults.Hangfire.Apis.RoAep.Models;
+﻿namespace ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 
 public enum ScopeCode
 {

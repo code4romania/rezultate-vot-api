@@ -3,7 +3,7 @@ using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
 using ElectionResults.Hangfire.Apis.RoAep;
-using ElectionResults.Hangfire.Apis.RoAep.Models;
+using ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 using Microsoft.EntityFrameworkCore;
 using ElectionResults.Hangfire.Extensions;
 using Z.EntityFramework.Plus;

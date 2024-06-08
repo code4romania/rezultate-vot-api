@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ElectionResults.Hangfire.Apis.RoAep.Models;
+namespace ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 
 public class CountyModel
 {
