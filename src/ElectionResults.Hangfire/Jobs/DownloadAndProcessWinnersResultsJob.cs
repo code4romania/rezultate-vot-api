@@ -7,20 +7,18 @@ using ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 using Microsoft.EntityFrameworkCore;
 using ElectionResults.Hangfire.Extensions;
 using Z.EntityFramework.Plus;
-using System.Diagnostics.Metrics;
 
 namespace ElectionResults.Hangfire.Jobs;
 
-public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
+public class DownloadAndProcessWinnersResultsJob(IRoAepApi roAepApi,
     ApplicationDbContext context,
-    ILogger<DownloadAndProcessTurnoutResultsJob> logger)
+    ILogger<DownloadAndProcessWinnersResultsJob> logger)
 {
     private const string DiasporaCountyCode = "SR";
 
     public async Task Run(string electionRoundKey, int electionRoundId, bool hasDiaspora)
     {
         var electionRound = context.Elections.FirstOrDefault(x => x.ElectionId == electionRoundId);
-
         if (electionRound == null)
         {
             throw new ArgumentException($"Election round {electionRoundId} does not exist!");
@@ -35,66 +33,18 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             .Where(b => b.ElectionId == electionRound.ElectionId)
             .ToListAsync();
 
-        var turnouts = new List<Turnout>();
-        foreach (var county in counties)
+        // Stages are registered by their priority, subsequent stages should override the data!
+        // From ROAEP advice: daca nu intereseaza separarea datelor din PV in cele 3 categorii (provizorii, partiale si finale), se pot acesa doar endpoint-urile de partiale, pentru ca acela contin toate datele in ultima versiunea. 
+        StageCode[] stages =
+        [
+            //StageCode.PROV,
+            StageCode.PART,
+            //StageCode.FINAL
+        ];
+
+        foreach (var stageCode in stages)
         {
-            var countyPresence = await roAepApi.GetPresenceNow(electionRoundKey, county.ShortName);
-
-            var countyData = countyPresence.County.FirstOrDefault(x => x.County.Code == county.ShortName);
-
-            if(countyData == null)
-            {
-                logger.LogWarning("Did not found data for {countyCode}", county.ShortName);
-                continue;
-            }
-
-            foreach (var ballot in ballots)
-            {
-                var turnoutsForBallot = await context
-                    .Turnouts
-                    .Where(t => t.BallotId == ballot.BallotId)
-                    .ToListAsync();
-
-                foreach (var countyResult in countyPresence.County)
-                {
-                    var turnout = Turnout.CreateForCounty(ballot, county, electionRoundId, countyData.InitialCountLp, countyData.Lt, 0);
-
-                    turnouts.Add(turnout);
-                }
-            }
-        }
-
-        if (hasDiaspora)
-        {
-            var diasporaResults = await roAepApi.GetPresenceNow(electionRoundKey, DiasporaCountyCode);
-
-            foreach (var ballot in ballots)
-            {
-                var turnoutsForBallot = await context
-                    .Turnouts
-                    .Where(t => t.BallotId == ballot.BallotId)
-                    .ToListAsync();
-
-                if (hasDiaspora && diasporaResult is not null)
-                {
-                    UpdateDiasporaTurnouts(countries, ballot, diasporaResult, turnoutsForBallot);
-                }
-
-                foreach (var countyResult in countiesResults)
-                {
-                    var county = counties.First(x => x.ShortName == countyResult.Key);
-                    var countyLocalities = localities.Where(x => x.CountyId == county.CountyId).ToList();
-                    UpdateCountyTurnout(countyResult.Value[ScopeCode.CNTY].Categories, ballot, turnoutsForBallot, county);
-                    UpdateLocalitiesTurnouts(countyResult.Value[ScopeCode.UAT].Categories, ballot, turnoutsForBallot, county, countyLocalities);
-                }
-
-                // each county result has data about the country as well
-                var firstResult = countiesResults.Values.FirstOrDefault();
-                if (firstResult is not null && firstResult.ContainsKey(ScopeCode.CNTRY))
-                {
-                    UpdateNationalTurnout(firstResult[ScopeCode.CNTY].Categories, ballot, turnoutsForBallot);
-                }
-            }
+            await ProcessStage(electionRound, electionRoundKey, stageCode, hasDiaspora, ballots, countries, counties, localities);
         }
     }
 
@@ -109,8 +59,18 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
     {
         var countiesResults = new Dictionary<string, Dictionary<ScopeCode, ScopeModel>>();
 
-        Dictionary<CategoryCode, CategoryModel> diasporaResult = default!;
+        foreach (var county in counties)
+        {
+            var countyResult = await roAepApi.GetPVForCounty(electionRoundKey, county.ShortName, stageCode);
+            var (hasValue, stage) = GetStageScopeData(electionRoundKey, stageCode, countyResult, county.ShortName);
 
+            if (hasValue)
+            {
+                countiesResults.Add(county.ShortName, stage);
+            }
+        }
+
+        Dictionary<CategoryCode, CategoryModel> diasporaResult = default!;
         if (hasDiaspora)
         {
             var diasporaData = await roAepApi.GetPVForCounty(electionRoundKey, DiasporaCountyCode, stageCode);
@@ -151,6 +111,56 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         }
 
         context.SaveChanges();
+    }
+
+    private (bool hasValue, Dictionary<CategoryCode, CategoryModel> data) GetStageScopeCategoriesData(string electionRoundKey,
+        StageCode stageCode,
+        PVResultsModel countyResult,
+        string countyCode,
+        ScopeCode scopeCode)
+    {
+        if (countyResult.Stages.TryGetValue(stageCode, out var stage))
+        {
+            if (stage.Enabled)
+            {
+                if (stage.Scopes.TryGetValue(scopeCode, out var scope))
+                {
+                    return (true, scope.Categories);
+                }
+
+                logger.LogWarning("Scope {scopeCode} not present in {electionRoundKey} {countyCode} {stageCode}", scopeCode, electionRoundKey, DiasporaCountyCode, stageCode);
+            }
+
+            logger.LogWarning("Stage not enabled on {electionRoundKey} {countyCode} {stageCode}", electionRoundKey, countyCode, stageCode);
+        }
+        else
+        {
+            logger.LogWarning("Stage not found on {electionRoundKey} {countyCode} {stageCode}", electionRoundKey, countyCode, stageCode);
+        }
+
+        return (false, default!);
+    }
+
+    private (bool hasValue, Dictionary<ScopeCode, ScopeModel> data) GetStageScopeData(string electionRoundKey,
+        StageCode stageCode,
+        PVResultsModel countyResult,
+        string countyCode)
+    {
+        if (countyResult.Stages.TryGetValue(stageCode, out var stage))
+        {
+            if (stage.Enabled)
+            {
+                return (true, stage.Scopes);
+            }
+
+            logger.LogWarning("Stage not enabled on {electionRoundKey} {countyCode} {stageCode}", electionRoundKey, countyCode, stageCode);
+        }
+        else
+        {
+            logger.LogWarning("Stage not found on {electionRoundKey} {countyCode} {stageCode}", electionRoundKey, countyCode, stageCode);
+        }
+
+        return (false, default!);
     }
 
     /// <summary>

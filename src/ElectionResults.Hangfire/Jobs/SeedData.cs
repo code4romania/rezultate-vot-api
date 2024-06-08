@@ -359,7 +359,7 @@ public class SeedData(IRoAepApi api, ApplicationDbContext context, ILogger<SeedD
         return (true, county.Name, uat.Name, dbLocality.CountyId, dbLocality.LocalityId);
     }
 
-    private (bool resolved, string countyName, string localityName, int CountyId, int LocalityId) CheckLocality(CountyModel county, List<Locality> existingLocalities, Apis.RoAep.SicpvModels.LocalityModel locality)
+    private (bool resolved, string countyName, string localityName, int CountyId, int LocalityId) CheckLocality(CountyModel county, List<Locality> existingLocalities, Apis.RoAep.SicpvModels.SicpvLocalityModel locality)
     {
         var dbLocality = existingLocalities.FirstOrDefault(dbLocality => dbLocality.Siruta.ToString() == locality.Code);
 

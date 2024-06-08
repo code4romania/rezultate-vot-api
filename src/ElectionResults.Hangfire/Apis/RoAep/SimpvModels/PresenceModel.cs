@@ -14,55 +14,55 @@ public class PresenceModel
 public class CountyElement
 {
     [JsonPropertyName("initial_count_lp")]
-    public long InitialCountLp { get; set; }
+    public int InitialCountLp { get; set; }
 
     [JsonPropertyName("initial_count_lc")]
-    public long InitialCountLc { get; set; }
+    public int InitialCountLc { get; set; }
 
     [JsonPropertyName("precincts_count")]
-    public long PrecinctsCount { get; set; }
+    public int PrecinctsCount { get; set; }
 
     [JsonPropertyName("LP")]
-    public long Lp { get; set; }
+    public int Lp { get; set; }
 
     [JsonPropertyName("LC")]
-    public long Lc { get; set; }
+    public int Lc { get; set; }
 
     [JsonPropertyName("LS")]
-    public long Ls { get; set; }
+    public int Ls { get; set; }
 
     [JsonPropertyName("UM")]
-    public long Um { get; set; }
+    public int Um { get; set; }
 
     [JsonPropertyName("LT")]
-    public long Lt { get; set; }
+    public int Lt { get; set; }
 
     [JsonPropertyName("presence")]
     public double Presence { get; set; }
 
     [JsonPropertyName("age_ranges")]
-    public Dictionary<string, long> AgeRanges { get; set; }
+    public Dictionary<string, int> AgeRanges { get; set; }
 
     [JsonPropertyName("medium_u")]
-    public long MediumU { get; set; }
+    public int MediumU { get; set; }
 
     [JsonPropertyName("medium_r")]
-    public long MediumR { get; set; }
+    public int MediumR { get; set; }
 
     [JsonPropertyName("county")]
     public CountyCounty County { get; set; }
 
     [JsonPropertyName("county_id")]
-    public long CountyId { get; set; }
+    public int CountyId { get; set; }
 }
 
 public class CountyCounty
 {
     [JsonPropertyName("id")]
-    public long Id { get; set; }
+    public int Id { get; set; }
 
     [JsonPropertyName("nce")]
-    public long Nce { get; set; }
+    public int Nce { get; set; }
 
     [JsonPropertyName("code")]
     public string Code { get; set; }
@@ -77,34 +77,34 @@ public class CountyCounty
 public class PrecinctElement
 {
     [JsonPropertyName("initial_count_lp")]
-    public long InitialCountLp { get; set; }
+    public int InitialCountLp { get; set; }
 
     [JsonPropertyName("initial_count_lc")]
-    public long InitialCountLc { get; set; }
+    public int InitialCountLc { get; set; }
 
     [JsonPropertyName("LP")]
-    public long Lp { get; set; }
+    public int Lp { get; set; }
 
     [JsonPropertyName("LC")]
-    public long Lc { get; set; }
+    public int Lc { get; set; }
 
     [JsonPropertyName("LS")]
-    public long Ls { get; set; }
+    public int Ls { get; set; }
 
     [JsonPropertyName("UM")]
-    public long Um { get; set; }
+    public int Um { get; set; }
 
     [JsonPropertyName("LT")]
-    public long Lt { get; set; }
+    public int Lt { get; set; }
 
     [JsonPropertyName("presence")]
     public double Presence { get; set; }
 
     [JsonPropertyName("age_ranges")]
-    public Dictionary<string, long> AgeRanges { get; set; }
+    public Dictionary<string, int> AgeRanges { get; set; }
 
     [JsonPropertyName("precinct_nr")]
-    public long PrecinctNr { get; set; }
+    public int PrecinctNr { get; set; }
 
     [JsonPropertyName("precinct")]
     public PrecinctPrecinct Precinct { get; set; }
@@ -119,16 +119,16 @@ public class PrecinctElement
     public CountyCounty County { get; set; }
 
     [JsonPropertyName("county_id")]
-    public long CountyId { get; set; }
+    public int CountyId { get; set; }
 
     [JsonPropertyName("precinct_id")]
-    public long PrecinctId { get; set; }
+    public int PrecinctId { get; set; }
 
     [JsonPropertyName("uat_id")]
-    public long UatId { get; set; }
+    public int UatId { get; set; }
 
     [JsonPropertyName("locality_id")]
-    public long LocalityId { get; set; }
+    public int LocalityId { get; set; }
 }
 
 public enum Medium
@@ -140,10 +140,10 @@ public enum Medium
 public class LocalityModel
 {
     [JsonPropertyName("id")]
-    public long Id { get; set; }
+    public int Id { get; set; }
 
     [JsonPropertyName("code")]
-    public long Code { get; set; }
+    public int Code { get; set; }
 
     [JsonPropertyName("name")]
     public string Name { get; set; }
@@ -153,40 +153,40 @@ public class LocalityModel
     public Medium Medium { get; set; }
 
     [JsonPropertyName("id_uat")]
-    public long IdUat { get; set; }
+    public int IdUat { get; set; }
 
     [JsonPropertyName("id_county")]
-    public long IdCounty { get; set; }
+    public int IdCounty { get; set; }
 }
 
 public class PrecinctPrecinct
 {
     [JsonPropertyName("id")]
-    public long Id { get; set; }
+    public int Id { get; set; }
 
     [JsonPropertyName("code")]
     public string Code { get; set; }
 
     [JsonPropertyName("nr")]
-    public long Nr { get; set; }
+    public int Nr { get; set; }
 
     [JsonPropertyName("name")]
     public string Name { get; set; }
 
     [JsonPropertyName("id_county")]
-    public long IdCounty { get; set; }
+    public int IdCounty { get; set; }
 
     [JsonPropertyName("id_locality")]
-    public long IdLocality { get; set; }
+    public int IdLocality { get; set; }
 
     [JsonPropertyName("id_uat")]
-    public long IdUat { get; set; }
+    public int IdUat { get; set; }
 }
 
 public class Uat
 {
     [JsonPropertyName("id")]
-    public long Id { get; set; }
+    public int Id { get; set; }
 
     [JsonPropertyName("name")]
     public string Name { get; set; }
@@ -195,8 +195,8 @@ public class Uat
     public object Code { get; set; }
 
     [JsonPropertyName("siruta")]
-    public long Siruta { get; set; }
+    public int Siruta { get; set; }
 
     [JsonPropertyName("id_county")]
-    public long IdCounty { get; set; }
+    public int IdCounty { get; set; }
 }

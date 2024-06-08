@@ -10,6 +10,7 @@ public static class Installer
     {
         services.AddScoped<SeedData>();
         services.AddScoped<DownloadAndProcessTurnoutResultsJob>();
+        services.AddScoped<DownloadAndProcessWinnersResultsJob>();
         services.AddScoped<DownloadVoteMonitorStatisticsJob>();
 
         return services;

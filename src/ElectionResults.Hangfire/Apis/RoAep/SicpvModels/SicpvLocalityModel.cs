@@ -2,7 +2,7 @@
 
 namespace ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 
-public class LocalityModel
+public class SicpvLocalityModel
 {
     [JsonPropertyName("id")]
     public int Id { get; set; }
