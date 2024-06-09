@@ -19,7 +19,8 @@ resource "aws_cloudfront_distribution" "main" {
     }
   }
 
-  default_cache_behavior {
+  ordered_cache_behavior {
+    path_pattern             = "/api/*"
     allowed_methods          = ["GET", "HEAD", "OPTIONS"]
     cached_methods           = ["GET", "HEAD", "OPTIONS"]
     target_origin_id         = aws_lb.main.dns_name
@@ -29,8 +30,7 @@ resource "aws_cloudfront_distribution" "main" {
     compress                 = true
   }
 
-  ordered_cache_behavior {
-    path_pattern           = "/Identity/*"
+  default_cache_behavior {
     allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
     cached_methods         = ["GET", "HEAD", "OPTIONS"]
     target_origin_id       = aws_lb.main.dns_name
