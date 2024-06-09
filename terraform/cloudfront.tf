@@ -29,6 +29,28 @@ resource "aws_cloudfront_distribution" "main" {
     compress                 = true
   }
 
+  ordered_cache_behavior {
+    path_pattern             = "/Identity/*"
+    allowed_methods          = ["GET", "HEAD", "OPTIONS"]
+    cached_methods           = ["GET", "HEAD"]
+    target_origin_id         = aws_lb.main.dns_name
+    viewer_protocol_policy   = "redirect-to-https"
+    min_ttl                  = 0
+    default_ttl              = 0
+    max_ttl                  = 0
+    compress                 = true
+
+    forwarded_values {
+      query_string = true
+      headers {
+        items = ["*"]
+      }
+      cookies {
+        forward = "all"
+      }
+    }
+  }
+
   restrictions {
     geo_restriction {
       restriction_type = "none"
