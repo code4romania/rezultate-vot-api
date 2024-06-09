@@ -134,8 +134,8 @@ namespace ElectionResults.Core.Entities
 
         public static Turnout CreateForCounty(Ballot ballot,
             County county,
-            //int totalNumberOfEligibleVoters,
-            //int totalNumberOfVotes,
+            int totalNumberOfEligibleVoters,
+            int totalNumberOfVotes,
             int numberOfValidVotes,
             int numberOfNullVotes)
         {

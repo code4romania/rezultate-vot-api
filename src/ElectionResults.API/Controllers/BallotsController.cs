@@ -96,8 +96,6 @@ namespace ElectionResults.API.Controllers
                     query.Round = null;
                 }
 
-                var expiration = GetExpirationDate(query);
-
                 var result = await _resultsAggregator.GetBallotResults(query);
 
                 var newsFeed = await _resultsAggregator.GetNewsFeed(query, result.Value.Meta.ElectionId);
