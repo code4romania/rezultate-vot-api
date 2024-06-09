@@ -124,16 +124,16 @@ module "ecs_importer" {
   ]
 }
 
-resource "aws_secretsmanager_secret" "app_key" {
+resource "aws_secretsmanager_secret" "app_key_importer" {
   name = "${local.namespace}-secret_key-${random_string.secrets_suffix.result}"
 }
 
-resource "aws_secretsmanager_secret_version" "app_key" {
-  secret_id     = aws_secretsmanager_secret.app_key.id
-  secret_string = random_password.app_key.result
+resource "aws_secretsmanager_secret_version" "app_key_importer" {
+  secret_id     = aws_secretsmanager_secret.app_key_importer.id
+  secret_string = random_password.app_key_importer.result
 }
 
-resource "random_password" "app_key" {
+resource "random_password" "app_key_importer" {
   length  = 32
   special = true
 
