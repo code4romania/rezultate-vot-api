@@ -56,6 +56,10 @@ module "ecs_importer" {
       name  = "IMPORT_SCHEDULE"
       value = "*/5 * * * *"
     },
+    {
+      name  = "DB_DATABASE"
+      value = "importer"
+    },
   ]
 
   secrets = [
@@ -78,10 +82,6 @@ module "ecs_importer" {
     {
       name      = "DB_PORT"
       valueFrom = "${aws_secretsmanager_secret.rds_importer.arn}:port::"
-    },
-    {
-      name      = "DB_DATABASE"
-      valueFrom = "importer"
     },
     {
       name      = "DB_USERNAME"
