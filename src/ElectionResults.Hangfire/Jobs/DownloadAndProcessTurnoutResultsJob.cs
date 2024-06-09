@@ -328,12 +328,21 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                                                                 && t.CountyId == county.CountyId
                                                                 && t.LocalityId == locality.LocalityId);
 
-            var totalNumberOfEligibleVoters = uatTurnout.Select(x=>x.Value.Fields.TryGetTotalNumberOfEligibleVoters()).Sum();
-            var totalNumberOfVotes = uatTurnout.Select(x => x.Value.Fields.TryGetNumberOfVotes()).Sum();
+            var totalNumberOfEligibleVoters = uatTurnout
+                .Select(x=>x.Value.Fields.TryGetTotalNumberOfEligibleVoters())
+                .Sum();
 
-            var numberOfValidVotes = uatTurnout.Select(x => x.Value.Fields.TryGetNumberOfValidVotes()).Sum();
-            var numberOfNullVotes = uatTurnout.Select(x => x.Value.Fields.TryGetNumberOfNullVotes()).Sum();
+            var totalNumberOfVotes = uatTurnout
+                .Select(x => x.Value.Fields.TryGetNumberOfVotes())
+                .Sum();
 
+            var numberOfValidVotes = uatTurnout
+                .Select(x => x.Value.Fields.TryGetNumberOfValidVotes())
+                .Sum();
+
+            var numberOfNullVotes = uatTurnout
+                .Select(x => x.Value.Fields.TryGetNumberOfNullVotes())
+                .Sum();
 
             if (turnout == null)
             {
@@ -370,14 +379,25 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             return;
         }
 
-        var countyResult = countyResults[category].GetTable().First();
+        var countyResult = countyResults[category].GetTable().GroupBy(x=>x.Value.CountyCode).First();
 
         var turnout = turnoutsForBallot.FirstOrDefault(t => t.Division == ElectionDivision.County && t.CountyId == county.CountyId);
 
-        var totalNumberOfEligibleVoters = countyResult.Value.Fields.TryGetTotalNumberOfEligibleVoters();
-        var totalNumberOfVotes = countyResult.Value.Fields.TryGetNumberOfVotes();
-        var numberOfValidVotes = countyResult.Value.Fields.TryGetNumberOfValidVotes();
-        var numberOfNullVotes = countyResult.Value.Fields.TryGetNumberOfNullVotes();
+        var totalNumberOfEligibleVoters = countyResult
+             .Select(x => x.Value.Fields.TryGetTotalNumberOfEligibleVoters())
+             .Sum();
+
+        var totalNumberOfVotes = countyResult
+            .Select(x => x.Value.Fields.TryGetNumberOfVotes())
+            .Sum();
+
+        var numberOfValidVotes = countyResult
+            .Select(x => x.Value.Fields.TryGetNumberOfValidVotes())
+            .Sum();
+
+        var numberOfNullVotes = countyResult
+            .Select(x => x.Value.Fields.TryGetNumberOfNullVotes())
+            .Sum();
 
         if (turnout == null)
         {
