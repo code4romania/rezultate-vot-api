@@ -87,6 +87,13 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                 UpdateDiasporaTurnouts(countries, ballot, diasporaResult, turnoutsForBallot);
             }
 
+            int totalNationalEligibleVoters = 0;
+            int totalNationalTotalVotes = 0;
+            int totalNationalNumberOfValidVotes = 0;
+            int totalNationalNumberOfNullVotes = 0;
+
+
+
             foreach (var countyResult in countiesResults)
             {
                 var county = counties.First(x => x.ShortName == countyResult.Key);
@@ -96,7 +103,9 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                     logger.LogWarning("No data for {county}", county.Name);
                     continue;
                 }
-                UpdateCountyTurnout(countyResult.Value[ScopeCode.PRCNCT].Categories, ballot, turnoutsForBallot, county);
+
+                var countyTurnout = UpdateCountyTurnout(countyResult.Value[ScopeCode.PRCNCT].Categories, ballot, turnoutsForBallot, county);
+
                 UpdateLocalitiesTurnouts(countyResult.Value[ScopeCode.PRCNCT].Categories, ballot, turnoutsForBallot, county, countyLocalities);
 
 
@@ -126,15 +135,15 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                     }
                 }
                 Console.WriteLine($"Finished county {county.Name}");
-            }
 
-            // each county result has data about the country as well
-            var firstResult = countiesResults.Values.FirstOrDefault();
-            if (firstResult is not null && firstResult.ContainsKey(ScopeCode.CNTRY))
-            {
-                UpdateNationalTurnout(firstResult[ScopeCode.CNTRY].Categories, ballot, turnoutsForBallot);
+                if (countyTurnout is not null)
+                {
+                    totalNationalEligibleVoters += countyTurnout.EligibleVoters;
+                    totalNationalTotalVotes += countyTurnout.TotalVotes;
+                    totalNationalNumberOfValidVotes += countyTurnout.ValidVotes;
+                    totalNationalNumberOfNullVotes += countyTurnout.NullVotes;
+                }
             }
-
         }
         await context.CandidateResults.BulkInsertAsync(_candidates);
 
@@ -356,7 +365,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         }
     }
 
-    private void UpdateCountyTurnout(Dictionary<CategoryCode, CategoryModel> countyResults,
+    private Turnout? UpdateCountyTurnout(Dictionary<CategoryCode, CategoryModel> countyResults,
         Ballot ballot,
         List<Turnout> turnoutsForBallot,
         County county)
@@ -367,7 +376,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         {
             logger.LogWarning("Could not find requested {category} {ballotType} in response for {countyCode}",
                 category, ballot.BallotType, county.ShortName);
-            return;
+            return null;
         }
 
         // When scope is CNTY we have only one entry with key = countyId from AEP
@@ -376,7 +385,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         {
             logger.LogWarning("No data for {category} {ballotType} in response for {countyCode}",
                 category, ballot.BallotType, county.ShortName);
-            return;
+            return null;
         }
 
         var countyResult = countyResults[category].GetTable().GroupBy(x=>x.Value.CountyCode).First();
@@ -409,7 +418,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             turnout.Update(totalNumberOfEligibleVoters, totalNumberOfVotes, numberOfValidVotes, numberOfNullVotes);
         }
 
-        //var winners =  countyResult.Value.Votes.
+        return turnout;
     }
 
     private void UpdateNationalTurnout(Dictionary<CategoryCode, CategoryModel> countryData,
