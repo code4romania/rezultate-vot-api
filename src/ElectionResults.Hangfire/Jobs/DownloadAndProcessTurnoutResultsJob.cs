@@ -39,14 +39,20 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
 
         foreach (var county in counties)
         {
-            var countyResult = await roAepApi.GetPVForCounty(electionRoundKey, county.ShortName, stageCode);
-            var (hasValue, stage) = GetStageScopeData(electionRoundKey, stageCode, countyResult, county.ShortName);
-
-            if (hasValue)
+            try
             {
-                countiesResults.Add(county.ShortName, stage);
-            }
+                var countyResult = await roAepApi.GetPVForCounty(electionRoundKey, county.ShortName, stageCode);
+                var (hasValue, stage) = GetStageScopeData(electionRoundKey, stageCode, countyResult, county.ShortName);
 
+                if (hasValue)
+                {
+                    countiesResults.Add(county.ShortName, stage);
+                }
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Error while downloading json for county {county}", county.ShortName);
+            }
         }
 
         Dictionary<CategoryCode, CategoryModel> diasporaResult = default!;
@@ -63,11 +69,11 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
 
         foreach (var ballot in ballots)
         {
-            var winners = await context.Winners
+            await context.Winners
                 .Where(w => w.BallotId == ballot.BallotId)
                 .ExecuteDeleteAsync();
 
-            var resultsForBallot = await context.CandidateResults
+            await context.CandidateResults
                 .Where(c => c.BallotId == ballot.BallotId)
                 .ExecuteDeleteAsync();
 
@@ -85,6 +91,11 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             {
                 var county = counties.First(x => x.ShortName == countyResult.Key);
                 var countyLocalities = localities.Where(x => x.CountyId == county.CountyId).ToList();
+                if (countyResult.Value == null)
+                {
+                    logger.LogWarning("No data for {county}", county.Name);
+                    continue;
+                }
                 UpdateCountyTurnout(countyResult.Value[ScopeCode.CNTY].Categories, ballot, turnoutsForBallot, county);
                 UpdateLocalitiesTurnouts(countyResult.Value[ScopeCode.UAT].Categories, ballot, turnoutsForBallot, county, countyLocalities);
 
@@ -164,8 +175,8 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             Seats2 = vote.Mandates2
         };
         var partyName = ballot.BallotType == BallotType.LocalCouncil || ballot.BallotType == BallotType.CountyCouncil ? vote.Candidate : vote.Party;
-        candidateResult.PartyId = parties.FirstOrDefault(p => p.Alias.ContainsString(partyName.GenerateSlug()))?.Id
-                                  ?? parties.FirstOrDefault(p => p.Name.ContainsString(partyName))?.Id;
+        candidateResult.PartyId = parties.FirstOrDefault(p => p.Alias.GenerateSlug().ContainsString(partyName.GenerateSlug()))?.Id
+                                  ?? parties.FirstOrDefault(p => p.Name.GenerateSlug().ContainsString(partyName.GenerateSlug()))?.Id;
 
         return candidateResult;
     }
