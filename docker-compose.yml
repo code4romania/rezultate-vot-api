@@ -1,0 +1,18 @@
+services:
+  hangfire:
+    platform: linux/amd64
+    image: code4romania/rezultate-vot-hangfire:1.1.0-rc.4
+    ports:
+      - "8081:8080"
+    environment:
+      ASPNETCORE__ENVIRONMENT: "production"
+      Crawler__ApiUrl: "http://64.226.106.231"
+      Crawler__ElectionRounds__0__Category: "Local"
+      Crawler__ElectionRounds__0__CronExpression: "*/10 * * * *"
+      Crawler__ElectionRounds__0__ElectionRoundId: "50"
+      Crawler__ElectionRounds__0__HasDiaspora: false
+      Crawler__ElectionRounds__0__Key: "locale27092020"
+      HangfireDashboard__IsSecuredDashboard: "true"
+      HangfireDashboard__Username: "admin"
+      HangfireDashboard__Password: "admin"
+      ConnectionStrings__DefaultConnection: "Server=host.docker.internal;Port=3306;Database=rezultatevot;User Id=root;Password=;SSL Mode=None;"
