@@ -32,8 +32,7 @@ public static class Installer
 
         recurringJobManager.AddOrUpdate<DownloadAndProcessTurnoutResultsJob>($"locale09062024-data-processor", x => x.Run("locale09062024", 50, false, StageCode.PROV), "*/7 * * * *");
 
-        //recurringJobManager.AddOrUpdate<DownloadAndProcessTurnoutResultsJob>($"europarlamentare09062024-data-processor", x => x.Run("europarlamentare09062024", 51, true), "*/5 * * * *");
-        //recurringJobManager.AddOrUpdate<SyncEuroTurnoutsJob>($"europarlamentare09062024-turnouts-processor", x => x.Run(CancellationToken.None), "*/5 * * * *");
+        recurringJobManager.AddOrUpdate<DownloadAndProcessTurnoutResultsJob>($"europarlamentare09062024-data-processor", x => x.Run("europarlamentare09062024", 51, true, StageCode.PROV), "*/5 * * * *");
 
         var electionRoundIds = crawlerOptions.Value.ElectionRounds.Select(x => x.ElectionRoundId).ToList();
         var voteMonitorElectionRoundId = crawlerOptions.Value.ElectionRoundId;
