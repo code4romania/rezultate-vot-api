@@ -72,10 +72,10 @@ module "ecs_hangfire" {
     #   name  = "Crawler__ElectionRounds__0__CronExpression"
     #   value = "*/5 * * * *"
     # },
-    # {
-    #   name  = "Crawler__ElectionRounds__0__ElectionRoundId"
-    #   value = "50"
-    # },
+    {
+      name  = "Crawler__ElectionRounds__0__ElectionRoundId"
+      value = "50"
+    },
     # {
     #   name  = "Crawler__ElectionRounds__0__HasDiaspora"
     #   value = tostring(false)
@@ -88,10 +88,10 @@ module "ecs_hangfire" {
     #   name  = "Crawler__ElectionRounds__1__CronExpression"
     #   value = "*/5 * * * *"
     # },
-    # {
-    #   name  = "Crawler__ElectionRounds__1__ElectionRoundId"
-    #   value = "51"
-    # },
+    {
+      name  = "Crawler__ElectionRounds__1__ElectionRoundId"
+      value = "51"
+    },
     # {
     #   name  = "Crawler__ElectionRounds__1__HasDiaspora"
     #   value = tostring(true)
