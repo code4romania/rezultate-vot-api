@@ -326,7 +326,7 @@ namespace ElectionResults.Core.Elections
 
             var results = await resultsQuery.ToListAsync();
 
-            if (query.Division == ElectionDivision.Diaspora_Country)
+            if (query.Division == ElectionDivision.Diaspora_Country || query.Division == ElectionDivision.Diaspora)
             {
                 results = results.GroupBy(r => r.Name).Select(r =>
                 {
