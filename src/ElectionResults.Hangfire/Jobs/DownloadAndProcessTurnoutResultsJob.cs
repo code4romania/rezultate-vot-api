@@ -102,13 +102,13 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
 
                 List<KeyValuePair<string, TableEntryModel>> list = new List<KeyValuePair<string, TableEntryModel>>();
                 if (ballot.BallotType == BallotType.LocalCouncil)
-                    list = countyResult.Value[ScopeCode.UAT].Categories[CategoryCode.CL].Table.OrderBy(c => c.Value.UatName).ToList();
+                    list = countyResult.Value[ScopeCode.UAT].Categories[CategoryCode.CL].GetTable().OrderBy(c => c.Value.UatName).ToList();
                 else if (ballot.BallotType == BallotType.Mayor)
-                    list = countyResult.Value[ScopeCode.UAT].Categories[CategoryCode.P].Table.OrderBy(c => c.Value.UatName).ToList();
+                    list = countyResult.Value[ScopeCode.UAT].Categories[CategoryCode.P].GetTable().OrderBy(c => c.Value.UatName).ToList();
                 else if (ballot.BallotType == BallotType.CountyCouncil)
-                    list = countyResult.Value[ScopeCode.CNTY].Categories[CategoryCode.CJ].Table.OrderBy(c => c.Value.UatName).ToList();
+                    list = countyResult.Value[ScopeCode.CNTY].Categories[CategoryCode.CJ].GetTable().OrderBy(c => c.Value.UatName).ToList();
                 else if (ballot.BallotType == BallotType.CountyCouncilPresident)
-                    list = countyResult.Value[ScopeCode.CNTY].Categories[CategoryCode.PCJ].Table.OrderBy(c => c.Value.UatName).ToList();
+                    list = countyResult.Value[ScopeCode.CNTY].Categories[CategoryCode.PCJ].GetTable().OrderBy(c => c.Value.UatName).ToList();
 
                 if ((ballot.BallotType == BallotType.CountyCouncilPresident ||
                      ballot.BallotType == BallotType.CountyCouncil) && list.Any())
@@ -260,7 +260,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         int totalDiasporaNumberOfValidVotes = 0;
         int totalDiasporaNumberOfNullVotes = 0;
 
-        foreach (var turnout in resultsCategory!.Table.Values)
+        foreach (var turnout in resultsCategory!.GetTable().Values)
         {
             var dbCountry = FindCountry(countries, turnout);
 
@@ -313,13 +313,13 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
     {
         var category = MapBallotTypeToCategoryCode(ballot.BallotType);
 
-        if (!uatsResults.ContainsKey(category))
+        if (!uatsResults.ContainsKey(category) || uatsResults[category].Table == null)
         {
             logger.LogWarning("Could not find requested {category} {ballotType} in response for {countyCode}", category, ballot.BallotType, county.ShortName);
             return;
         }
 
-        foreach (var uatTurnout in uatsResults[category].Table)
+        foreach (var uatTurnout in uatsResults[category].GetTable())
         {
             var locality = localities.First(x => x.Siruta == int.Parse(uatTurnout.Value.UatSiruta));
             var turnout = turnoutsForBallot.FirstOrDefault(t => t.BallotId == ballot.BallotId
@@ -361,14 +361,14 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
 
         // When scope is CNTY we have only one entry with key = countyId from AEP
         // It could happen that table is empty.
-        if (!countyResults[category].Table.Any())
+        if (!countyResults[category].GetTable().Any())
         {
             logger.LogWarning("No data for {category} {ballotType} in response for {countyCode}",
                 category, ballot.BallotType, county.ShortName);
             return;
         }
 
-        var countyResult = countyResults[category].Table.First();
+        var countyResult = countyResults[category].GetTable().First();
 
         var turnout = turnoutsForBallot.FirstOrDefault(t => t.Division == ElectionDivision.County && t.CountyId == county.CountyId);
 
@@ -404,7 +404,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         }
 
         // It could happen that table is empty.
-        if (!countryData[category].Table.Any())
+        if (!countryData[category].GetTable().Any())
         {
             logger.LogWarning("No data for {category} {ballotType} for Romania",
                 category, ballot.BallotType);
@@ -412,7 +412,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         }
 
         // When scope is CNTRY we have only one entry  with key = RO
-        var countryResult = countryData[category].Table.First();
+        var countryResult = countryData[category].GetTable().First();
 
         var turnout = turnoutsForBallot.FirstOrDefault(t => t.Division == ElectionDivision.National);
 

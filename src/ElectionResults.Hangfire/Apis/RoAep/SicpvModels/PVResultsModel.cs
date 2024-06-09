@@ -34,7 +34,12 @@ public class CategoryModel
     /// </summary>
     [JsonPropertyName("table")]
     [JsonConverter(typeof(CategoryTableConverter))]
-    public Dictionary<string, TableEntryModel> Table { get; set; }
+    public Dictionary<string, TableEntryModel>? Table { get; set; }
+
+    public Dictionary<string, TableEntryModel> GetTable()
+    {
+        return Table ??= new Dictionary<string, TableEntryModel>();
+    }
 }
 
 
