@@ -10,13 +10,16 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using System.Globalization;
+using ElectionResults.Hangfire.Apis;
 using Z.EntityFramework.Plus;
 
 namespace ElectionResults.Hangfire.Jobs;
-public class SeedData(IRoAepApi api, ApplicationDbContext context, ILogger<SeedData> logger)
+public class SeedData(IRoAepApi api, ITurnoutCrawler turnoutCrawler, ApplicationDbContext context, ILogger<SeedData> logger)
 {
     public async Task Run(CancellationToken ct = default)
     {
+        // don't insert turnouts from this job
+        return;
         var existingCounties = (await context.Counties.FromCacheAsync(ct, CacheKeys.RoCounties)).ToList();
         var existingLocalities = (await context.Localities.FromCacheAsync(ct, CacheKeys.RoLocalities)).ToList();
 
@@ -60,17 +63,17 @@ public class SeedData(IRoAepApi api, ApplicationDbContext context, ILogger<SeedD
         var euroParlamentareBallot = await context
             .Ballots
             .Where(b => b.ElectionId == 51)
-            .FirstAsync();
+            .FirstAsync(cancellationToken: ct);
 
         var localeBallots = await context
         .Ballots
         .Where(b => b.ElectionId == 50)
-        .ToListAsync();
+        .ToListAsync(cancellationToken: ct);
 
         var parties = await context.Parties.ToListAsync();
 
         //await ImportDateForLocale(parties, ballots, allUats);
-        await ImportDateForEuroParlamentare(parties, euroParlamentareBallot, allUats, existingCountries);
+        //await ImportDateForEuroParlamentare(parties, euroParlamentareBallot, allUats, existingCountries);
     }
 
     private async Task ImportDateForLocale(List<Party> parties, List<Ballot> ballots, List<(bool resolved, string countyName, string localityName, int CountyId, int LocalityId)> allUats)

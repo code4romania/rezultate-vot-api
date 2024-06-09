@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json;
 using ElectionResults.Hangfire.Apis.RoAep;
 using ElectionResults.Hangfire.Apis.VoteMonitor;
+using ElectionResults.Hangfire.Jobs;
 using ElectionResults.Hangfire.Options;
 using Microsoft.Extensions.Options;
 using Refit;
@@ -19,7 +20,7 @@ public static class Installer
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             NumberHandling = JsonNumberHandling.AllowReadingFromString,
         };
-
+        services.AddSingleton<ITurnoutCrawler, TurnoutCrawler>();
         services
             .AddRefitClient<IRoAepApi>(new RefitSettings(new SystemTextJsonContentSerializer(jsonSerializerOptions))
             {

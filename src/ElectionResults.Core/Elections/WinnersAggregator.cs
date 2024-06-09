@@ -372,7 +372,7 @@ namespace ElectionResults.Core.Elections
                 }
             }
 
-            electionMapWinner.ValidVotes = turnoutForDivision.ValidVotes;
+            electionMapWinner.ValidVotes = turnoutForDivision?.ValidVotes ?? 0;
             return electionMapWinner;
         }
 
