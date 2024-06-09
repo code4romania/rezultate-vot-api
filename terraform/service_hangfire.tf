@@ -109,12 +109,12 @@ module "ecs_hangfire" {
       value = "https://api.votemonitor.org"
     },
     {
-      name      = "Crawler__ApiKey"
-      valueFrom = var.crawler_api_key
+      name  = "Crawler__ApiKey"
+      value = var.crawler_api_key
     },
     {
-      name      = "Crawler__ElectionRoundId"
-      valueFrom = var.crawler_election_round_uuid
+      name  = "Crawler__ElectionRoundId"
+      value = var.crawler_election_round_uuid
     }
   ]
 
