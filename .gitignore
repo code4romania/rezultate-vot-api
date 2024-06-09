@@ -267,3 +267,4 @@ src/ElectionResults.WebApi/ClientApp/package-lock.json
 src/ElectionResults.API/bin/
 
 src/ElectionResults.API/wwwroot/lib/
+.infracost
