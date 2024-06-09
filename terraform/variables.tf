@@ -39,6 +39,13 @@ variable "sentry_dsn" {
   default     = null
 }
 
+
+variable "sentry_dsn_importer" {
+  description = "Sentry DSN for importer"
+  type        = string
+  default     = null
+}
+
 variable "use_load_balancer" {
   type    = bool
   default = true
@@ -64,7 +71,6 @@ variable "uploads_bucket" {
 variable "crawler_election_round_uuid" {
   description = "Election round UUID for crwal election results from MV"
   type        = string
-  
 }
 
 variable "crawler_api_key" {

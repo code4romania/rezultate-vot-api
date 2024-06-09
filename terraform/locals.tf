@@ -12,6 +12,11 @@ locals {
       image = "code4romania/rezultate-vot-hangfire"
       tag   = "1.1.0-rc.6"
     }
+
+    importer = {
+      image = "code4romania/rezultate-vot-importer"
+      tag   = "1.0.0"
+    }
   }
 
   ecs = {
