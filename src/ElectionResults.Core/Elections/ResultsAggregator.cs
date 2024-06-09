@@ -409,9 +409,10 @@ namespace ElectionResults.Core.Elections
         {
             await using var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>();
             var ballot = await dbContext.Ballots
-                .AsNoTracking()
                 .Include(b => b.Election)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(e => e.BallotId == query.BallotId);
+
             var candidates = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
             var minorities = await GetMinorities(ballot, dbContext);
             candidates = candidates.Concat(minorities).ToList();

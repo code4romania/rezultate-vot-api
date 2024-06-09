@@ -156,6 +156,7 @@ namespace ElectionResults.Core.Elections
                 return Result.Failure<List<ElectionMapWinner>>(countries.Error);
             var ballot = await _dbContext.Ballots
                 .Include(b => b.Election)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(b => b.BallotId == ballotId);
 
             var candidateResultsByCountries = await _dbContext.CandidateResults
@@ -198,7 +199,9 @@ namespace ElectionResults.Core.Elections
             var parties = await _partiesRepository.GetAllParties();
             var ballot = await _dbContext.Ballots
                 .Include(b => b.Election)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(b => b.BallotId == ballotId);
+           
             if (ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.LocalCouncil)
             {
                 var results = await _dbContext.CandidateResults
@@ -250,6 +253,7 @@ namespace ElectionResults.Core.Elections
             var counties = await _territoryRepository.GetCounties();
             var ballot = await dbContext.Ballots
                 .Include(b => b.Election)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(b => b.BallotId == ballotId);
 
             var candidateResultsByCounties = await dbContext.CandidateResults
