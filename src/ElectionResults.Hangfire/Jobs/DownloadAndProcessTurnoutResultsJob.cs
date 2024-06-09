@@ -7,7 +7,6 @@ using ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 using Microsoft.EntityFrameworkCore;
 using ElectionResults.Hangfire.Extensions;
 using Z.EntityFramework.Plus;
-using static ElectionResults.Hangfire.Apis.TurnoutCrawler;
 
 namespace ElectionResults.Hangfire.Jobs;
 
@@ -64,11 +63,14 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
 
         foreach (var ballot in ballots)
         {
-            var winners = await context.Winners.Where(w => w.BallotId == ballot.BallotId).ToListAsync();
-            var resultsForBallot =
-                await context.CandidateResults.Where(c => c.BallotId == ballot.BallotId).ToListAsync();
-            await context.Winners.BulkDeleteAsync(winners);
-            await context.CandidateResults.BulkDeleteAsync(resultsForBallot);
+            var winners = await context.Winners
+                .Where(w => w.BallotId == ballot.BallotId)
+                .ExecuteDeleteAsync();
+
+            var resultsForBallot = await context.CandidateResults
+                .Where(c => c.BallotId == ballot.BallotId)
+                .ExecuteDeleteAsync();
+
             var turnoutsForBallot = await context
                 .Turnouts
                 .Where(t => t.BallotId == ballot.BallotId)
@@ -144,7 +146,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
     {
         var newResults = jsonLocality.Value.Votes.Select(r => CreateCandidateResult(r, ballot, parties, null, county.CountyId, ElectionDivision.County))
             .ToList();
-       
+
         _candidates.AddRange(newResults);
     }
     private static CandidateResult CreateCandidateResult(VoteModel vote, Ballot ballot, List<Party> parties,

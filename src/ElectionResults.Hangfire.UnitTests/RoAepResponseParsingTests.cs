@@ -11,6 +11,7 @@ public class RoAepResponseParsingTests
     [Theory]
     [InlineData("pv_b_final.json")]
     [InlineData("pv_ab_final.json")]
+    [InlineData("pv_sr_part.json")]
     public void Should_Parse_Response_Correctly(string file)
     {
         var json = File.ReadAllText(file);
