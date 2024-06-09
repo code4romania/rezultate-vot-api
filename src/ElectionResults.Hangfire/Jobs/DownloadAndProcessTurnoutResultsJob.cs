@@ -223,7 +223,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             await context.Database.ExecuteSqlRawAsync($@"
             INSERT INTO candidateresults (Votes, BallotId, Name, ShortName, PartyName, PartyId, YesVotes, NoVotes, SeatsGained, Division, CountyId, LocalityId, TotalSeats, Seats1, Seats2, OverElectoralThreshold, CountryId, BallotPosition)
             SELECT Votes, BallotId, Name, ShortName, PartyName, PartyId, YesVotes, NoVotes, SeatsGained, Division, CountyId, LocalityId, TotalSeats, Seats1, Seats2, OverElectoralThreshold, CountryId, BallotPosition
-            FROM TempCandidateResults where ballotid = {ballot.BallotId};
+            FROM tempcandidateresults where ballotid = {ballot.BallotId};
         ");
 
         }
@@ -248,7 +248,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         }
 
         var insertQuery = new StringBuilder();
-        insertQuery.Append("INSERT INTO TempCandidateResults (Votes, BallotId, Name, ShortName, PartyName, PartyId, YesVotes, NoVotes, SeatsGained, Division, CountyId, LocalityId, TotalSeats, Seats1, Seats2, OverElectoralThreshold, CountryId, BallotPosition) VALUES ");
+        insertQuery.Append("INSERT INTO tempcandidateresults (Votes, BallotId, Name, ShortName, PartyName, PartyId, YesVotes, NoVotes, SeatsGained, Division, CountyId, LocalityId, TotalSeats, Seats1, Seats2, OverElectoralThreshold, CountryId, BallotPosition) VALUES ");
 
         var valueQueries = new List<string>();
         foreach (var candidate in candidateResults.Where(c => c != null))
