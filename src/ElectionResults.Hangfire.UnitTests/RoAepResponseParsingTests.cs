@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using ElectionResults.Core.Extensions;
 using ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 using ElectionResults.Hangfire.Extensions;
 

@@ -245,4 +245,8 @@ public class VoteModel
 
     [JsonPropertyName("votes")]
     public long? Votes { get; set; }
+
+    public int Mandates1 { get; set; }
+
+    public int Mandates2 { get; set; }
 }

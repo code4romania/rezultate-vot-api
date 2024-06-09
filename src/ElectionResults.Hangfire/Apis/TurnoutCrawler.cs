@@ -1,4 +1,5 @@
 ﻿using ElectionResults.Core.Entities;
+using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
 using ElectionResults.Hangfire.Extensions;
 using Microsoft.EntityFrameworkCore;

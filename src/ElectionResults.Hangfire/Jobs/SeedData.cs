@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using System.Globalization;
+using ElectionResults.Core.Extensions;
 using ElectionResults.Hangfire.Apis;
 using Z.EntityFramework.Plus;
 
