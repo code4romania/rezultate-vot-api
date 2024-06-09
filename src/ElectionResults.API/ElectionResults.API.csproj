@@ -33,7 +33,12 @@
     <None Include="wwwroot\*" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Import\" />
+    <Compile Remove="Import\**" />
+    <Content Remove="Import\**" />
+    <EmbeddedResource Remove="Import\**" />
+    <None Remove="Import\**" />
+  </ItemGroup>
+  <ItemGroup>
     <Folder Include="Options\" />
     <Folder Include="wwwroot\lib\" />
     <Folder Include="wwwroot\upload\" />
