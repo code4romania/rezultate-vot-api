@@ -19,6 +19,15 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
     private readonly ConcurrentBag<CandidateResult> _candidates = new();
     private const string DiasporaCountyCode = "SR";
 
+    private readonly Dictionary<string, int> _sectorSirutaMap = new Dictionary<string, int>() {
+        { "BUCURESTI SECTORUL 1", 179141 },
+        {"BUCURESTI SECTORUL 2", 179150},
+        {"BUCURESTI SECTORUL 3", 179169},
+        {"BUCURESTI SECTORUL 4", 179178},
+        {"BUCURESTI SECTORUL 5", 179187},
+        {"BUCURESTI SECTORUL 6", 179196}
+    };
+
     public async Task Run(string electionRoundKey, int electionRoundId, bool hasDiaspora, StageCode stageCode)
     {
         var electionRound = context.Elections.FirstOrDefault(x => x.ElectionId == electionRoundId);
@@ -434,12 +443,24 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
 
         foreach (var uatTurnout in uatsResults[category].GetTable().GroupBy(x => x.Value.UatSiruta))
         {
-            var locality = localities.FirstOrDefault(x => x.Siruta == int.Parse(uatTurnout.Key));
-            if (locality == null)
+            Locality? locality = null;
+            if(county.ShortName == "B")
             {
-                logger.LogWarning("Locality {locality} not found in the database", uatTurnout.Key);
-                continue;
+                var sectorSirutaId = _sectorSirutaMap.First(x => x.Key.InvariantEquals(uatTurnout.First().Value.UatName)).Value;
+
+                locality = localities.FirstOrDefault(x => x.Siruta == sectorSirutaId);
             }
+            else
+            {
+                locality = localities.FirstOrDefault(x => x.Siruta == int.Parse(uatTurnout.Key));
+                if (locality == null)
+                {
+                    logger.LogWarning("Locality {locality} not found in the database", uatTurnout.Key);
+                    continue;
+                }
+            }
+
+        
 
             var turnout = turnoutsForBallot.FirstOrDefault(t => t.BallotId == ballot.BallotId
                                                                 && t.Division == ElectionDivision.Locality
