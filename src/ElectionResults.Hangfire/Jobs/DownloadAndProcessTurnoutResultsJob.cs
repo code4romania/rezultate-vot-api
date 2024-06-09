@@ -128,7 +128,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                 if (ballot.BallotType == BallotType.LocalCouncil)
                 {
                     list = countyResult.Value[ScopeCode.PRCNCT].Categories[CategoryCode.CL].GetTable().Values
-                        .GroupBy(g => g.UatSiruta, (key, g) => new { Siruta = key, Votes = g.SelectMany(x => x.Votes).ToList() })
+                        .GroupBy(g => g.UatSiruta, (key, g) => new { Siruta = GetSiruta(county, key, g.First()), Votes = g.SelectMany(x => x.Votes).ToList() })
                         .ToDictionary(x => x.Siruta, y => y.Votes.GroupBy(x => x.Candidate, (key, g) => new VoteModel()
                         {
                             Candidate = key,
@@ -141,7 +141,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                 else if (ballot.BallotType == BallotType.Mayor)
                 {
                     list = countyResult.Value[ScopeCode.PRCNCT].Categories[CategoryCode.P].GetTable().Values
-                     .GroupBy(g => g.UatSiruta, (key, g) => new { Siruta = key, Votes = g.SelectMany(x => x.Votes).ToList() })
+                     .GroupBy(g => g.UatSiruta, (key, g) => new { Siruta = GetSiruta(county, key, g.First()), Votes = g.SelectMany(x => x.Votes).ToList() })
                      .ToDictionary(x => x.Siruta, y => y.Votes.GroupBy(x => x.Candidate, (key, g) => new VoteModel()
                      {
                          Candidate = key,
@@ -227,6 +227,17 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         ");
 
         }
+    }
+
+    private string GetSiruta(County county, string key, TableEntryModel tableEntryModel)
+    {
+        if (county.ShortName == "B")
+        {
+            var sectorSirutaId = _sectorSirutaMap.First(x => x.Key.InvariantEquals(tableEntryModel.UatName)).Value;
+            return sectorSirutaId.ToString();
+        }
+
+        return key;
     }
 
     private async Task BulkInsertCandidateResultsAsync(List<CandidateResult> candidateResults)
