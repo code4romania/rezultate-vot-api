@@ -12,8 +12,7 @@ public static class FieldsExtensions
 
     public static int TryGetNumberOfVotes(this List<FieldModel> fields)
     {
-        var totalNumberOfVotes = fields.FirstOrDefault(x => x.Name == FieldNames.b)?.Value ?? 0;
-        return totalNumberOfVotes;
+        return TryGetNumberOfValidVotes(fields) + TryGetNumberOfNullVotes(fields);
     }
 
     public static int TryGetNumberOfValidVotes(this List<FieldModel> fields)

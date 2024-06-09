@@ -1,5 +1,7 @@
 ﻿using System.Globalization;
+using System.Text;
 using Diacritics.Extensions;
+using Humanizer;
 
 namespace ElectionResults.Core.Extensions
 {
@@ -47,6 +49,43 @@ namespace ElectionResults.Core.Extensions
         {
             return string.IsNullOrWhiteSpace(value);
         }
+
+        public static string GenerateSlug(this string phrase)
+        {
+            if (phrase.IsEmpty())
+            {
+                return string.Empty;
+            }
+            string str = phrase.ToLowerInvariant();
+
+            // Remove invalid characters
+            str = RemoveDiacritics(str).Dehumanize();
+
+
+            return str;
+        }
+        public static bool InvariantEquals(this string first, string second)
+        {
+            return first.GenerateSlug() == second.GenerateSlug();
+        }
+
+        private static string RemoveDiacritics(string text)
+        {
+            var normalizedString = text.Normalize(NormalizationForm.FormD);
+            var stringBuilder = new StringBuilder();
+
+            foreach (var c in normalizedString)
+            {
+                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+                {
+                    stringBuilder.Append(c);
+                }
+            }
+
+            return stringBuilder.ToString().Normalize(NormalizationForm.FormC);
+        }
+
 
 
     }
