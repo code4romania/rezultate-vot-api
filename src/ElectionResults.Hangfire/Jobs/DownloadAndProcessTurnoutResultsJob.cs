@@ -96,8 +96,8 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                     logger.LogWarning("No data for {county}", county.Name);
                     continue;
                 }
-                UpdateCountyTurnout(countyResult.Value[ScopeCode.CNTY].Categories, ballot, turnoutsForBallot, county);
-                UpdateLocalitiesTurnouts(countyResult.Value[ScopeCode.UAT].Categories, ballot, turnoutsForBallot, county, countyLocalities);
+                UpdateCountyTurnout(countyResult.Value[ScopeCode.PRCNCT].Categories, ballot, turnoutsForBallot, county);
+                UpdateLocalitiesTurnouts(countyResult.Value[ScopeCode.PRCNCT].Categories, ballot, turnoutsForBallot, county, countyLocalities);
 
 
                 List<KeyValuePair<string, TableEntryModel>> list = new List<KeyValuePair<string, TableEntryModel>>();
@@ -260,20 +260,20 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         int totalDiasporaNumberOfValidVotes = 0;
         int totalDiasporaNumberOfNullVotes = 0;
 
-        foreach (var turnout in resultsCategory!.GetTable().Values)
+        foreach (var countryData in resultsCategory!.Table.Values.GroupBy(x => x.UatName))
         {
-            var dbCountry = FindCountry(countries, turnout);
+            var dbCountry = FindCountry(countries, countryData.Key);
 
             if (dbCountry == null)
             {
-                logger.LogWarning($"{turnout.UatName} not found in the database");
+                logger.LogWarning($"{countryData.Key} not found in the database");
                 continue;
             }
 
-            var eligibleVoters = turnout.Fields.TryGetTotalNumberOfEligibleVoters();
-            var totalVotes = turnout.Fields.TryGetNumberOfVotes();
-            var numberOfValidVotes = turnout.Fields.TryGetNumberOfValidVotes();
-            var numberOfNullVotes = turnout.Fields.TryGetNumberOfNullVotes();
+            var eligibleVoters = countryData.Select(x => x.Fields.TryGetTotalNumberOfEligibleVoters()).Sum();
+            var totalVotes = countryData.Select(x => x.Fields.TryGetNumberOfVotes()).Sum();
+            var numberOfValidVotes = countryData.Select(x => x.Fields.TryGetNumberOfValidVotes()).Sum();
+            var numberOfNullVotes = countryData.Select(x => x.Fields.TryGetNumberOfNullVotes()).Sum();
 
             var countryTurnout = existingTurnouts.FirstOrDefault(t => t.Division == ElectionDivision.Diaspora_Country && t.CountryId == dbCountry.Id);
 
@@ -287,10 +287,10 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                 countryTurnout.Update(eligibleVoters, totalVotes, numberOfValidVotes, numberOfNullVotes);
             }
 
-            totalDiasporaEligibleVoters = turnout.Fields.TryGetTotalNumberOfEligibleVoters();
-            totalDiasporaTotalVotes = turnout.Fields.TryGetNumberOfVotes();
-            totalDiasporaNumberOfValidVotes = turnout.Fields.TryGetNumberOfValidVotes();
-            totalDiasporaNumberOfNullVotes = turnout.Fields.TryGetNumberOfNullVotes();
+            totalDiasporaEligibleVoters += countryTurnout.EligibleVoters;
+            totalDiasporaTotalVotes += countryTurnout.TotalVotes;
+            totalDiasporaNumberOfValidVotes += countryTurnout.ValidVotes;
+            totalDiasporaNumberOfNullVotes += countryTurnout.NullVotes;
         }
         var diasporaTurnout = existingTurnouts.FirstOrDefault(t => t.Division == ElectionDivision.Diaspora);
 
@@ -319,19 +319,21 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             return;
         }
 
-        foreach (var uatTurnout in uatsResults[category].GetTable())
+        foreach (var uatTurnout in uatsResults[category].GetTable().GroupBy(x=>x.Value.UatSiruta))
         {
-            var locality = localities.First(x => x.Siruta == int.Parse(uatTurnout.Value.UatSiruta));
+            var locality = localities.First(x => x.Siruta == int.Parse(uatTurnout.Key));
+
             var turnout = turnoutsForBallot.FirstOrDefault(t => t.BallotId == ballot.BallotId
                                                                 && t.Division == ElectionDivision.Locality
                                                                 && t.CountyId == county.CountyId
                                                                 && t.LocalityId == locality.LocalityId);
 
+            var totalNumberOfEligibleVoters = uatTurnout.Select(x=>x.Value.Fields.TryGetTotalNumberOfEligibleVoters()).Sum();
+            var totalNumberOfVotes = uatTurnout.Select(x => x.Value.Fields.TryGetNumberOfVotes()).Sum();
 
-            var totalNumberOfEligibleVoters = uatTurnout.Value.Fields.TryGetTotalNumberOfEligibleVoters();
-            var totalNumberOfVotes = uatTurnout.Value.Fields.TryGetNumberOfVotes();
-            var numberOfValidVotes = uatTurnout.Value.Fields.TryGetNumberOfValidVotes();
-            var numberOfNullVotes = uatTurnout.Value.Fields.TryGetNumberOfNullVotes();
+            var numberOfValidVotes = uatTurnout.Select(x => x.Value.Fields.TryGetNumberOfValidVotes()).Sum();
+            var numberOfNullVotes = uatTurnout.Select(x => x.Value.Fields.TryGetNumberOfNullVotes()).Sum();
+
 
             if (turnout == null)
             {
@@ -438,9 +440,9 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
     /// <param name="countries"></param>
     /// <param name="turnout"></param>
     /// <returns></returns>
-    private Country? FindCountry(List<Country> countries, TableEntryModel turnout)
+    private Country? FindCountry(List<Country> countries, string name)
     {
-        return countries.FirstOrDefault(c => c.Name.EqualsIgnoringAccent(turnout.UatName));
+        return countries.FirstOrDefault(c => c.Name.InvariantEquals(name));
     }
 
     private CategoryCode MapBallotTypeToCategoryCode(BallotType ballotType)
