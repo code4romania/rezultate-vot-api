@@ -76,7 +76,7 @@ namespace ElectionResults.API
                     });
             });
 
-            services.AddHealthChecks().AddMySql(name: "domain-db", connectionString: connectionString);
+            services.AddHealthChecks();
         }
 
         private static void RegisterDependencies(IServiceCollection services, IConfiguration configuration)
