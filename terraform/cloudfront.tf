@@ -29,6 +29,18 @@ resource "aws_cloudfront_distribution" "main" {
     compress                 = true
   }
 
+  ordered_cache_behavior {
+    path_pattern           = "/Identity/*"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods         = ["GET", "HEAD", "OPTIONS"]
+    target_origin_id       = aws_lb.main.dns_name
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = true
+
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" #Managed-CachingDisabled
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.admin.id
+  }
+
   restrictions {
     geo_restriction {
       restriction_type = "none"
@@ -71,6 +83,28 @@ resource "aws_cloudfront_origin_request_policy" "default" {
 
   cookies_config {
     cookie_behavior = "none"
+  }
+
+  headers_config {
+    header_behavior = "allViewerAndWhitelistCloudFront"
+
+    headers {
+      items = [
+        "CloudFront-Forwarded-Proto",
+      ]
+    }
+  }
+
+  query_strings_config {
+    query_string_behavior = "all"
+  }
+}
+
+resource "aws_cloudfront_origin_request_policy" "admin" {
+  name = "${local.namespace}-origin-request-policy"
+
+  cookies_config {
+    cookie_behavior = "all"
   }
 
   headers_config {
