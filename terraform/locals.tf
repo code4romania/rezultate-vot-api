@@ -27,7 +27,7 @@ locals {
 
   db = {
     name           = "rezultatevot"
-    instance_class = var.env == "production" ? "db.m7g.xlarge" : "db.t4g.micro"
+    instance_class = var.env == "production" ? "db.m7g.2xlarge" : "db.t4g.micro"
   }
 
   networking = {
