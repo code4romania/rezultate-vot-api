@@ -128,14 +128,14 @@ namespace ElectionResults.Core.Elections
 
         private static ElectionMapWinner WinnerToElectionMapWinner(Winner winner, IEnumerable<Party> parties)
         {
-            var divisionId = winner.Candidate.LocalityId ?? winner.CountyId ?? winner.LocalityId ?? winner.CountryId;
+            var divisionId = winner.Candidate?.LocalityId ?? winner.CountyId ?? winner.LocalityId ?? winner.CountryId;
 
             var electionMapWinner = CreateElectionMapWinner(divisionId, winner.Ballot, winner.Candidate, winner.Turnout);
 
             if (electionMapWinner.Winner.PartyColor.IsEmpty())
             {
                 electionMapWinner.Winner.PartyColor =
-                    parties.ToList().GetMatchingParty(winner.Candidate.ShortName)?.Color ??
+                    parties.ToList().GetMatchingParty(winner.Candidate?.ShortName)?.Color ??
                     Consts.IndependentCandidateColor;
             }
 

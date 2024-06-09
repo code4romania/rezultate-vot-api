@@ -14,7 +14,7 @@ using ElectionResults.Hangfire.Apis;
 using Z.EntityFramework.Plus;
 
 namespace ElectionResults.Hangfire.Jobs;
-public class SeedData(IRoAepApi api, ITurnoutCrawler turnoutCrawler, ApplicationDbContext context, ILogger<SeedData> logger)
+public class SeedData(IRoAepApi api, ApplicationDbContext context, ILogger<SeedData> logger)
 {
     public async Task Run(CancellationToken ct = default)
     {
