@@ -101,7 +101,7 @@ resource "aws_cloudfront_origin_request_policy" "default" {
 }
 
 resource "aws_cloudfront_origin_request_policy" "admin" {
-  name = "${local.namespace}-origin-request-policy"
+  name = "${local.namespace}-admin-origin-request-policy"
 
   cookies_config {
     cookie_behavior = "all"
