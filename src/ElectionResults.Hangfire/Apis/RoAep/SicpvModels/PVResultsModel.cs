@@ -34,7 +34,12 @@ public class CategoryModel
     /// </summary>
     [JsonPropertyName("table")]
     [JsonConverter(typeof(CategoryTableConverter))]
-    public Dictionary<string, TableEntryModel> Table { get; set; }
+    public Dictionary<string, TableEntryModel>? Table { get; set; }
+
+    public Dictionary<string, TableEntryModel> GetTable()
+    {
+        return Table ??= new Dictionary<string, TableEntryModel>();
+    }
 }
 
 
@@ -244,9 +249,11 @@ public class VoteModel
     public string Party { get; set; }
 
     [JsonPropertyName("votes")]
-    public long? Votes { get; set; }
+    public int? Votes { get; set; }
 
-    public int Mandates1 { get; set; }
+    [JsonPropertyName("mandates1")]
+    public int? Mandates1 { get; set; }
 
-    public int Mandates2 { get; set; }
+    [JsonPropertyName("mandates2")]
+    public int? Mandates2 { get; set; }
 }

@@ -21,9 +21,9 @@ public class RoAepResponseParsingTests
         });
         result.Should().NotBeNull();
 
-        result.Stages[StageCode.PART].Scopes[ScopeCode.UAT].Categories[CategoryCode.P].Table.Should().BeEmpty();
-        result.Stages[StageCode.PROV].Scopes[ScopeCode.UAT].Categories[CategoryCode.P].Table.Should().BeEmpty();
-        result.Stages[StageCode.FINAL].Scopes[ScopeCode.UAT].Categories[CategoryCode.P].Table.Should().NotBeEmpty();
+        result.Stages[StageCode.PART].Scopes[ScopeCode.UAT].Categories[CategoryCode.P].GetTable().Should().BeEmpty();
+        result.Stages[StageCode.PROV].Scopes[ScopeCode.UAT].Categories[CategoryCode.P].GetTable().Should().BeEmpty();
+        result.Stages[StageCode.FINAL].Scopes[ScopeCode.UAT].Categories[CategoryCode.P].GetTable().Should().NotBeEmpty();
     }
 
     //[Fact]
