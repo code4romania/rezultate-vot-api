@@ -57,10 +57,10 @@ namespace ElectionResults.Core.Elections
         public async Task<Result<ElectionResponse>> GetBallotResults(ElectionResultsQuery query)
         {
             await using var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>();
-            var ballot = dbContext.Ballots
+            var ballot = await dbContext.Ballots
                 .AsNoTracking()
                 .Include(b => b.Election)
-                .FirstOrDefault(e => e.BallotId == query.BallotId);
+                .FirstOrDefaultAsync(e => e.BallotId == query.BallotId);
 
             // ASTA E BUCURESTI ?
             //if (query.CountyId != null
@@ -407,26 +407,24 @@ namespace ElectionResults.Core.Elections
 
         public async Task<Result<List<PartyList>>> GetBallotCandidates(ElectionResultsQuery query)
         {
-            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
-            {
-                var ballot = dbContext.Ballots
-                    .AsNoTracking()
-                    .Include(b => b.Election)
-                    .FirstOrDefault(e => e.BallotId == query.BallotId);
-                var candidates = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
-                var minorities = await GetMinorities(ballot, dbContext);
-                candidates = candidates.Concat(minorities).ToList();
-                return candidates
-                    .GroupBy(c => c.PartyName)
-                    .Select(p => new PartyList
+            await using var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>();
+            var ballot = await dbContext.Ballots
+                .AsNoTracking()
+                .Include(b => b.Election)
+                .FirstOrDefaultAsync(e => e.BallotId == query.BallotId);
+            var candidates = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
+            var minorities = await GetMinorities(ballot, dbContext);
+            candidates = candidates.Concat(minorities).ToList();
+            return candidates
+                .GroupBy(c => c.PartyName)
+                .Select(p => new PartyList
+                {
+                    Candidates = p.OrderBy(c => c.BallotPosition).Select(c => new BasicCandidateInfo
                     {
-                        Candidates = p.OrderBy(c => c.BallotPosition).Select(c => new BasicCandidateInfo
-                        {
-                            Name = c.Name
-                        }).ToList(),
-                        Name = p.FirstOrDefault()?.PartyName
-                    }).ToList();
-            }
+                        Name = c.Name
+                    }).ToList(),
+                    Name = p.FirstOrDefault()?.PartyName
+                }).ToList();
         }
 
         private async Task<List<CandidateResult>> GetMinorities(Ballot ballot, ApplicationDbContext dbContext)
