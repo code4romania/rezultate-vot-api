@@ -1,4 +1,4 @@
-﻿using ElectionResults.Core.Endpoints.Response;
+using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
@@ -16,7 +16,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
 {
     private const string DiasporaCountyCode = "SR";
 
-    public async Task Run(string electionRoundKey, int electionRoundId, bool hasDiaspora)
+    public async Task Run(string electionRoundKey, int electionRoundId, bool hasDiaspora, StageCode stageCode)
     {
         var electionRound = context.Elections.FirstOrDefault(x => x.ElectionId == electionRoundId);
         if (electionRound == null)
@@ -37,8 +37,8 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
 
         foreach (var county in counties)
         {
-            var countyResult = await roAepApi.GetPVForCounty(electionRoundKey, county.ShortName, StageCode.PROV);
-            var (hasValue, stage) = GetStageScopeData(electionRoundKey, StageCode.PROV, countyResult, county.ShortName);
+            var countyResult = await roAepApi.GetPVForCounty(electionRoundKey, county.ShortName, stageCode);
+            var (hasValue, stage) = GetStageScopeData(electionRoundKey, stageCode, countyResult, county.ShortName);
 
             if (hasValue)
             {
@@ -49,8 +49,8 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         Dictionary<CategoryCode, CategoryModel> diasporaResult = default!;
         if (hasDiaspora)
         {
-            var diasporaData = await roAepApi.GetPVForCounty(electionRoundKey, DiasporaCountyCode, StageCode.PROV);
-            var (hasValue, stage) = GetStageScopeCategoriesData(electionRoundKey, StageCode.PROV, diasporaData, DiasporaCountyCode, ScopeCode.CNTRY);
+            var diasporaData = await roAepApi.GetPVForCounty(electionRoundKey, DiasporaCountyCode, stageCode);
+            var (hasValue, stage) = GetStageScopeCategoriesData(electionRoundKey, stageCode, diasporaData, DiasporaCountyCode, ScopeCode.CNTRY);
 
             if (hasValue)
             {
@@ -86,7 +86,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             }
         }
 
-        context.SaveChanges();
+        await context.SaveChangesAsync();
     }
 
     private (bool hasValue, Dictionary<CategoryCode, CategoryModel> data) GetStageScopeCategoriesData(string electionRoundKey,
