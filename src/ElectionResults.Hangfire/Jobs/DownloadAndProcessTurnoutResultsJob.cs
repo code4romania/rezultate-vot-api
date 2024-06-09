@@ -42,6 +42,8 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         }
         catch (Exception e)
         {
+            await context.Database.ExecuteSqlRawAsync(
+                "DELETE FROM  tempcandidateresults;");
             Console.WriteLine(e);
         }
 
