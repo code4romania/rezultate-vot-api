@@ -88,3 +88,19 @@ resource "aws_secretsmanager_secret_version" "rds" {
     aws_db_instance.main.password
   )
 }
+
+resource "aws_secretsmanager_secret" "rds_importer" {
+  name = "${local.namespace}-db_credentials_importer-${random_string.secrets_suffix.result}"
+}
+
+resource "aws_secretsmanager_secret_version" "rds_importer" {
+  secret_id = aws_secretsmanager_secret.rds_importer.id
+  secret_string = jsonencode({
+    "engine"   = aws_db_instance.main.engine
+    "database" = aws_db_instance.main.db_name
+    "username" = aws_db_instance.main.username
+    "password" = aws_db_instance.main.password
+    "host"     = aws_db_instance.main.address
+    "port"     = aws_db_instance.main.port
+  })
+}
