@@ -1,4 +1,4 @@
-﻿using ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
+using ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 using ElectionResults.Hangfire.Options;
 using Hangfire;
 using Microsoft.Extensions.Options;
@@ -10,7 +10,7 @@ public static class Installer
     public static IServiceCollection RegisterJobs(this IServiceCollection services)
     {
         services.AddScoped<SeedData>();
-        services.AddScoped<SyncEuroTurnoutsJob>();
+        //services.AddScoped<SyncEuroTurnoutsJob>();
         services.AddScoped<DownloadAndProcessTurnoutResultsJob>();
         services.AddScoped<DownloadVoteMonitorStatisticsJob>();
 
