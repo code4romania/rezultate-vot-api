@@ -21,5 +21,28 @@ namespace ElectionResults.Core.Entities
         public int MessageCount { get; set; }
 
         public int IssueCount { get; set; }
+        public static Observation Create(Ballot ballot, int startedForms, int coveredPollingPlaces, int coveredCounties, int flaggedAnswers, int observers)
+        {
+            return new()
+            {
+                BallotId = ballot.BallotId,
+                MessageCount = startedForms,
+                CoveredPollingPlaces = coveredPollingPlaces,
+                CoveredCounties = coveredCounties,
+                IssueCount = flaggedAnswers,
+                ObserverCount = observers
+            };
+        }
+
+        public void Update(int startedForms, int coveredPollingPlaces, int coveredCounties, int flaggedAnswers,
+            int observers)
+        {
+            MessageCount = startedForms;
+            CoveredPollingPlaces = coveredPollingPlaces;
+            CoveredCounties = coveredCounties;
+            IssueCount = flaggedAnswers;
+            ObserverCount = observers;
+        }
     }
+
 }

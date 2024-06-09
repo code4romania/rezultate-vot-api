@@ -11,6 +11,7 @@ using ElectionResults.Core.Repositories;
 using LazyCache;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ElectionResults.Core.Elections
 {
@@ -18,16 +19,19 @@ namespace ElectionResults.Core.Elections
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly IAppCache _appCache;
+        private readonly IServiceProvider _serviceProvider;
         private readonly IPartiesRepository _partiesRepository;
         private readonly ITerritoryRepository _territoryRepository;
 
         public WinnersAggregator(ApplicationDbContext dbContext,
             IAppCache appCache,
+            IServiceProvider serviceProvider,
             IPartiesRepository partiesRepository,
             ITerritoryRepository territoryRepository)
         {
             _dbContext = dbContext;
             _appCache = appCache;
+            _serviceProvider = serviceProvider;
             _partiesRepository = partiesRepository;
             _territoryRepository = territoryRepository;
         }
@@ -253,18 +257,19 @@ namespace ElectionResults.Core.Elections
 
         private async Task<List<Winner>> AggregateCountyWinners(int ballotId, IEnumerable<Party> parties)
         {
+            await using var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>();
             var counties = await _territoryRepository.GetCounties();
-            var ballot = await _dbContext.Ballots
+            var ballot = await dbContext.Ballots
                 .Include(b => b.Election)
                 .FirstOrDefaultAsync(b => b.BallotId == ballotId);
 
-            var candidateResultsByCounties = await _dbContext.CandidateResults
+            var candidateResultsByCounties = await dbContext.CandidateResults
                 .Include(c => c.Party)
                 .Where(c => c.BallotId == ballotId
                             && c.Division == ElectionDivision.County)
                 .ToListAsync();
 
-            var turnouts = await _dbContext.Turnouts
+            var turnouts = await dbContext.Turnouts
                 .Where(c => c.BallotId == ballotId &&
                             c.Division == ElectionDivision.County)
                 .ToListAsync();
@@ -367,7 +372,7 @@ namespace ElectionResults.Core.Elections
                 }
             }
 
-            electionMapWinner.ValidVotes = turnoutForDivision.ValidVotes;
+            electionMapWinner.ValidVotes = turnoutForDivision?.ValidVotes ?? 0;
             return electionMapWinner;
         }
 

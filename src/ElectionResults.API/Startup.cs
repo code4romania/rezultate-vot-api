@@ -112,7 +112,7 @@ namespace ElectionResults.API
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Rezultate Vot API V2");
             });
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseCors("origins");
 

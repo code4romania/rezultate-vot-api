@@ -17,5 +17,8 @@ public class CrawlerOptions
 
     public string ApiUrl { get; set; }
     public ElectionRoundConfig[] ElectionRounds { get; set; }
+    public string VoteMonitorUrl { get; set; }
+    public Guid ElectionRoundId { get; set; }
+    public string ApiKey { get; set; }
 }
 

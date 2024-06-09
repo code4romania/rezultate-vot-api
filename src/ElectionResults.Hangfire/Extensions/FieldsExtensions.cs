@@ -1,4 +1,4 @@
-﻿using ElectionResults.Hangfire.Apis.RoAep.Models;
+﻿using ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 
 namespace ElectionResults.Hangfire.Extensions;
 
