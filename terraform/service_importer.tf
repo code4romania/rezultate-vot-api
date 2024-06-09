@@ -50,7 +50,7 @@ module "ecs_importer" {
     },
     {
       name  = "IMPORT_ENABLED"
-      value = tostring(true)
+      value = tostring(false)
     },
     {
       name  = "IMPORT_SCHEDULE"
