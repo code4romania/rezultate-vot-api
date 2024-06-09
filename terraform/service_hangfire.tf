@@ -68,38 +68,38 @@ module "ecs_hangfire" {
       name  = "Crawler__ApiUrl"
       value = "https://prezenta.roaep.ro"
     },
-    {
-      name  = "Crawler__ElectionRounds__0__CronExpression"
-      value = "*/5 * * * *"
-    },
-    {
-      name  = "Crawler__ElectionRounds__0__ElectionRoundId"
-      value = "50"
-    },
-    {
-      name  = "Crawler__ElectionRounds__0__HasDiaspora"
-      value = tostring(false)
-    },
-    {
-      name  = "Crawler__ElectionRounds__0__Key"
-      value = "locale27092020"
-    },
-    {
-      name  = "Crawler__ElectionRounds__1__CronExpression"
-      value = "*/5 * * * *"
-    },
-    {
-      name  = "Crawler__ElectionRounds__1__ElectionRoundId"
-      value = "51"
-    },
-    {
-      name  = "Crawler__ElectionRounds__1__HasDiaspora"
-      value = tostring(true)
-    },
-    {
-      name  = "Crawler__ElectionRounds__1__Key"
-      value = "europarlamentare09062024"
-    },
+    # {
+    #   name  = "Crawler__ElectionRounds__0__CronExpression"
+    #   value = "*/5 * * * *"
+    # },
+    # {
+    #   name  = "Crawler__ElectionRounds__0__ElectionRoundId"
+    #   value = "50"
+    # },
+    # {
+    #   name  = "Crawler__ElectionRounds__0__HasDiaspora"
+    #   value = tostring(false)
+    # },
+    # {
+    #   name  = "Crawler__ElectionRounds__0__Key"
+    #   value = "locale27092020"
+    # },
+    # {
+    #   name  = "Crawler__ElectionRounds__1__CronExpression"
+    #   value = "*/5 * * * *"
+    # },
+    # {
+    #   name  = "Crawler__ElectionRounds__1__ElectionRoundId"
+    #   value = "51"
+    # },
+    # {
+    #   name  = "Crawler__ElectionRounds__1__HasDiaspora"
+    #   value = tostring(true)
+    # },
+    # {
+    #   name  = "Crawler__ElectionRounds__1__Key"
+    #   value = "europarlamentare09062024"
+    # },
     {
       name  = "HangfireDashboard__IsSecuredDashboard"
       value = tostring(true)
