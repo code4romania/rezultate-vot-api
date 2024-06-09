@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
@@ -7,6 +8,7 @@ using ElectionResults.Hangfire.Apis.RoAep.SicpvModels;
 using Microsoft.EntityFrameworkCore;
 using ElectionResults.Hangfire.Extensions;
 using Z.EntityFramework.Plus;
+using System.Text;
 
 namespace ElectionResults.Hangfire.Jobs;
 
@@ -14,7 +16,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
     ApplicationDbContext context,
     ILogger<DownloadAndProcessTurnoutResultsJob> logger)
 {
-    private List<CandidateResult> _candidates = new();
+    private readonly ConcurrentBag<CandidateResult> _candidates = new();
     private const string DiasporaCountyCode = "SR";
 
     public async Task Run(string electionRoundKey, int electionRoundId, bool hasDiaspora, StageCode stageCode)
@@ -24,6 +26,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         {
             throw new ArgumentException($"Election round {electionRoundId} does not exist!");
         }
+        await context.Database.ExecuteSqlRawAsync("CREATE TEMPORARY TABLE tempcandidateresults LIKE candidateresults;");
 
         var counties = (await context.Counties.FromCacheAsync(CacheKeys.RoCounties)).ToList();
         var countries = (await context.Countries.FromCacheAsync(CacheKeys.Countries)).ToList();
@@ -35,9 +38,8 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             .Where(b => b.ElectionId == electionRound.ElectionId)
             .ToListAsync();
 
-        var countiesResults = new Dictionary<string, Dictionary<ScopeCode, ScopeModel>>();
-
-        foreach (var county in counties)
+        var countiesResults = new ConcurrentDictionary<string, Dictionary<ScopeCode, ScopeModel>>();
+        await Parallel.ForEachAsync(counties, async (county, token) =>
         {
             try
             {
@@ -46,14 +48,14 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
 
                 if (hasValue)
                 {
-                    countiesResults.Add(county.ShortName, stage);
+                    countiesResults.TryAdd(county.ShortName, stage);
                 }
             }
             catch (Exception e)
             {
                 logger.LogError(e, "Error while downloading json for county {county}", county.ShortName);
             }
-        }
+        });
 
         Dictionary<CategoryCode, CategoryModel> diasporaResult = default!;
         if (hasDiaspora)
@@ -67,20 +69,13 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             }
         }
 
-        foreach (var ballot in ballots)
+        var turnouts = await context
+            .Turnouts.ToListAsync();
+
+        Parallel.ForEach(ballots, parallelOptions: new ParallelOptions{MaxDegreeOfParallelism = 1}, (ballot) =>
         {
-            await context.Winners
-                .Where(w => w.BallotId == ballot.BallotId)
-                .ExecuteDeleteAsync();
-
-            await context.CandidateResults
-                .Where(c => c.BallotId == ballot.BallotId)
-                .ExecuteDeleteAsync();
-
-            var turnoutsForBallot = await context
-                .Turnouts
-                .Where(t => t.BallotId == ballot.BallotId)
-                .ToListAsync();
+            var turnoutsForBallot = turnouts
+                .Where(t => t.BallotId == ballot.BallotId).ToList();
 
             if (hasDiaspora && diasporaResult is not null)
             {
@@ -125,20 +120,62 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                             parties);
                     }
                 }
-                Console.WriteLine($"Finished county {county.Name}");
             }
 
-            // each county result has data about the country as well
             var firstResult = countiesResults.Values.FirstOrDefault();
             if (firstResult is not null && firstResult.ContainsKey(ScopeCode.CNTRY))
             {
                 UpdateNationalTurnout(firstResult[ScopeCode.CNTRY].Categories, ballot, turnoutsForBallot);
             }
-
-        }
-        await context.CandidateResults.BulkInsertAsync(_candidates);
+            Console.WriteLine($"Finished ballot {ballot.Name}");
+        });
 
         await context.SaveChangesAsync();
+
+        foreach (var ballot in ballots)
+        {
+            await context.Database.ExecuteSqlRawAsync($@"
+                DELETE FROM winners WHERE ballotId = {ballot.BallotId};
+                DELETE FROM candidateresults WHERE ballotId = {ballot.BallotId};
+            ");
+            var candidateResults = _candidates.Where(c => c.BallotId == ballot.BallotId).ToList();
+            await BulkInsertCandidateResultsAsync(candidateResults);
+            await context.Database.ExecuteSqlRawAsync($@"
+            INSERT INTO candidateresults (Votes, BallotId, Name, ShortName, PartyName, PartyId, YesVotes, NoVotes, SeatsGained, Division, CountyId, LocalityId, TotalSeats, Seats1, Seats2, OverElectoralThreshold, CountryId, BallotPosition)
+            SELECT Votes, BallotId, Name, ShortName, PartyName, PartyId, YesVotes, NoVotes, SeatsGained, Division, CountyId, LocalityId, TotalSeats, Seats1, Seats2, OverElectoralThreshold, CountryId, BallotPosition
+            FROM TempCandidateResults where ballotid = {ballot.BallotId};
+        ");
+            
+        }
+    }
+
+    private async Task BulkInsertCandidateResultsAsync(List<CandidateResult> candidateResults)
+    {
+        if (candidateResults == null || !candidateResults.Any())
+        {
+            return;
+        }
+
+        var insertQuery = new StringBuilder();
+        insertQuery.Append("INSERT INTO TempCandidateResults (Votes, BallotId, Name, ShortName, PartyName, PartyId, YesVotes, NoVotes, SeatsGained, Division, CountyId, LocalityId, TotalSeats, Seats1, Seats2, OverElectoralThreshold, CountryId, BallotPosition) VALUES ");
+
+        var valueQueries = new List<string>();
+        foreach (var candidate in candidateResults.Where(c => c != null))
+        {
+            valueQueries.Add($"({candidate.Votes}, {candidate.BallotId}, '{EscapeSql(candidate.Name)}', '{EscapeSql(candidate.ShortName)}', '{EscapeSql(candidate.PartyName)}', {candidate.PartyId?.ToString() ?? "NULL"}, {candidate.YesVotes}, {candidate.NoVotes}, {candidate.SeatsGained}, {(int)candidate.Division}, {candidate.CountyId?.ToString() ?? "NULL"}, {candidate.LocalityId?.ToString() ?? "NULL"}, {candidate.TotalSeats}, {candidate.Seats1}, {candidate.Seats2}, {(candidate.OverElectoralThreshold ? 1 : 0)}, {candidate.CountryId?.ToString() ?? "NULL"}, {candidate.BallotPosition})");
+        }
+
+        insertQuery.Append(string.Join(", ", valueQueries));
+        insertQuery.Append(";");
+
+        await context.Database.ExecuteSqlRawAsync(insertQuery.ToString());
+    }
+
+    private string EscapeSql(string input)
+    {
+        if (input.IsEmpty())
+            return string.Empty;
+        return input.Replace("'", "''");
     }
 
     private void UpdateLocalityCandidates(List<Locality> localities, KeyValuePair<string, TableEntryModel> jsonLocality, County county, Ballot ballot, List<Party> parties)
@@ -151,14 +188,20 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         }
         var newResults = jsonLocality.Value.Votes.Select(r => CreateCandidateResult(r, ballot, parties, locality.LocalityId, locality.CountyId))
             .ToList();
-        _candidates.AddRange(newResults);
+        foreach (var candidateResult in newResults)
+        {
+            _candidates.Add(candidateResult);
+        }
     }
     private void UpdateCountyCandidates(KeyValuePair<string, TableEntryModel> jsonLocality, County county, Ballot ballot, List<Party> parties)
     {
         var newResults = jsonLocality.Value.Votes.Select(r => CreateCandidateResult(r, ballot, parties, null, county.CountyId, ElectionDivision.County))
             .ToList();
 
-        _candidates.AddRange(newResults);
+        foreach (var candidateResult in newResults)
+        {
+            _candidates.Add(candidateResult);
+        }
     }
     private static CandidateResult CreateCandidateResult(VoteModel vote, Ballot ballot, List<Party> parties,
         int? localityId, int? countyId, ElectionDivision division = ElectionDivision.Locality)
@@ -177,7 +220,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         var partyName = ballot.BallotType == BallotType.LocalCouncil || ballot.BallotType == BallotType.CountyCouncil ? vote.Candidate : vote.Party;
         candidateResult.PartyId = parties.FirstOrDefault(p => p.Alias.GenerateSlug().ContainsString(partyName.GenerateSlug()))?.Id
                                   ?? parties.FirstOrDefault(p => p.Name.GenerateSlug().ContainsString(partyName.GenerateSlug()))?.Id;
-
+       
         return candidateResult;
     }
 
