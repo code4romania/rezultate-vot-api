@@ -36,8 +36,8 @@ module "ecs_api" {
   task_role_arn          = aws_iam_role.ecs_task_role.arn
   enable_execute_command = var.enable_execute_command
 
-  # predefined_metric_type = "ECSServiceAverageCPUUtilization"
-  # target_value           = 65
+  predefined_metric_type = "ECSServiceAverageCPUUtilization"
+  target_value           = 65
 
   ordered_placement_strategy = [
     {
