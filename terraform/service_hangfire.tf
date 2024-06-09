@@ -107,6 +107,14 @@ module "ecs_hangfire" {
     {
       name  = "Crawler__VoteMonitorUrl"
       value = "https://api.votemonitor.org"
+    },
+    {
+      name      = "Crawler__ApiKey"
+      valueFrom = var.crawler_api_key
+    },
+    {
+      name      = "Crawler__ElectionRoundId"
+      valueFrom = var.crawler_election_round_uuid
     }
   ]
 
@@ -123,15 +131,6 @@ module "ecs_hangfire" {
       name      = "HangfireDashboard__Password"
       valueFrom = "${aws_secretsmanager_secret.hangfire_credentials.arn}:password::"
     },
-     {
-      name      = "Crawler__ApiKey"
-      valueFrom = var.crawler_api_key
-    },
-    {
-      name      = "Crawler__ElectionRoundId"
-      valueFrom = var.crawler_election_round_uuid
-    }
-
   ]
 
   allowed_secrets = [
@@ -141,7 +140,7 @@ module "ecs_hangfire" {
 }
 
 
-# Hangfire credentials 
+# Hangfire credentials
 resource "random_password" "hangfire_password" {
   length  = 20
   special = false
