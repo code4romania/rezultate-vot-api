@@ -128,7 +128,7 @@ namespace ElectionResults.Core.Elections
 
         private static ElectionMapWinner WinnerToElectionMapWinner(Winner winner, IEnumerable<Party> parties)
         {
-            var divisionId = winner.Candidate?.LocalityId ?? winner.CountyId ?? winner.LocalityId ?? winner.CountryId;
+            var divisionId = winner.Candidate.LocalityId ?? winner.CountyId ?? winner.LocalityId ?? winner.CountryId;
 
             var electionMapWinner = CreateElectionMapWinner(divisionId, winner.Ballot, winner.Candidate, winner.Turnout);
 
@@ -247,6 +247,13 @@ namespace ElectionResults.Core.Elections
                 return dbWinners.Select(winner => WinnerToElectionMapWinner(winner, parties)).ToList();
 
             var winners = await AggregateCountyWinners(ballotId, parties);
+            var ids = winners.Select(w => w.Id).ToList();
+            winners = await _dbContext.Winners
+                .AsNoTracking()
+                .Include(w => w.Candidate)
+                .Include(w => w.Ballot)
+                .Include(w => w.Turnout)
+                .Where(w => ids.Contains(w.Id)).ToListAsync();
             return Result.Success(winners.Select(winner => WinnerToElectionMapWinner(winner, parties)).ToList());
         }
 

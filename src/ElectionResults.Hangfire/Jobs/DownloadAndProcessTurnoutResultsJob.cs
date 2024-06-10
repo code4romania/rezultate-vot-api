@@ -58,7 +58,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             .ToListAsync();
 
         var countiesResults = new ConcurrentDictionary<string, Dictionary<ScopeCode, ScopeModel>>();
-        await Parallel.ForEachAsync(counties, async (county, token) =>
+        await Parallel.ForEachAsync(counties, new ParallelOptions{MaxDegreeOfParallelism = 4}, async (county, token) =>
         {
             try
             {
@@ -72,7 +72,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Error while downloading json for county {county}", county.ShortName);
+                logger.LogError("Error while downloading json for county {county}", county.ShortName);
             }
         });
 
@@ -91,7 +91,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         var turnouts = await context
             .Turnouts.ToListAsync();
 
-        Parallel.ForEach(ballots, parallelOptions: new ParallelOptions { MaxDegreeOfParallelism = 1 }, (ballot) =>
+        Parallel.ForEach(ballots, (ballot) =>
         {
             var turnoutsForBallot = turnouts
                 .Where(t => t.BallotId == ballot.BallotId).ToList();
@@ -228,6 +228,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
 
         }
     }
+
     private string GetUatSiruta(TableEntryModel tableEntryModel, County county)
     {
         if (county.ShortName == "B")
@@ -287,8 +288,16 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
             return;
         }
 
+        if (locality.Name.ToLower().Contains("sector"))
+        {
+
+        }
         var newResults = votes.Select(r => CreateCandidateResult(r, ballot, parties, locality.LocalityId, locality.CountyId))
             .ToList();
+        if (siruta == "179141")
+        {
+            Console.WriteLine("179141");
+        }
         foreach (var candidateResult in newResults)
         {
             _candidates.Add(candidateResult);
@@ -465,55 +474,59 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
 
         foreach (var uatTurnout in uatsResults[category].GetTable().GroupBy(x => x.Value.UatSiruta))
         {
-            Locality? locality = null;
-            if(county.ShortName == "B")
+            var locality = localities.FirstOrDefault(x => x.Siruta == int.Parse(uatTurnout.Key));
+            if (locality == null)
+            {
+                logger.LogWarning("Locality {locality} not found in the database", uatTurnout.Key);
+                continue;
+            }
+
+            UpdateTurnoutForLocality(ballot, turnoutsForBallot, county, locality, uatTurnout);
+        }
+        if (county.ShortName == "B")
+        {
+            foreach (var uatTurnout in uatsResults[category].GetTable().GroupBy(x => x.Value.UatName))
             {
                 var sectorSirutaId = _sectorSirutaMap.First(x => x.Key.InvariantEquals(uatTurnout.First().Value.UatName)).Value;
 
-                locality = localities.FirstOrDefault(x => x.Siruta == sectorSirutaId);
+                var locality = localities.FirstOrDefault(x => x.Siruta == sectorSirutaId);
+                UpdateTurnoutForLocality(ballot, turnoutsForBallot, county, locality, uatTurnout);
             }
-            else
-            {
-                locality = localities.FirstOrDefault(x => x.Siruta == int.Parse(uatTurnout.Key));
-                if (locality == null)
-                {
-                    logger.LogWarning("Locality {locality} not found in the database", uatTurnout.Key);
-                    continue;
-                }
-            }
+        }
+    }
 
-        
+    private void UpdateTurnoutForLocality(Ballot ballot, List<Turnout> turnoutsForBallot, County county, Locality? locality,
+        IGrouping<string, KeyValuePair<string, TableEntryModel>> uatTurnout)
+    {
+        var turnout = turnoutsForBallot.FirstOrDefault(t => t.BallotId == ballot.BallotId
+                                                            && t.Division == ElectionDivision.Locality
+                                                            && t.CountyId == county.CountyId
+                                                            && t.LocalityId == locality.LocalityId);
 
-            var turnout = turnoutsForBallot.FirstOrDefault(t => t.BallotId == ballot.BallotId
-                                                                && t.Division == ElectionDivision.Locality
-                                                                && t.CountyId == county.CountyId
-                                                                && t.LocalityId == locality.LocalityId);
+        var totalNumberOfEligibleVoters = uatTurnout
+            .Select(x => x.Value.Fields.TryGetTotalNumberOfEligibleVoters())
+            .Sum();
 
-            var totalNumberOfEligibleVoters = uatTurnout
-                .Select(x => x.Value.Fields.TryGetTotalNumberOfEligibleVoters())
-                .Sum();
+        var totalNumberOfVotes = uatTurnout
+            .Select(x => x.Value.Fields.TryGetNumberOfVotes())
+            .Sum();
 
-            var totalNumberOfVotes = uatTurnout
-                .Select(x => x.Value.Fields.TryGetNumberOfVotes())
-                .Sum();
+        var numberOfValidVotes = uatTurnout
+            .Select(x => x.Value.Fields.TryGetNumberOfValidVotes())
+            .Sum();
 
-            var numberOfValidVotes = uatTurnout
-                .Select(x => x.Value.Fields.TryGetNumberOfValidVotes())
-                .Sum();
+        var numberOfNullVotes = uatTurnout
+            .Select(x => x.Value.Fields.TryGetNumberOfNullVotes())
+            .Sum();
 
-            var numberOfNullVotes = uatTurnout
-                .Select(x => x.Value.Fields.TryGetNumberOfNullVotes())
-                .Sum();
-
-            if (turnout == null)
-            {
-                turnout = Turnout.CreateForUat(ballot, county, locality, totalNumberOfEligibleVoters, totalNumberOfVotes, numberOfValidVotes, numberOfNullVotes);
-                context.Turnouts.AddAsync(turnout);
-            }
-            else
-            {
-                turnout.Update(totalNumberOfEligibleVoters, totalNumberOfVotes, numberOfValidVotes, numberOfNullVotes);
-            }
+        if (turnout == null)
+        {
+            turnout = Turnout.CreateForUat(ballot, county, locality, totalNumberOfEligibleVoters, totalNumberOfVotes, numberOfValidVotes, numberOfNullVotes);
+            context.Turnouts.Add(turnout);
+        }
+        else
+        {
+            turnout.Update(totalNumberOfEligibleVoters, totalNumberOfVotes, numberOfValidVotes, numberOfNullVotes);
         }
     }
 
