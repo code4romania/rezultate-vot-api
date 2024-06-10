@@ -61,9 +61,9 @@ resource "aws_cloudfront_distribution" "main" {
 
 resource "aws_cloudfront_cache_policy" "default" {
   name        = "${local.namespace}-cache-policy"
-  min_ttl     = 600
-  default_ttl = 600
-  max_ttl     = 600
+  min_ttl     = 300
+  default_ttl = 300
+  max_ttl     = 300
 
   parameters_in_cache_key_and_forwarded_to_origin {
     enable_accept_encoding_brotli = true
