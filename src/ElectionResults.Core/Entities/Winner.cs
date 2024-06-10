@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using ElectionResults.Core.Endpoints.Response;
+using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ElectionResults.Core.Entities
@@ -46,24 +48,64 @@ namespace ElectionResults.Core.Entities
         public Ballot Ballot { get; set; }
 
 
-        public static Winner Create(int ballotId,
-            int? countyId,
+        public static Winner CreateLocalityWinner(int ballotId,
+            int countyId,
+            int localityId,
             CandidateResult localityWinner,
-            Turnout turnoutForLocality,
-            ElectionDivision division)
+            Turnout turnoutForLocality)
         {
             var winner = new Winner
             {
                 BallotId = ballotId,
                 CandidateId = localityWinner.Id,
                 CountyId = countyId,
-                Division = division,
+                LocalityId = localityId,
+                Division = ElectionDivision.Locality,
                 Name = localityWinner.Name,
                 PartyId = localityWinner.PartyId,
                 TurnoutId = turnoutForLocality?.Id,
             };
 
             return winner;
+        }  
+        
+        public static Winner CreateForDiasporaCountry(int ballotId,
+            int countryId,
+            CandidateResult localityWinner,
+            Turnout turnoutForLocality,
+            int votes)
+        {
+            var winner = new Winner
+            {
+                BallotId = ballotId,
+                CandidateId = localityWinner.Id,
+                CountryId = countryId,
+                Division = ElectionDivision.Diaspora_Country,
+                Name = localityWinner.Name,
+                PartyId = localityWinner.PartyId,
+                TurnoutId = turnoutForLocality?.Id,
+                Votes = votes,
+
+            };
+
+            return winner;
+        }
+
+        internal static Winner CreateForCounty(Ballot ballot, CandidateResult countyWinner,
+            ElectionMapWinner electionMapWinner, int turnoutId, int countyId)
+        {
+            return new Winner
+            {
+                BallotId = ballot.BallotId,
+                Ballot = ballot,
+                CandidateId = countyWinner.Id,
+                Name = electionMapWinner.Winner.Name,
+                PartyId = electionMapWinner.Winner.Party?.Id,
+                Votes = electionMapWinner.Winner.Votes,
+                TurnoutId = turnoutId,
+                CountyId = countyId,
+                Division = ElectionDivision.County
+            };
         }
     }
 }
