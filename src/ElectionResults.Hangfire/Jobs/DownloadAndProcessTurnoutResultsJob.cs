@@ -91,7 +91,7 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
         var turnouts = await context
             .Turnouts.ToListAsync();
 
-        Parallel.ForEach(ballots, parallelOptions: new ParallelOptions { MaxDegreeOfParallelism = 1 }, (ballot) =>
+        Parallel.ForEach(ballots, (ballot) =>
         {
             var turnoutsForBallot = turnouts
                 .Where(t => t.BallotId == ballot.BallotId).ToList();
