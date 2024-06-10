@@ -64,8 +64,8 @@ namespace ElectionResults.Core.Entities
                 Division = ElectionDivision.Diaspora_Country,
                 CountryId = country.Id,
                 BallotId = ballot.BallotId,
-                //TotalVotes = totalNumberOfVotes,
-                //EligibleVoters = totalNumberOfEligibleVoters,
+                TotalVotes = totalNumberOfVotes,
+                EligibleVoters = totalNumberOfEligibleVoters,
                 ValidVotes = numberOfValidVotes,
                 NullVotes = numberOfNullVotes,
             };
@@ -76,8 +76,8 @@ namespace ElectionResults.Core.Entities
             int numberOfValidVotes,
             int numberOfNullVotes)
         {
-            //TotalVotes = totalNumberOfVotes;
-            //EligibleVoters = totalNumberOfEligibleVoters;
+            TotalVotes = totalNumberOfVotes;
+            EligibleVoters = totalNumberOfEligibleVoters;
             ValidVotes = numberOfValidVotes;
             NullVotes = numberOfNullVotes;
         }
@@ -104,8 +104,8 @@ namespace ElectionResults.Core.Entities
             {
                 Division = ElectionDivision.Diaspora,
                 BallotId = ballot.BallotId,
-                //TotalVotes = totalNumberOfVotes,
-                //EligibleVoters = totalNumberOfEligibleVoters,
+                TotalVotes = totalNumberOfVotes,
+                EligibleVoters = totalNumberOfEligibleVoters,
                 ValidVotes = numberOfValidVotes,
                 NullVotes = numberOfNullVotes,
             };
@@ -125,8 +125,8 @@ namespace ElectionResults.Core.Entities
                 CountyId = county.CountyId,
                 LocalityId = locality.LocalityId,
                 BallotId = ballot.BallotId,
-                //TotalVotes = totalNumberOfVotes,
-                //EligibleVoters = totalNumberOfEligibleVoters,
+                TotalVotes = totalNumberOfVotes,
+                EligibleVoters = totalNumberOfEligibleVoters,
                 ValidVotes = numberOfValidVotes,
                 NullVotes = numberOfNullVotes,
             };
@@ -144,8 +144,8 @@ namespace ElectionResults.Core.Entities
                 Division = ElectionDivision.County,
                 CountyId = county.CountyId,
                 BallotId = ballot.BallotId,
-                //TotalVotes = totalNumberOfVotes,
-                //EligibleVoters = totalNumberOfEligibleVoters,
+                TotalVotes = totalNumberOfVotes,
+                EligibleVoters = totalNumberOfEligibleVoters,
                 ValidVotes = numberOfValidVotes,
                 NullVotes = numberOfNullVotes,
             };
@@ -161,8 +161,8 @@ namespace ElectionResults.Core.Entities
             {
                 Division = ElectionDivision.National,
                 BallotId = ballot.BallotId,
-                //TotalVotes = totalNumberOfVotes,
-                //EligibleVoters = totalNumberOfEligibleVoters,
+                TotalVotes = totalNumberOfVotes,
+                EligibleVoters = totalNumberOfEligibleVoters,
                 ValidVotes = numberOfValidVotes,
                 NullVotes = numberOfNullVotes,
             };

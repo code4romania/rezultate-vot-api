@@ -201,8 +201,8 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                 }
                 if (countyTurnout is not null)
                 {
-                    //totalNationalEligibleVoters += countyTurnout.EligibleVoters;
-                    //totalNationalTotalVotes += countyTurnout.TotalVotes;
+                    totalNationalEligibleVoters += countyTurnout.EligibleVoters;
+                    totalNationalTotalVotes += countyTurnout.TotalVotes;
                     totalNationalNumberOfValidVotes += countyTurnout.ValidVotes;
                     totalNationalNumberOfNullVotes += countyTurnout.NullVotes;
                 }
@@ -440,8 +440,8 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                 countryTurnout.Update(eligibleVoters, totalVotes, numberOfValidVotes, numberOfNullVotes);
             }
 
-            //totalDiasporaEligibleVoters += countryTurnout.EligibleVoters;
-            //totalDiasporaTotalVotes += countryTurnout.TotalVotes;
+            totalDiasporaEligibleVoters += countryTurnout.EligibleVoters;
+            totalDiasporaTotalVotes += countryTurnout.TotalVotes;
             totalDiasporaNumberOfValidVotes += countryTurnout.ValidVotes;
             totalDiasporaNumberOfNullVotes += countryTurnout.NullVotes;
         }
