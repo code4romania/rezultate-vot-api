@@ -51,6 +51,7 @@ namespace ElectionResults.API
                     options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(new SnakeCaseNamingPolicy()));
                 });
+            services.AddLazyCache();
             RegisterDependencies(services, Configuration);
             services.AddSwaggerGen(c =>
             {
@@ -64,6 +65,7 @@ namespace ElectionResults.API
                 options.UseMySQL(connectionString);
             });
 
+            services.AddLazyCache();
             services.AddCors(options =>
             {
                 options.AddPolicy("origins",

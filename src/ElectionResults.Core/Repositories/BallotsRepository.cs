@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ElectionResults.Core.Entities;
+using LazyCache;
 using Microsoft.EntityFrameworkCore;
 
 namespace ElectionResults.Core.Repositories
@@ -10,23 +11,36 @@ namespace ElectionResults.Core.Repositories
     public class BallotsRepository : IBallotsRepository
     {
         private readonly ApplicationDbContext _dbContext;
+        private readonly IAppCache _appCache;
+        private readonly CacheSettings _cacheSettings;
 
-        public BallotsRepository(ApplicationDbContext dbContext)
+        public BallotsRepository(ApplicationDbContext dbContext, IAppCache appCache)
         {
             _dbContext = dbContext;
+            _appCache = appCache;
+            _cacheSettings = MemoryCache.Ballots;
         }
 
         public async Task<IEnumerable<Ballot>> GetAllBallots(bool includeElection = false)
         {
-            return await  CreateQueryable(includeElection).ToListAsync();
+            return await _appCache.GetOrAddAsync(
+                _cacheSettings.Key, () =>
+                {
+                    var query = CreateQueryable(includeElection);
+                    return query.ToListAsync();
+                },
+                DateTimeOffset.Now.AddMinutes(_cacheSettings.Minutes));
         }
 
         public async Task<Ballot> GetBallotById(int ballotId, bool includeElection = false)
         {
-
-            var query = CreateQueryable(includeElection);
-            var ballot = await query.FirstOrDefaultAsync(b => b.BallotId == ballotId);
-
+            var ballot = await _appCache.GetOrAddAsync(
+                _cacheSettings.Key, () =>
+                {
+                    var query = CreateQueryable(includeElection);
+                    return query.FirstOrDefaultAsync(b => b.BallotId == ballotId);
+                },
+                DateTimeOffset.Now.AddMinutes(_cacheSettings.Minutes));
             return ballot;
         }
 
