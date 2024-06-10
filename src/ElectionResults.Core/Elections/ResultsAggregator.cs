@@ -9,23 +9,22 @@ using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace ElectionResults.Core.Elections
 {
     public class ResultsAggregator : IResultsAggregator
     {
-        private readonly IServiceProvider _serviceProvider;
         private readonly IPartiesRepository _partiesRepository;
         private readonly IWinnersAggregator _winnersAggregator;
         private readonly IElectionsRepository _electionRepository;
+        private readonly ApplicationDbContext _dbContext;
 
-        public ResultsAggregator(IServiceProvider serviceProvider,
+        public ResultsAggregator(ApplicationDbContext dbContext,
             IPartiesRepository partiesRepository,
             IWinnersAggregator winnersAggregator,
             IElectionsRepository electionRepository)
         {
-            _serviceProvider = serviceProvider;
+            _dbContext = dbContext;
             _partiesRepository = partiesRepository;
             _winnersAggregator = winnersAggregator;
             _electionRepository = electionRepository;
@@ -56,8 +55,7 @@ namespace ElectionResults.Core.Elections
 
         public async Task<Result<ElectionResponse>> GetBallotResults(ElectionResultsQuery query)
         {
-            await using var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>();
-            var ballot = await dbContext.Ballots
+            var ballot = await _dbContext.Ballots
                 .AsNoTracking()
                 .Include(b => b.Election)
                 .FirstOrDefaultAsync(e => e.BallotId == query.BallotId);
@@ -75,7 +73,7 @@ namespace ElectionResults.Core.Elections
                     ballotType = BallotType.CountyCouncil;
                 }
 
-                ballot = dbContext.Ballots
+                ballot = _dbContext.Ballots
                     .AsNoTracking()
                     .Include(b => b.Election)
                     .FirstOrDefault(e => e.ElectionId == ballot.ElectionId && e.BallotType == ballotType);
@@ -88,8 +86,8 @@ namespace ElectionResults.Core.Elections
 
             var electionResponse = new ElectionResponse();
 
-            var divisionTurnout = await GetDivisionTurnout(query, dbContext, ballot);
-            var electionInfo = await GetCandidatesFromDb(query, ballot, dbContext);
+            var divisionTurnout = await GetDivisionTurnout(query, ballot);
+            var electionInfo = await GetCandidatesFromDb(query, ballot);
 
             if (electionInfo.TotalVotes > 0)
             {
@@ -122,7 +120,7 @@ namespace ElectionResults.Core.Elections
 
             electionResponse.Aggregated = electionInfo.Aggregated;
             electionResponse.Results = results;
-            electionResponse.Observation = await dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
+            electionResponse.Observation = await _dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
             if (divisionTurnout != null)
             {
                 electionResponse.Turnout = new ElectionTurnout
@@ -137,9 +135,9 @@ namespace ElectionResults.Core.Elections
                 }
             }
 
-            electionResponse.Scope = await CreateElectionScope(dbContext, query);
+            electionResponse.Scope = await CreateElectionScope(query);
             electionResponse.Meta = CreateElectionMeta(query, ballot);
-            electionResponse.ElectionNews = await GetElectionNews(dbContext, ballot.BallotId, ballot.ElectionId);
+            electionResponse.ElectionNews = await GetElectionNews(ballot.BallotId, ballot.ElectionId);
             return electionResponse;
         }
 
@@ -151,7 +149,7 @@ namespace ElectionResults.Core.Elections
                    && ballot.Date.Year >= 2020;
         }
 
-        private async Task<ElectionScope> CreateElectionScope(ApplicationDbContext dbContext, ElectionResultsQuery query)
+        private async Task<ElectionScope> CreateElectionScope(ElectionResultsQuery query)
         {
             var electionScope = new ElectionScope
             {
@@ -160,24 +158,24 @@ namespace ElectionResults.Core.Elections
             County county;
             if (query.Division == ElectionDivision.County)
             {
-                county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
+                county = await _dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
                 electionScope.CountyId = query.CountyId;
                 electionScope.CountyName = county?.Name;
             }
             else
             {
-                var locality = await dbContext.Localities.FirstOrDefaultAsync(c => c.LocalityId == query.LocalityId);
+                var locality = await _dbContext.Localities.FirstOrDefaultAsync(c => c.LocalityId == query.LocalityId);
                 if (query.Division == ElectionDivision.Locality)
                 {
                     electionScope.LocalityId = query.LocalityId;
                     electionScope.LocalityName = locality?.Name;
                     electionScope.CountyId = locality?.CountyId;
-                    county = await dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
+                    county = await _dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
                     electionScope.CountyName = county?.Name;
                 }
                 else if (query.Division == ElectionDivision.Diaspora_Country)
                 {
-                    var country = await dbContext.Countries.FirstOrDefaultAsync(c => c.Id == query.CountryId);
+                    var country = await _dbContext.Countries.FirstOrDefaultAsync(c => c.Id == query.CountryId);
                     electionScope.CountryId = query.CountryId;
                     electionScope.CountryName = country?.Name;
                 }
@@ -186,7 +184,7 @@ namespace ElectionResults.Core.Elections
             return electionScope;
         }
 
-        private static async Task<List<ArticleResponse>> GetElectionNews(ApplicationDbContext dbContext, int ballotId, int electionId)
+        private async Task<List<ArticleResponse>> GetElectionNews(int ballotId, int electionId)
         {
             // var ballotNews = await dbContext.Articles.Where(a => a.BallotId == ballotId)
             //     .Include(a => a.Author)
@@ -194,7 +192,7 @@ namespace ElectionResults.Core.Elections
             //     .ToListAsync();
             // if (ballotNews == null || ballotNews.Any() == false)
             // {
-            var ballotNews = await dbContext.Articles
+            var ballotNews = await _dbContext.Articles
                 .Include(a => a.Author)
                 .Include(a => a.Pictures)
                 .Where(a => a.ElectionId == electionId).ToListAsync();
@@ -217,14 +215,14 @@ namespace ElectionResults.Core.Elections
             return electionNews;
         }
 
-        public async Task<Turnout> GetDivisionTurnout(ElectionResultsQuery query, ApplicationDbContext dbContext, Ballot ballot)
+        public async Task<Turnout> GetDivisionTurnout(ElectionResultsQuery query, Ballot ballot)
         {
             if (ballot.Election.Category == ElectionCategory.Local && !ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
             {
-                return await RetrieveAggregatedTurnoutForCityHalls(query, ballot, dbContext);
+                return await RetrieveAggregatedTurnoutForCityHalls(query, ballot, _dbContext);
             }
 
-            var turnouts = await dbContext.Turnouts
+            var turnouts = await _dbContext.Turnouts
                 .Where(t =>
                     t.BallotId == ballot.BallotId
                     && t.CountyId == query.CountyId
@@ -241,7 +239,7 @@ namespace ElectionResults.Core.Elections
 
             if (turnouts.Count == 0 && query.Division == ElectionDivision.Diaspora)
             {
-                turnouts = await dbContext.Turnouts
+                turnouts = await _dbContext.Turnouts
                     .Where(t => t.BallotId == ballot.BallotId
                                 && t.CountyId == null
                                 && t.Division == ElectionDivision.Diaspora_Country
@@ -296,12 +294,11 @@ namespace ElectionResults.Core.Elections
             var nullVotes = turnouts.Sum(c => c.NullVotes);
 
             Turnout turnout = Turnout.New(ballotBallotId, totalVotes, eligibleVoters, validVotes, nullVotes);
-            
+
             return turnout;
         }
 
-        private async Task<LiveElectionInfo> GetCandidatesFromDb(ElectionResultsQuery query, Ballot ballot,
-            ApplicationDbContext dbContext)
+        private async Task<LiveElectionInfo> GetCandidatesFromDb(ElectionResultsQuery query, Ballot ballot)
         {
             LiveElectionInfo liveElectionInfo = new LiveElectionInfo();
 
@@ -309,7 +306,7 @@ namespace ElectionResults.Core.Elections
             {
                 if (!ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
                 {
-                    var aggregatedVotes = await RetrieveAggregatedVotes(dbContext, query, ballot);
+                    var aggregatedVotes = await RetrieveAggregatedVotes(_dbContext, query, ballot);
                     liveElectionInfo.Candidates = aggregatedVotes;
                     liveElectionInfo.Aggregated = true;
 
@@ -317,15 +314,14 @@ namespace ElectionResults.Core.Elections
                 }
             }
 
-            var results = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
+            var results = await GetCandidateResultsFromQueryAndBallot(query, ballot);
             liveElectionInfo.Candidates = results;
             return liveElectionInfo;
         }
 
-        private static async Task<List<CandidateResult>> GetCandidateResultsFromQueryAndBallot(ElectionResultsQuery query, Ballot ballot,
-            ApplicationDbContext dbContext)
+        private async Task<List<CandidateResult>> GetCandidateResultsFromQueryAndBallot(ElectionResultsQuery query, Ballot ballot)
         {
-            var resultsQuery = dbContext.CandidateResults
+            var resultsQuery = _dbContext.CandidateResults
                 .Include(c => c.Party)
                 .Where(er =>
                     er.BallotId == ballot.BallotId &&
@@ -403,7 +399,7 @@ namespace ElectionResults.Core.Elections
                 ElectionId = ballot.ElectionId,
                 BallotId = ballot.BallotId,
                 Live = ballot.Election.Live,
-                Stage = ballot.Election.Live? "prov": "final"
+                Stage = ballot.Election.Live ? "prov" : "final"
             };
             if (QueryIsForCapitalCity(query, ballot))
             {
@@ -414,22 +410,18 @@ namespace ElectionResults.Core.Elections
 
         public async Task<List<ArticleResponse>> GetNewsFeed(ElectionResultsQuery query, int electionId)
         {
-            using (var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>())
-            {
-                return await GetElectionNews(dbContext, query.BallotId, electionId);
-            }
+            return await GetElectionNews(query.BallotId, electionId);
         }
 
         public async Task<Result<List<PartyList>>> GetBallotCandidates(ElectionResultsQuery query)
         {
-            await using var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>();
-            var ballot = await dbContext.Ballots
+            var ballot = await _dbContext.Ballots
                 .Include(b => b.Election)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(e => e.BallotId == query.BallotId);
 
-            var candidates = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
-            var minorities = await GetMinorities(ballot, dbContext);
+            var candidates = await GetCandidateResultsFromQueryAndBallot(query, ballot);
+            var minorities = await GetMinorities(ballot);
             candidates = candidates.Concat(minorities).ToList();
             return candidates
                 .GroupBy(c => c.PartyName)
@@ -443,12 +435,12 @@ namespace ElectionResults.Core.Elections
                 }).ToList();
         }
 
-        private async Task<List<CandidateResult>> GetMinorities(Ballot ballot, ApplicationDbContext dbContext)
+        private async Task<List<CandidateResult>> GetMinorities(Ballot ballot)
         {
             var query = new ElectionResultsQuery();
             query.CountyId = null;
             query.Division = ElectionDivision.County;
-            var minorities = await GetCandidateResultsFromQueryAndBallot(query, ballot, dbContext);
+            var minorities = await GetCandidateResultsFromQueryAndBallot(query, ballot);
             return minorities;
         }
     }
