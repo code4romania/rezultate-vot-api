@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -62,28 +62,24 @@ namespace ElectionResults.Core.Elections
                 .Include(b => b.Election)
                 .FirstOrDefaultAsync(e => e.BallotId == query.BallotId);
 
-            // ASTA E BUCURESTI ?
-            //if (query.CountyId != null
-            //    && query.CountyId.Value.IsCapitalCity()
-            //    && query.Division == ElectionDivision.County
-            //    && ballot.Date.Year == 2020)
-            //{
-            //    BallotType ballotType = ballot.BallotType;
-            //    if (ballot.BallotType == BallotType.Mayor)
-            //    {
-            //        ballotType = BallotType.CountyCouncilPresident;
-            //    }
+            if (QueryIsForCapitalCity(query, ballot))
+            {
+                BallotType ballotType = ballot.BallotType;
+                if (ballot.BallotType == BallotType.Mayor)
+                {
+                    ballotType = BallotType.CountyCouncilPresident;
+                }
 
-            //    if (ballot.BallotType == BallotType.LocalCouncil)
-            //    {
-            //        ballotType = BallotType.CountyCouncil;
-            //    }
+                if (ballot.BallotType == BallotType.LocalCouncil)
+                {
+                    ballotType = BallotType.CountyCouncil;
+                }
 
-            //    ballot = dbContext.Ballots
-            //        .AsNoTracking()
-            //        .Include(b => b.Election)
-            //        .FirstOrDefault(e => e.ElectionId == ballot.ElectionId && e.BallotType == ballotType);
-            //}
+                ballot = dbContext.Ballots
+                    .AsNoTracking()
+                    .Include(b => b.Election)
+                    .FirstOrDefault(e => e.ElectionId == ballot.ElectionId && e.BallotType == ballotType);
+            }
 
             if (ballot == null)
             {
@@ -142,9 +138,17 @@ namespace ElectionResults.Core.Elections
             }
 
             electionResponse.Scope = await CreateElectionScope(dbContext, query);
-            electionResponse.Meta = CreateElectionMeta(ballot);
+            electionResponse.Meta = CreateElectionMeta(query, ballot);
             electionResponse.ElectionNews = await GetElectionNews(dbContext, ballot.BallotId, ballot.ElectionId);
             return electionResponse;
+        }
+
+        private static bool QueryIsForCapitalCity(ElectionResultsQuery query, Ballot ballot)
+        {
+            return query.CountyId != null
+                   && query.CountyId.Value.IsCapitalCity()
+                   && query.Division == ElectionDivision.County
+                   && ballot.Date.Year >= 2020;
         }
 
         private async Task<ElectionScope> CreateElectionScope(ApplicationDbContext dbContext, ElectionResultsQuery query)
@@ -381,9 +385,9 @@ namespace ElectionResults.Core.Elections
             }
         }
 
-        private ElectionMeta CreateElectionMeta(Ballot ballot)
+        private ElectionMeta CreateElectionMeta(ElectionResultsQuery query, Ballot ballot)
         {
-            return new ElectionMeta
+            var electionMeta = new ElectionMeta
             {
                 Date = ballot.Date,
                 Type = ballot.BallotType,
@@ -395,6 +399,11 @@ namespace ElectionResults.Core.Elections
                 Live = ballot.Election.Live,
                 Stage = ballot.Election.Live? "prov": "final"
             };
+            if (QueryIsForCapitalCity(query, ballot))
+            {
+                electionMeta.Ballot = "Primăria Capitalei";
+            }
+            return electionMeta;
         }
 
         public async Task<List<ArticleResponse>> GetNewsFeed(ElectionResultsQuery query, int electionId)
