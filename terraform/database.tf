@@ -80,7 +80,7 @@ resource "aws_secretsmanager_secret" "rds" {
 resource "aws_secretsmanager_secret_version" "rds" {
   secret_id = aws_secretsmanager_secret.rds.id
   secret_string = format(
-    "Server=%s;Port=%d;Database=%s;User Id=%s;Password=%s;SSL Mode=None;",
+    "Server=%s;Port=%d;Database=%s;User Id=%s;Password=%s;SSL Mode=None;Max Pool Size=500;",
     aws_db_instance.main.address,
     aws_db_instance.main.port,
     aws_db_instance.main.db_name,
