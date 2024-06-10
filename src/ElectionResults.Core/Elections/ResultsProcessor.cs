@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
@@ -61,31 +62,43 @@ namespace ElectionResults.Core.Elections
             {
                 var colors = new List<string>();
                 var logos = new List<string>();
+                results.Candidates = [];
                 foreach (var candidate in candidates)
                 {
-                    var matchingParty = parties.GetMatchingParty(candidate.ShortName) ?? parties.FirstOrDefault(p => p.Name.ContainsString(candidate.Name));
+                    var matchingParty = parties.GetMatchingParty(candidate.ShortName) 
+                        ?? parties.FirstOrDefault(p => p.Name.ContainsString(candidate.Name))
+                        ?? parties.FirstOrDefault(p => p.Alias.ContainsString(candidate.Name));
+
+                    var name = candidate.GetCandidateName(ballot);
+                    var shortName = candidate.GetCandidateShortName(ballot);
+
                     if (matchingParty != null)
                     {
                         colors.Add(matchingParty.Color);
                         logos.Add(matchingParty.LogoUrl);
+
+                        name = matchingParty.Name;
+                        shortName = matchingParty.ShortName;
                     }
                     else
                     {
                         colors.Add(null);
                         logos.Add(null);
                     }
+
+                    results.Candidates.Add(new CandidateResponse
+                    {
+                        ShortName = shortName,
+                        Name = name,
+                        Votes = candidate.Votes,
+                        PartyColor = candidate.GetPartyColor(),
+                        PartyName = candidate.Party?.Name,
+                        PartyLogo = candidate.Party?.LogoUrl,
+                        Seats = candidate.TotalSeats != 0 ? candidate.TotalSeats : candidate.Seats1 + candidate.Seats2,
+                        TotalSeats = candidate.TotalSeats != 0 ? candidate.TotalSeats : candidate.Seats1 + candidate.Seats2
+                    });
                 }
-                results.Candidates = candidates.Select(c => new CandidateResponse
-                {
-                    ShortName = c.GetCandidateShortName(ballot),
-                    Name = c.GetCandidateName(ballot),
-                    Votes = c.Votes,
-                    PartyColor = c.GetPartyColor(),
-                    PartyName = c.Party?.Name,
-                    PartyLogo = c.Party?.LogoUrl,
-                    Seats = c.TotalSeats != 0 ? c.TotalSeats : c.Seats1 + c.Seats2,
-                    TotalSeats = c.TotalSeats != 0 ? c.TotalSeats : c.Seats1 + c.Seats2
-                }).ToList();
+                
                 for (var i = 0; i < results.Candidates.Count; i++)
                 {
                     var candidate = results.Candidates[i];

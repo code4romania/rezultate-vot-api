@@ -41,6 +41,11 @@ namespace ElectionResults.Core.Extensions
         {
             try
             {
+                if(c.PartyId != null)
+                {
+                    return c.ShortName;
+                }
+
                 if (ballot.BallotType == BallotType.EuropeanParliament || ballot.BallotType == BallotType.Senate ||
                     ballot.BallotType == BallotType.House)
                     return c.ShortName;
