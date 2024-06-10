@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
 using ElectionResults.Core.Infrastructure;
@@ -59,18 +60,23 @@ namespace ElectionResults.Core.Extensions
         {
             if (shortName.ToLower() == "independent")
                 return shortName;
-            var fullName = shortName.Replace("CANDIDAT INDEPENDENT - ", "");
-            var firstInitial = fullName[0].ToString().ToUpper() + ". ";
-            string firstname;
-            if (fullName.Contains("-"))
-            {
-                firstname = fullName.Split("-")[0] + "-";
-            }
-            else firstname = fullName.Split(" ")[0] + " ";
 
-            var candidateName = firstInitial + fullName.Replace(firstname, "");
-            return candidateName;
+            var fullName = shortName.Replace("CANDIDAT INDEPENDENT - ", "").Trim();
+            var nameParts = fullName.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (nameParts.Length < 2)
+                return shortName; // Return original if not enough parts
+
+            // Assuming the first part is the last name and the rest are first names
+            var lastName = nameParts[0];
+            var firstName = string.Join(" ", nameParts.Skip(1));
+
+            // Handle cases where the first name might be hyphenated or have multiple parts
+            var firstInitial = firstName[0].ToString().ToUpper() + ". ";
+
+            return firstInitial + lastName;
         }
+
 
         public static string GetPartyColor(this CandidateResult c)
         {

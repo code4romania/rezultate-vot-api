@@ -20,7 +20,7 @@ public static class Installer
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             NumberHandling = JsonNumberHandling.AllowReadingFromString,
         };
-        services.AddSingleton<ITurnoutCrawler, TurnoutCrawler>();
+
         services
             .AddRefitClient<IRoAepApi>(new RefitSettings(new SystemTextJsonContentSerializer(jsonSerializerOptions))
             {

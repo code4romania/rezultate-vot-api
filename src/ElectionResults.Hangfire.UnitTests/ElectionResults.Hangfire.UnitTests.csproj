@@ -60,6 +60,9 @@
     <None Update="pv_b_prov.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="pv_sr_part.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="sicpv-prov-ab.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

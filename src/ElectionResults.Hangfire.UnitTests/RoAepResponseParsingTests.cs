@@ -11,7 +11,6 @@ public class RoAepResponseParsingTests
     [Theory]
     [InlineData("pv_b_final.json")]
     [InlineData("pv_ab_final.json")]
-    [InlineData("pv_sr_part.json")]
     public void Should_Parse_Response_Correctly(string file)
     {
         var json = File.ReadAllText(file);
@@ -24,6 +23,23 @@ public class RoAepResponseParsingTests
         result.Stages[StageCode.PART].Scopes[ScopeCode.UAT].Categories[CategoryCode.P].GetTable().Should().BeEmpty();
         result.Stages[StageCode.PROV].Scopes[ScopeCode.UAT].Categories[CategoryCode.P].GetTable().Should().BeEmpty();
         result.Stages[StageCode.FINAL].Scopes[ScopeCode.UAT].Categories[CategoryCode.P].GetTable().Should().NotBeEmpty();
+    }
+        
+    [Theory]
+    [InlineData("pv_sr_part.json")]
+    public void Should_ParseSR_Response_Correctly(string file)
+    {
+        var json = File.ReadAllText(file);
+        var result = JsonSerializer.Deserialize<PVResultsModel>(json, new JsonSerializerOptions()
+        {
+            NumberHandling = JsonNumberHandling.AllowReadingFromString,
+        });
+        result.Should().NotBeNull();
+
+        result.Stages[StageCode.PROV].Enabled.Should().BeTrue();
+        result.Stages[StageCode.PROV].Scopes[ScopeCode.PRCNCT].Categories[CategoryCode.EUP].Table.Should().NotBeEmpty();
+        result.Stages[StageCode.PART].Enabled.Should().BeFalse();
+        result.Stages[StageCode.FINAL].Enabled.Should().BeFalse();
     }
 
     //[Fact]
