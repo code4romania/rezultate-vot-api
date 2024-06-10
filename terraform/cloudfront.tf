@@ -17,6 +17,11 @@ resource "aws_cloudfront_distribution" "main" {
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
+
+    origin_shield {
+      enabled              = true
+      origin_shield_region = var.region
+    }
   }
 
   ordered_cache_behavior {
