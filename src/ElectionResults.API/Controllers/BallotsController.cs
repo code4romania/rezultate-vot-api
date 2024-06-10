@@ -8,6 +8,7 @@ using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
+using LazyCache;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -18,14 +19,17 @@ namespace ElectionResults.API.Controllers
     public class BallotsController : ControllerBase
     {
         private readonly IResultsAggregator _resultsAggregator;
+        private readonly IAppCache _appCache;
         private readonly ITerritoryRepository _territoryRepository;
         private readonly MemoryCacheSettings _cacheSettings;
 
         public BallotsController(IResultsAggregator resultsAggregator,
+            IAppCache appCache,
             ITerritoryRepository territoryRepository,
             IOptions<MemoryCacheSettings> cacheSettings)
         {
             _resultsAggregator = resultsAggregator;
+            _appCache = appCache;
             _territoryRepository = territoryRepository;
             _cacheSettings = cacheSettings.Value;
         }
@@ -33,7 +37,9 @@ namespace ElectionResults.API.Controllers
         [HttpGet("ballots")]
         public async Task<ActionResult<List<ElectionMeta>>> GetBallots()
         {
-            var result = await  _resultsAggregator.GetAllBallots();
+            var result = await _appCache.GetOrAddAsync(
+                "ballots", () => _resultsAggregator.GetAllBallots(),
+                DateTimeOffset.Now.AddMinutes(120));
 
             if (result.IsSuccess)
             {
@@ -65,12 +71,15 @@ namespace ElectionResults.API.Controllers
                     query.Round = null;
                 }
 
-                var result = await _resultsAggregator.GetBallotCandidates(query);
+                var result = await _appCache.GetOrAddAsync(
+                    query.GetCacheKey(), () => _resultsAggregator.GetBallotCandidates(query),
+                    DateTimeOffset.Now.AddMinutes(query.GetCacheDurationInMinutes()));
 
                 return result.Value;
             }
             catch (Exception e)
             {
+                _appCache.Remove(query.GetCacheKey());
                 Log.LogError(e, "Exception encountered while retrieving voter turnout stats");
                 return StatusCode(500, e.StackTrace);
             }
@@ -96,7 +105,11 @@ namespace ElectionResults.API.Controllers
                     query.Round = null;
                 }
 
-                var result = await _resultsAggregator.GetBallotResults(query);
+                var expiration = GetExpirationDate(query);
+
+                var result = await _appCache.GetOrAddAsync(
+                    query.GetCacheKey(), () => _resultsAggregator.GetBallotResults(query),
+                    expiration);
 
                 var newsFeed = await _resultsAggregator.GetNewsFeed(query, result.Value.Meta.ElectionId);
                 result.Value.ElectionNews = newsFeed;
@@ -105,6 +118,7 @@ namespace ElectionResults.API.Controllers
             }
             catch (Exception e)
             {
+                _appCache.Remove(query.GetCacheKey());
                 Log.LogError(e, "Exception encountered while retrieving voter turnout stats");
                 return StatusCode(500, e.StackTrace);
             }
@@ -182,11 +196,12 @@ namespace ElectionResults.API.Controllers
 
         private DateTimeOffset GetExpirationDate(ElectionResultsQuery electionResultsQuery)
         {
-            if (electionResultsQuery.BallotId <= 110) // ballot older than parliament elections in 2020
+            if (electionResultsQuery.BallotId <= 113) // ballot older than parliament elections in 2020
             {
                 return DateTimeOffset.Now.AddDays(1);
             }
-            return DateTimeOffset.Now.AddMinutes(_cacheSettings.ResultsCacheInMinutes);
+
+            return DateTimeOffset.Now.AddMinutes(1);
         }
     }
 }

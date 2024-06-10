@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
+using LazyCache;
 using Microsoft.EntityFrameworkCore;
 
 namespace ElectionResults.Core.Repositories
@@ -12,16 +13,21 @@ namespace ElectionResults.Core.Repositories
     public class ElectionsRepository : IElectionsRepository
     {
         private readonly ApplicationDbContext _dbContext;
+        private readonly IAppCache _appCache;
+        private readonly CacheSettings _cacheSettings;
 
-        public ElectionsRepository(ApplicationDbContext dbContext)
+        public ElectionsRepository(ApplicationDbContext dbContext, IAppCache appCache)
         {
             _dbContext = dbContext;
+            _appCache = appCache;
+            _cacheSettings = MemoryCache.Elections;
         }
 
         public async Task<Result<List<Election>>> GetAllElections(bool includeBallots = false)
         {
-            var elections = await  CreateQueryable(includeBallots).ToListAsync();
-
+            var elections = await _appCache.GetOrAddAsync(
+                _cacheSettings.Key, () => CreateQueryable(includeBallots).ToListAsync(),
+                DateTimeOffset.Now.AddMinutes(_cacheSettings.Minutes));
             return Result.Success(elections);
         }
 
