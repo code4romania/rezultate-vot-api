@@ -11,7 +11,6 @@ using ElectionResults.Core.Repositories;
 using LazyCache;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace ElectionResults.Core.Elections
 {
@@ -19,7 +18,6 @@ namespace ElectionResults.Core.Elections
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly IAppCache _appCache;
-        private readonly IServiceProvider _serviceProvider;
         private readonly IPartiesRepository _partiesRepository;
         private readonly ITerritoryRepository _territoryRepository;
 
@@ -31,7 +29,6 @@ namespace ElectionResults.Core.Elections
         {
             _dbContext = dbContext;
             _appCache = appCache;
-            _serviceProvider = serviceProvider;
             _partiesRepository = partiesRepository;
             _territoryRepository = territoryRepository;
         }
@@ -270,20 +267,19 @@ namespace ElectionResults.Core.Elections
 
         private async Task<List<Winner>> AggregateCountyWinners(int ballotId, IEnumerable<Party> parties)
         {
-            await using var dbContext = _serviceProvider.CreateScope().ServiceProvider.GetService<ApplicationDbContext>();
             var counties = await _territoryRepository.GetCounties();
-            var ballot = await dbContext.Ballots
+            var ballot = await _dbContext.Ballots
                 .Include(b => b.Election)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(b => b.BallotId == ballotId);
 
-            var candidateResultsByCounties = await dbContext.CandidateResults
+            var candidateResultsByCounties = await _dbContext.CandidateResults
                 .Include(c => c.Party)
                 .Where(c => c.BallotId == ballotId
                             && c.Division == ElectionDivision.County)
                 .ToListAsync();
 
-            var turnouts = await dbContext.Turnouts
+            var turnouts = await _dbContext.Turnouts
                 .Where(c => c.BallotId == ballotId &&
                             c.Division == ElectionDivision.County)
                 .ToListAsync();
