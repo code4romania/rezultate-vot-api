@@ -87,8 +87,8 @@ namespace ElectionResults.Core.Entities
             return new()
             {
                 BallotId = ballotBallotId,
-                //TotalVotes = totalNumberOfVotes,
-                //EligibleVoters = totalNumberOfEligibleVoters,
+                TotalVotes = totalNumberOfVotes,
+                EligibleVoters = totalNumberOfEligibleVoters,
                 ValidVotes = validVotes,
                 NullVotes = nullVotes
             };

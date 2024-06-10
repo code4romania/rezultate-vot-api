@@ -251,7 +251,13 @@ namespace ElectionResults.Core.Elections
                 var turnout = AggregateTurnouts(ballot.BallotId, turnouts);
                 return turnout;
             }
-            return turnouts.FirstOrDefault();
+
+            var divisionTurnout = turnouts.FirstOrDefault();
+            if (divisionTurnout != null)
+            {
+                divisionTurnout.CountedVotes = divisionTurnout.ValidVotes + divisionTurnout.NullVotes;
+            }
+            return divisionTurnout;
         }
 
         private static async Task<Turnout> RetrieveAggregatedTurnoutForCityHalls(ElectionResultsQuery query,
