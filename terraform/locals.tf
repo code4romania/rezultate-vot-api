@@ -15,7 +15,7 @@ locals {
 
     importer = {
       image = "code4romania/rezultate-vot-importer"
-      tag   = "1.1.1"
+      tag   = "1.2.0"
     }
   }
 
