@@ -129,6 +129,7 @@ module "ecs_importer" {
     aws_secretsmanager_secret.sentry_dsn_importer.arn,
     aws_secretsmanager_secret.app_key_importer.arn,
     aws_secretsmanager_secret.rds_importer.arn,
+    aws_secretsmanager_secret.ftp.arn,
   ]
 }
 
