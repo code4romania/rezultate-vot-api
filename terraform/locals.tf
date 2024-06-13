@@ -10,7 +10,7 @@ locals {
 
     hangfire = {
       image = "code4romania/rezultate-vot-hangfire"
-      tag   = "1.1.12"
+      tag   = "1.1.13"
     }
 
     importer = {
