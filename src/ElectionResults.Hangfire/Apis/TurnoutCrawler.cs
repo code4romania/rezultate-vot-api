@@ -1,7 +1,6 @@
 ﻿using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Repositories;
-using ElectionResults.Hangfire.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Z.EntityFramework.Extensions;
@@ -50,8 +49,8 @@ namespace ElectionResults.Hangfire.Apis
                     dbContext.Turnouts.Add(countyTurnout);
                 }
 
-                //countyTurnout.EligibleVoters = countyData.InitialCountLp + countyData.InitialCountLc;
-                //countyTurnout.TotalVotes = countyData.TotalVotes;
+                countyTurnout.EligibleVoters = countyData.InitialCountLp + countyData.InitialCountLc;
+                countyTurnout.TotalVotes = countyData.TotalVotes;
                 countyTurnout.CorrespondenceVotes = countyData.CorrespondenceVotes;
 
                 var localities = response.Precinct.GroupBy(p => p.UatInfo.Siruta);
@@ -83,8 +82,8 @@ namespace ElectionResults.Hangfire.Apis
                         dbContext.Turnouts.Add(turnout);
                     }
 
-                    //turnout.EligibleVoters = locality.Sum(p => p.InitialCountLp + p.InitialCountLc);
-                    //turnout.TotalVotes = locality.Sum(p => p.TotalVotes);
+                    turnout.EligibleVoters = locality.Sum(p => p.InitialCountLp + p.InitialCountLc);
+                    turnout.TotalVotes = locality.Sum(p => p.TotalVotes);
                     turnout.CorrespondenceVotes = locality.Sum(v => v.CorrespondenceVotes);
                     turnout.SpecialListsVotes = locality.Sum(v => v.InitialCountLc);
                 }
@@ -104,8 +103,8 @@ namespace ElectionResults.Hangfire.Apis
                 dbContext.Turnouts.Add(nationalTurnout);
             }
 
-            //nationalTurnout.EligibleVoters = countiesTurnouts.Sum(t => t.EligibleVoters);
-            //nationalTurnout.TotalVotes = countiesTurnouts.Sum(t => t.TotalVotes);
+            nationalTurnout.EligibleVoters = countiesTurnouts.Sum(t => t.EligibleVoters);
+            nationalTurnout.TotalVotes = countiesTurnouts.Sum(t => t.TotalVotes);
             nationalTurnout.CorrespondenceVotes = countiesTurnouts.Sum(t => t.CorrespondenceVotes);
 
             foreach (var turnout in diasporaTurnouts)
@@ -113,8 +112,8 @@ namespace ElectionResults.Hangfire.Apis
                 var existingTurnout = dbTurnouts.FirstOrDefault(t => t.BallotId == turnout.BallotId && t.CountryId == turnout.CountryId && t.Division == turnout.Division);
                 if (existingTurnout != null)
                 {
-                    //existingTurnout.EligibleVoters = turnout.EligibleVoters;
-                    //existingTurnout.TotalVotes = turnout.TotalVotes;
+                    existingTurnout.EligibleVoters = turnout.EligibleVoters;
+                    existingTurnout.TotalVotes = turnout.TotalVotes;
                     existingTurnout.CorrespondenceVotes = turnout.CorrespondenceVotes;
                     existingTurnout.SpecialListsVotes = turnout.SpecialListsVotes;
                 }
@@ -146,8 +145,8 @@ namespace ElectionResults.Hangfire.Apis
             var diasporaTurnout = new Turnout
             {
                 CountyId = diasporaData.CountyId,
-                //EligibleVoters = diasporaData.InitialCountLp + diasporaData.InitialCountLc,
-                //TotalVotes = diasporaData.TotalVotes,
+                EligibleVoters = diasporaData.InitialCountLp + diasporaData.InitialCountLc,
+                TotalVotes = diasporaData.TotalVotes,
                 CorrespondenceVotes = diasporaData.CorrespondenceVotes,
                 BallotId = ballotId,
                 Division = ElectionDivision.Diaspora
@@ -172,8 +171,8 @@ namespace ElectionResults.Hangfire.Apis
                 {
                     CountryId = dbCountry.Id,
                     BallotId = ballotId,
-                    //EligibleVoters = country.Sum(p => p.InitialCountLp + p.InitialCountLc),
-                    //TotalVotes = country.Sum(p => p.TotalVotes),
+                    EligibleVoters = country.Sum(p => p.InitialCountLp + p.InitialCountLc),
+                    TotalVotes = country.Sum(p => p.TotalVotes),
                     Division = ElectionDivision.Diaspora_Country,
                     CorrespondenceVotes = country.Sum(v => v.CorrespondenceVotes),
                     SpecialListsVotes = country.Sum(v => v.InitialCountLc)

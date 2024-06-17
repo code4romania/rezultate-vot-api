@@ -5,30 +5,29 @@ locals {
   images = {
     api = {
       image = "code4romania/rezultate-vot-api"
-      tag   = "1.1.10"
+      tag   = "1.1.11"
     }
 
     hangfire = {
       image = "code4romania/rezultate-vot-hangfire"
-      tag   = "1.1.10"
+      tag   = "1.1.13"
     }
 
     importer = {
       image = "code4romania/rezultate-vot-importer"
-      tag   = "1.1.1"
+      tag   = "1.2.0"
     }
   }
 
   ecs = {
     instance_types = {
-      # "t3a.medium" = ""
-      "m5n.xlarge" = ""
+      "t3a.small" = ""
     }
   }
 
   db = {
     name           = "rezultatevot"
-    instance_class = var.env == "production" ? "db.m7g.2xlarge" : "db.t4g.micro"
+    instance_class = var.env == "production" ? "db.t4g.large" : "db.t4g.micro"
   }
 
   networking = {

@@ -50,11 +50,11 @@ module "ecs_importer" {
     },
     {
       name  = "IMPORT_ENABLED"
-      value = tostring(false)
+      value = tostring(true)
     },
     {
       name  = "IMPORT_SCHEDULE"
-      value = "*/5 * * * *"
+      value = "*/30 * * * *"
     },
     {
       name  = "DB_DATABASE"
@@ -115,12 +115,21 @@ module "ecs_importer" {
       name      = "IMPORT_DB_PASSWORD"
       valueFrom = "${aws_secretsmanager_secret.rds_importer.arn}:password::"
     },
+    {
+      name      = "IMPORT_EUROPARL_USERNAME"
+      valueFrom = "${aws_secretsmanager_secret.ftp.arn}:username::"
+    },
+    {
+      name      = "IMPORT_EUROPARL_PASSWORD"
+      valueFrom = "${aws_secretsmanager_secret.ftp.arn}:password::"
+    },
   ]
 
   allowed_secrets = [
     aws_secretsmanager_secret.sentry_dsn_importer.arn,
     aws_secretsmanager_secret.app_key_importer.arn,
     aws_secretsmanager_secret.rds_importer.arn,
+    aws_secretsmanager_secret.ftp.arn,
   ]
 }
 
@@ -153,4 +162,18 @@ resource "aws_secretsmanager_secret" "sentry_dsn_importer" {
 resource "aws_secretsmanager_secret_version" "sentry_dsn_importer" {
   secret_id     = aws_secretsmanager_secret.sentry_dsn_importer.id
   secret_string = var.sentry_dsn_importer
+}
+
+
+
+resource "aws_secretsmanager_secret" "ftp" {
+  name = "${local.namespace}-ftp_importer-${random_string.secrets_suffix.result}"
+}
+
+resource "aws_secretsmanager_secret_version" "ftp" {
+  secret_id = aws_secretsmanager_secret.ftp.id
+  secret_string = jsonencode({
+    "username" = var.europarl_username
+    "password" = var.europarl_password
+  })
 }

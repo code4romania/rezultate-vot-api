@@ -77,3 +77,13 @@ variable "crawler_api_key" {
   description = "API key for crawler from MV"
   type        = string
 }
+
+variable "europarl_username" {
+  type    = string
+  default = null
+}
+
+variable "europarl_password" {
+  type    = string
+  default = null
+}

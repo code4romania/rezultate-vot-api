@@ -30,9 +30,9 @@ public static class Installer
 
         backgroundJobClient.Enqueue<SeedData>(x => x.Run(CancellationToken.None));
 
-        recurringJobManager.AddOrUpdate<DownloadAndProcessTurnoutResultsJob>($"locale09062024-data-processor", x => x.Run("locale09062024", 50, false, StageCode.PROV), "*/7 * * * *");
+        recurringJobManager.AddOrUpdate<DownloadAndProcessTurnoutResultsJob>($"locale09062024-data-processor", x => x.Run("locale09062024", 50, false, StageCode.PART), "*/7 * * * *");
 
-        recurringJobManager.AddOrUpdate<DownloadAndProcessTurnoutResultsJob>($"europarlamentare09062024-data-processor", x => x.Run("europarlamentare09062024", 51, true, StageCode.PROV), "*/5 * * * *");
+        // recurringJobManager.AddOrUpdate<DownloadAndProcessTurnoutResultsJob>($"europarlamentare09062024-data-processor", x => x.Run("europarlamentare09062024", 51, true, StageCode.PROV), "*/5 * * * *");
 
         var electionRoundIds = crawlerOptions.Value.ElectionRounds.Select(x => x.ElectionRoundId).ToList();
         var voteMonitorElectionRoundId = crawlerOptions.Value.ElectionRoundId;
