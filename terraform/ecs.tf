@@ -9,7 +9,7 @@ module "ecs_cluster" {
   instance_types        = local.ecs.instance_types
 
   min_size                  = 2
-  max_size                  = 4
+  max_size                  = 2
   minimum_scaling_step_size = 1
   maximum_scaling_step_size = 1
 
