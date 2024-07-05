@@ -36,7 +36,7 @@ namespace ElectionResults.Core.Repositories
             if (!countyId.HasValue)
             {
                 var localitiesResult = await _appCache.GetOrAddAsync(
-                    MemoryCache.Localities.Key, () => _dbContext.Localities.OrderBy(c => c.Name).ToListAsync(),
+                    MemoryCache.Localities.Key, async () =>await _dbContext.Localities.OrderBy(c => c.Name).ToListAsync(),
                     DateTimeOffset.Now.AddMinutes(MemoryCache.Localities.Minutes));
 
                 return localitiesResult;
@@ -57,7 +57,7 @@ namespace ElectionResults.Core.Repositories
         public async Task<Result<List<Country>>> GetCountries(int? ballotId)
         {
             var countries = await _appCache.GetOrAddAsync(
-                MemoryCache.Countries.Key, () => _dbContext.Countries.OrderBy(c => c.Name).ToListAsync(),
+                MemoryCache.Countries.Key, async () =>await _dbContext.Countries.OrderBy(c => c.Name).ToListAsync(),
                 DateTimeOffset.Now.AddMinutes(MemoryCache.Countries.Minutes));
             if (ballotId.HasValue)
             {
@@ -80,7 +80,7 @@ namespace ElectionResults.Core.Repositories
             dbSet = dbSet.Where(l => l.LocalityId == localityId);
             var localityKey = MemoryCache.Locality.Key + localityId + includeCounty;
             return await _appCache.GetOrAddAsync(
-                localityKey, () => dbSet.Where(l => l.LocalityId == localityId)
+                localityKey, async () =>await dbSet.Where(l => l.LocalityId == localityId)
                     .FirstOrDefaultAsync(),
                 DateTimeOffset.Now.AddMinutes(MemoryCache.Locality.Minutes));
         }
@@ -92,7 +92,7 @@ namespace ElectionResults.Core.Repositories
             dbSet = dbSet.Where(l => l.CountyId == countyId);
             var countyKey = MemoryCache.Locality.Key + countyId;
             return await _appCache.GetOrAddAsync(
-                countyKey, () => dbSet.Where(l => l.CountyId == countyId).FirstOrDefaultAsync(),
+                countyKey, async () =>await dbSet.Where(l => l.CountyId == countyId).FirstOrDefaultAsync(),
                 DateTimeOffset.Now.AddMinutes(MemoryCache.County.Minutes));
         }
     }
