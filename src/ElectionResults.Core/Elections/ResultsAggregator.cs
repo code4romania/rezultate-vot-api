@@ -121,6 +121,7 @@ namespace ElectionResults.Core.Elections
             electionResponse.Aggregated = electionInfo.Aggregated;
             electionResponse.Results = results;
             electionResponse.Observation = await _dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
+            
             if (divisionTurnout != null)
             {
                 electionResponse.Turnout = new ElectionTurnout
@@ -219,7 +220,7 @@ namespace ElectionResults.Core.Elections
         {
             if (ballot.Election.Category == ElectionCategory.Local && !ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
             {
-                return await RetrieveAggregatedTurnoutForCityHalls(query, ballot, _dbContext);
+                return await RetrieveAggregatedTurnoutForCityHalls(query, ballot);
             }
 
             var turnouts = await _dbContext.Turnouts
@@ -258,10 +259,9 @@ namespace ElectionResults.Core.Elections
             return divisionTurnout;
         }
 
-        private static async Task<Turnout> RetrieveAggregatedTurnoutForCityHalls(ElectionResultsQuery query,
-            Ballot ballot, ApplicationDbContext dbContext)
+        private async Task<Turnout> RetrieveAggregatedTurnoutForCityHalls(ElectionResultsQuery query, Ballot ballot)
         {
-            IQueryable<Turnout> queryable = dbContext.Turnouts
+            IQueryable<Turnout> queryable = _dbContext.Turnouts
                 .Where(t => t.BallotId == ballot.BallotId);
 
             if (ballot.BallotType == BallotType.CountyCouncilPresident || ballot.BallotType == BallotType.CountyCouncil)
@@ -306,7 +306,7 @@ namespace ElectionResults.Core.Elections
             {
                 if (!ballot.AllowsDivision(query.Division, query.LocalityId.GetValueOrDefault()) && !ballot.Election.Live)
                 {
-                    var aggregatedVotes = await RetrieveAggregatedVotes(_dbContext, query, ballot);
+                    var aggregatedVotes = await RetrieveAggregatedVotes(query, ballot);
                     liveElectionInfo.Candidates = aggregatedVotes;
                     liveElectionInfo.Aggregated = true;
 
@@ -345,8 +345,7 @@ namespace ElectionResults.Core.Elections
             return results;
         }
 
-        private async Task<List<CandidateResult>> RetrieveAggregatedVotes(ApplicationDbContext dbContext,
-            ElectionResultsQuery query, Ballot ballot)
+        private async Task<List<CandidateResult>> RetrieveAggregatedVotes(ElectionResultsQuery query, Ballot ballot)
         {
             switch (query.Division)
             {
@@ -374,7 +373,7 @@ namespace ElectionResults.Core.Elections
                         }
                         else
                         {
-                            var resultsForElection = await dbContext.CandidateResults
+                            var resultsForElection = await _dbContext.CandidateResults
                                 .Include(c => c.Party)
                                 .Where(c => c.BallotId == query.BallotId && c.Division == ElectionDivision.Locality)
                                 .ToListAsync();
