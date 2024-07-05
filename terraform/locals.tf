@@ -5,7 +5,7 @@ locals {
   images = {
     api = {
       image = "code4romania/rezultate-vot-api"
-      tag   = "1.1.15"
+      tag   = "1.1.16"
     }
 
     hangfire = {
