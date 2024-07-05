@@ -60,7 +60,8 @@ namespace ElectionResults.Core.Repositories
                 .Include(n => n.Election)
                 .Include(n => n.Pictures)
                 .Include(n => n.Ballot)
-                .FirstOrDefaultAsync(n => n.Id == id);
+                .Where(n => n.Id == id)
+                .FirstOrDefaultAsync();
             return Result.Success(newsFeed);
         }
     }

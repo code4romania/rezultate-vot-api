@@ -94,6 +94,7 @@ namespace ElectionResults.API
             services.AddScoped<IPicturesRepository, PicturesRepository>();
             services.AddScoped<IBallotsRepository, BallotsRepository>();
             services.AddScoped<IPartiesRepository, PartiesRepository>();
+            
             services.Configure<AWSS3Settings>(configuration.GetSection(AWSS3Settings.SectionKey));
             services.Configure<MemoryCacheSettings>(configuration.GetSection(MemoryCacheSettings.SectionKey));
         }

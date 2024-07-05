@@ -38,7 +38,7 @@ namespace ElectionResults.Core.Repositories
                 _cacheSettings.Key, () =>
                 {
                     var query = CreateQueryable(includeElection);
-                    return query.FirstOrDefaultAsync(b => b.BallotId == ballotId);
+                    return query.Where(b => b.BallotId == ballotId).FirstOrDefaultAsync();
                 },
                 DateTimeOffset.Now.AddMinutes(_cacheSettings.Minutes));
             return ballot;

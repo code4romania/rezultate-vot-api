@@ -58,7 +58,8 @@ namespace ElectionResults.Core.Elections
             var ballot = await _dbContext.Ballots
                 .AsNoTracking()
                 .Include(b => b.Election)
-                .FirstOrDefaultAsync(e => e.BallotId == query.BallotId);
+                .Where(e => e.BallotId == query.BallotId)
+                .FirstOrDefaultAsync();
 
             if (QueryIsForCapitalCity(query, ballot))
             {
@@ -120,7 +121,10 @@ namespace ElectionResults.Core.Elections
 
             electionResponse.Aggregated = electionInfo.Aggregated;
             electionResponse.Results = results;
-            electionResponse.Observation = await _dbContext.Observations.FirstOrDefaultAsync(o => o.BallotId == ballot.BallotId);
+            electionResponse.Observation = await _dbContext
+                .Observations
+                .Where(o => o.BallotId == ballot.BallotId)
+                .FirstOrDefaultAsync();
             
             if (divisionTurnout != null)
             {
@@ -159,24 +163,29 @@ namespace ElectionResults.Core.Elections
             County county;
             if (query.Division == ElectionDivision.County)
             {
-                county = await _dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
+                county = await _dbContext.Counties
+                    .Where(c => c.CountyId == query.CountyId)
+                    .FirstOrDefaultAsync();
                 electionScope.CountyId = query.CountyId;
                 electionScope.CountyName = county?.Name;
             }
             else
             {
-                var locality = await _dbContext.Localities.FirstOrDefaultAsync(c => c.LocalityId == query.LocalityId);
+                var locality = await _dbContext.Localities
+                    .Where(c => c.LocalityId == query.LocalityId)
+                    .FirstOrDefaultAsync();
+                
                 if (query.Division == ElectionDivision.Locality)
                 {
                     electionScope.LocalityId = query.LocalityId;
                     electionScope.LocalityName = locality?.Name;
                     electionScope.CountyId = locality?.CountyId;
-                    county = await _dbContext.Counties.FirstOrDefaultAsync(c => c.CountyId == query.CountyId);
+                    county = await _dbContext.Counties.Where(c => c.CountyId == query.CountyId).FirstOrDefaultAsync();
                     electionScope.CountyName = county?.Name;
                 }
                 else if (query.Division == ElectionDivision.Diaspora_Country)
                 {
-                    var country = await _dbContext.Countries.FirstOrDefaultAsync(c => c.Id == query.CountryId);
+                    var country = await _dbContext.Countries.Where(c => c.Id == query.CountryId).FirstOrDefaultAsync();
                     electionScope.CountryId = query.CountryId;
                     electionScope.CountryName = country?.Name;
                 }
@@ -417,7 +426,8 @@ namespace ElectionResults.Core.Elections
             var ballot = await _dbContext.Ballots
                 .Include(b => b.Election)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(e => e.BallotId == query.BallotId);
+                .Where(e => e.BallotId == query.BallotId)
+                .FirstOrDefaultAsync();
 
             var candidates = await GetCandidateResultsFromQueryAndBallot(query, ballot);
             var minorities = await GetMinorities(ballot);
