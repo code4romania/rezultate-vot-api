@@ -23,9 +23,10 @@ namespace ElectionResults.Core.Repositories
         public async Task<Result<List<County>>> GetCounties()
         {
             return await _appCache.GetOrAddAsync(
-                MemoryCache.Counties.Key, () => _dbContext.Counties
+                MemoryCache.Counties.Key, async () => await _dbContext.Counties
                     .Where(c => c.Name != "MINORITĂȚI")
-                    .OrderBy(c => c.Name).ToListAsync(),
+                    .OrderBy(c => c.Name)
+                    .ToListAsync(),
                 DateTimeOffset.Now.AddMinutes(MemoryCache.Counties.Minutes));
         }
 
@@ -37,7 +38,7 @@ namespace ElectionResults.Core.Repositories
                 var localitiesResult = await _appCache.GetOrAddAsync(
                     MemoryCache.Localities.Key, () => _dbContext.Localities.OrderBy(c => c.Name).ToListAsync(),
                     DateTimeOffset.Now.AddMinutes(MemoryCache.Localities.Minutes));
-               
+
                 return localitiesResult;
             }
 
@@ -49,6 +50,7 @@ namespace ElectionResults.Core.Repositories
                     .Select(c => c.LocalityId).ToListAsync();
                 return localities.Where(l => ids.Any(i => i == l.LocalityId)).ToList();
             }
+
             return localities;
         }
 
@@ -63,6 +65,7 @@ namespace ElectionResults.Core.Repositories
                     .Select(c => c.CountryId).Distinct().ToListAsync();
                 return countries.Where(l => ids.Any(i => i == l.Id)).ToList();
             }
+
             return countries;
         }
 

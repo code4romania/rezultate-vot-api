@@ -23,7 +23,6 @@ namespace ElectionResults.Core.Elections
 
         public WinnersAggregator(ApplicationDbContext dbContext,
             IAppCache appCache,
-            IServiceProvider serviceProvider,
             IPartiesRepository partiesRepository,
             ITerritoryRepository territoryRepository)
         {
@@ -103,7 +102,7 @@ namespace ElectionResults.Core.Elections
             var winnersKey = MemoryCache.CreateWinnersKey(ballotId, countyId, division);
 
             var winners = await _appCache
-                .GetOrAddAsync(winnersKey, () => query, DateTimeOffset.Now.AddMinutes(10));
+                .GetOrAddAsync(winnersKey, async () =>await query, DateTimeOffset.Now.AddMinutes(10));
 
             return winners;
         }

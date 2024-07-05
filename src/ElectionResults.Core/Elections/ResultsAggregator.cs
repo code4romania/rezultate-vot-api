@@ -74,11 +74,11 @@ namespace ElectionResults.Core.Elections
                     ballotType = BallotType.CountyCouncil;
                 }
 
-                ballot = _dbContext.Ballots
+                ballot = await _dbContext.Ballots
                     .AsNoTracking()
                     .Include(b => b.Election)
                     .Where(e => e.ElectionId == ballot.ElectionId && e.BallotType == ballotType)
-                    .FirstOrDefault();
+                    .FirstOrDefaultAsync();
             }
 
             if (ballot == null)

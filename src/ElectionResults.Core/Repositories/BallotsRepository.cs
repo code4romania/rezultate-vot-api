@@ -24,10 +24,10 @@ namespace ElectionResults.Core.Repositories
         public async Task<IEnumerable<Ballot>> GetAllBallots(bool includeElection = false)
         {
             return await _appCache.GetOrAddAsync(
-                _cacheSettings.Key, () =>
+                _cacheSettings.Key, async () =>
                 {
                     var query = CreateQueryable(includeElection);
-                    return query.ToListAsync();
+                    return  await query.ToListAsync();
                 },
                 DateTimeOffset.Now.AddMinutes(_cacheSettings.Minutes));
         }
@@ -35,10 +35,10 @@ namespace ElectionResults.Core.Repositories
         public async Task<Ballot> GetBallotById(int ballotId, bool includeElection = false)
         {
             var ballot = await _appCache.GetOrAddAsync(
-                _cacheSettings.Key, () =>
+                _cacheSettings.Key, async () =>
                 {
                     var query = CreateQueryable(includeElection);
-                    return query.Where(b => b.BallotId == ballotId).FirstOrDefaultAsync();
+                    return await query.Where(b => b.BallotId == ballotId).FirstOrDefaultAsync();
                 },
                 DateTimeOffset.Now.AddMinutes(_cacheSettings.Minutes));
             return ballot;
