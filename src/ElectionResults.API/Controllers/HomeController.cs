@@ -132,7 +132,8 @@ namespace ElectionResults.API.Controllers
                     var elections = await _electionsRepository.GetElectionsForNewsFeed();
                     var ballots = elections.Value.SelectMany(e => e.Ballots).ToList();
                     var selectedBallot = ballots
-                        .FirstOrDefault(b => b.BallotId == model.SelectedElectionId);
+                        .Where(b => b.BallotId == model.SelectedElectionId)
+                        .FirstOrDefault();
                     if (selectedBallot == null)
                         selectedBallot = ballots.FirstOrDefault();
                     var pictures = new List<ArticlePicture>();

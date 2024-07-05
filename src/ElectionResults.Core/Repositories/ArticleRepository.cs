@@ -42,7 +42,7 @@ namespace ElectionResults.Core.Repositories
 
         public async Task<Result> Delete(Article model)
         {
-            var existingNews = await _dbContext.Articles.FirstOrDefaultAsync(n => n.Id == model.Id);
+            var existingNews = await _dbContext.Articles.Where(n => n.Id == model.Id).FirstOrDefaultAsync();
             if (existingNews != null)
             {
                 _dbContext.Articles.Remove(existingNews);

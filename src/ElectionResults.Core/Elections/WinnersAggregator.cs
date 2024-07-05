@@ -68,7 +68,7 @@ namespace ElectionResults.Core.Elections
 
                 var localityWinner = results.FirstOrDefault();
 
-                var turnoutForLocality = turnouts.FirstOrDefault(c => c.LocalityId == locality.LocalityId);
+                var turnoutForLocality = turnouts.Where(c => c.LocalityId == locality.LocalityId).FirstOrDefault();
 
                 if (localityWinner != null)
                 {

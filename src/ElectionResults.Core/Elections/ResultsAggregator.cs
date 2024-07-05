@@ -77,7 +77,8 @@ namespace ElectionResults.Core.Elections
                 ballot = _dbContext.Ballots
                     .AsNoTracking()
                     .Include(b => b.Election)
-                    .FirstOrDefault(e => e.ElectionId == ballot.ElectionId && e.BallotType == ballotType);
+                    .Where(e => e.ElectionId == ballot.ElectionId && e.BallotType == ballotType)
+                    .FirstOrDefault();
             }
 
             if (ballot == null)
