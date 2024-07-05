@@ -26,7 +26,7 @@ namespace ElectionResults.Core.Repositories
         public async Task<Result<List<Election>>> GetAllElections(bool includeBallots = false)
         {
             var elections = await _appCache.GetOrAddAsync(
-                _cacheSettings.Key, () => CreateQueryable(includeBallots).ToListAsync(),
+                _cacheSettings.Key, async () => await CreateQueryable(includeBallots).ToListAsync(),
                 DateTimeOffset.Now.AddMinutes(_cacheSettings.Minutes));
             return Result.Success(elections);
         }

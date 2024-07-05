@@ -38,7 +38,7 @@ namespace ElectionResults.API.Controllers
         public async Task<ActionResult<List<ElectionMeta>>> GetBallots()
         {
             var result = await _appCache.GetOrAddAsync(
-                "ballots", () => _resultsAggregator.GetAllBallots(),
+                "ballots", async () => await _resultsAggregator.GetAllBallots(),
                 DateTimeOffset.Now.AddMinutes(120));
 
             if (result.IsSuccess)
@@ -50,7 +50,8 @@ namespace ElectionResults.API.Controllers
         }
 
         [HttpGet("ballots/{ballotId}/candidates")]
-        public async Task<ActionResult<List<PartyList>>> GetCandidatesForBallot([FromQuery] ElectionResultsQuery query, int ballotId)
+        public async Task<ActionResult<List<PartyList>>> GetCandidatesForBallot([FromQuery] ElectionResultsQuery query,
+            int ballotId)
         {
             try
             {
@@ -72,7 +73,7 @@ namespace ElectionResults.API.Controllers
                 }
 
                 var result = await _appCache.GetOrAddAsync(
-                    query.GetCacheKey(), () => _resultsAggregator.GetBallotCandidates(query),
+                    query.GetCacheKey(), async () => await _resultsAggregator.GetBallotCandidates(query),
                     DateTimeOffset.Now.AddMinutes(query.GetCacheDurationInMinutes()));
 
                 return result.Value;
@@ -108,7 +109,7 @@ namespace ElectionResults.API.Controllers
                 var expiration = GetExpirationDate(query);
 
                 var result = await _appCache.GetOrAddAsync(
-                    query.GetCacheKey(), () => _resultsAggregator.GetBallotResults(query),
+                    query.GetCacheKey(), async () => await _resultsAggregator.GetBallotResults(query),
                     expiration);
 
                 var newsFeed = await _resultsAggregator.GetNewsFeed(query, result.Value.Meta.ElectionId);

@@ -23,7 +23,7 @@ namespace ElectionResults.Core.Repositories
         public async Task<IEnumerable<Party>> GetAllParties()
         {
             return await _appCache.GetOrAddAsync(
-                _cacheSettings.Key, () => _dbContext.Parties.ToListAsync(),
+                _cacheSettings.Key, async () =>await _dbContext.Parties.ToListAsync(),
                 DateTimeOffset.Now.AddMinutes(_cacheSettings.Minutes));
         }
     }
