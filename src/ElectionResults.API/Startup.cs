@@ -60,7 +60,7 @@ namespace ElectionResults.API
 
             var connectionString = Configuration["ConnectionStrings:DefaultConnection"]!;
 
-            services.AddDbContextPool<ApplicationDbContext>(options =>
+            services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseMySQL(connectionString);
             });
@@ -83,17 +83,17 @@ namespace ElectionResults.API
 
         private static void RegisterDependencies(IServiceCollection services, IConfiguration configuration)
         {
-            services.AddTransient<IResultsAggregator, ResultsAggregator>();
+            services.AddScoped<IResultsAggregator, ResultsAggregator>();
 
-            services.AddTransient<IAuthorsRepository, AuthorsRepository>();
-            services.AddTransient<IWinnersAggregator, WinnersAggregator>();
+            services.AddScoped<IAuthorsRepository, AuthorsRepository>();
+            services.AddScoped<IWinnersAggregator, WinnersAggregator>();
 
-            services.AddTransient<IArticleRepository, ArticleRepository>();
-            services.AddTransient<IElectionsRepository, ElectionsRepository>();
-            services.AddTransient<ITerritoryRepository, TerritoryRepository>();
-            services.AddTransient<IPicturesRepository, PicturesRepository>();
-            services.AddTransient<IBallotsRepository, BallotsRepository>();
-            services.AddTransient<IPartiesRepository, PartiesRepository>();
+            services.AddScoped<IArticleRepository, ArticleRepository>();
+            services.AddScoped<IElectionsRepository, ElectionsRepository>();
+            services.AddScoped<ITerritoryRepository, TerritoryRepository>();
+            services.AddScoped<IPicturesRepository, PicturesRepository>();
+            services.AddScoped<IBallotsRepository, BallotsRepository>();
+            services.AddScoped<IPartiesRepository, PartiesRepository>();
             services.Configure<AWSS3Settings>(configuration.GetSection(AWSS3Settings.SectionKey));
             services.Configure<MemoryCacheSettings>(configuration.GetSection(MemoryCacheSettings.SectionKey));
         }
