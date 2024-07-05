@@ -42,7 +42,7 @@ namespace ElectionResults.Core.Repositories
 
         public async Task<Result> Delete(Article model)
         {
-            var existingNews = await _dbContext.Articles.FirstOrDefaultAsync(n => n.Id == model.Id);
+            var existingNews = await _dbContext.Articles.Where(n => n.Id == model.Id).FirstOrDefaultAsync();
             if (existingNews != null)
             {
                 _dbContext.Articles.Remove(existingNews);
@@ -60,7 +60,8 @@ namespace ElectionResults.Core.Repositories
                 .Include(n => n.Election)
                 .Include(n => n.Pictures)
                 .Include(n => n.Ballot)
-                .FirstOrDefaultAsync(n => n.Id == id);
+                .Where(n => n.Id == id)
+                .FirstOrDefaultAsync();
             return Result.Success(newsFeed);
         }
     }

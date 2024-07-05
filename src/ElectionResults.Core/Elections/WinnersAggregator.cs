@@ -68,7 +68,7 @@ namespace ElectionResults.Core.Elections
 
                 var localityWinner = results.FirstOrDefault();
 
-                var turnoutForLocality = turnouts.FirstOrDefault(c => c.LocalityId == locality.LocalityId);
+                var turnoutForLocality = turnouts.Where(c => c.LocalityId == locality.LocalityId).FirstOrDefault();
 
                 if (localityWinner != null)
                 {
@@ -165,7 +165,8 @@ namespace ElectionResults.Core.Elections
             var ballot = await _dbContext.Ballots
                 .Include(b => b.Election)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.BallotId == ballotId);
+                .Where(b => b.BallotId == ballotId)
+                .FirstOrDefaultAsync();
 
             var candidateResultsByCountries = await _dbContext.CandidateResults
                 .Include(c => c.Party)
@@ -211,7 +212,8 @@ namespace ElectionResults.Core.Elections
             var ballot = await _dbContext.Ballots
                 .Include(b => b.Election)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.BallotId == ballotId);
+                .Where(b => b.BallotId == ballotId)
+                .FirstOrDefaultAsync();
 
             if (ballot.BallotType == BallotType.Mayor || ballot.BallotType == BallotType.LocalCouncil)
             {
@@ -271,7 +273,8 @@ namespace ElectionResults.Core.Elections
             var ballot = await _dbContext.Ballots
                 .Include(b => b.Election)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.BallotId == ballotId);
+                .Where(b => b.BallotId == ballotId)
+                .FirstOrDefaultAsync();
 
             var candidateResultsByCounties = await _dbContext.CandidateResults
                 .Include(c => c.Party)

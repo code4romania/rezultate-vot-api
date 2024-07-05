@@ -77,7 +77,8 @@ namespace ElectionResults.Core.Repositories
             dbSet = dbSet.Where(l => l.LocalityId == localityId);
             var localityKey = MemoryCache.Locality.Key + localityId + includeCounty;
             return await _appCache.GetOrAddAsync(
-                localityKey, () => dbSet.FirstOrDefaultAsync(l => l.LocalityId == localityId),
+                localityKey, () => dbSet.Where(l => l.LocalityId == localityId)
+                    .FirstOrDefaultAsync(),
                 DateTimeOffset.Now.AddMinutes(MemoryCache.Locality.Minutes));
         }
 
@@ -88,7 +89,7 @@ namespace ElectionResults.Core.Repositories
             dbSet = dbSet.Where(l => l.CountyId == countyId);
             var countyKey = MemoryCache.Locality.Key + countyId;
             return await _appCache.GetOrAddAsync(
-                countyKey, () => dbSet.FirstOrDefaultAsync(l => l.CountyId == countyId),
+                countyKey, () => dbSet.Where(l => l.CountyId == countyId).FirstOrDefaultAsync(),
                 DateTimeOffset.Now.AddMinutes(MemoryCache.County.Minutes));
         }
     }
