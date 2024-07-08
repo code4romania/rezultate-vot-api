@@ -10,7 +10,6 @@ namespace ElectionResults.Core.Repositories
         Task<Result<List<County>>> GetCounties();
         Task<Result<List<Locality>>> GetLocalities(int? countyId, int? ballotId);
         Task<Result<List<Country>>> GetCountries(int? ballotId);
-        Task<Result<Locality>> GetLocalityById(int? localityId, bool includeCounty = false);
         Task<Result<County>> GetCountyById(int? queryCountyId);
     }
 }

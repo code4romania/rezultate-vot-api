@@ -16,16 +16,9 @@ namespace ElectionResults.Core.Endpoints.Query
 
         public int? CountryId { get; set; }
 
-        public string GetCacheKey()
+        public string GetCacheKey(string route)
         {
-            return $"{BallotId}-{CountryId}-{LocalityId}-{CountyId}-{Division}";
-        }
-
-        public double GetCacheDurationInMinutes()
-        {
-            if (BallotId >= 95 && BallotId <= 98)
-                return 10;
-            return 60*24;
+            return $"{route}-{BallotId}-{CountryId}-{LocalityId}-{CountyId}-{Division}";
         }
     }
 }

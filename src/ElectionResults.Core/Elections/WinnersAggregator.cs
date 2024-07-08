@@ -8,26 +8,25 @@ using ElectionResults.Core.Entities;
 using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
-using LazyCache;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.Extensions.Caching.Memory;
+using Z.EntityFramework.Plus;
+using MemoryCache = ElectionResults.Core.Repositories.MemoryCache;
 
 namespace ElectionResults.Core.Elections
 {
     public class WinnersAggregator : IWinnersAggregator
     {
         private readonly ApplicationDbContext _dbContext;
-        private readonly IAppCache _appCache;
         private readonly IPartiesRepository _partiesRepository;
         private readonly ITerritoryRepository _territoryRepository;
 
         public WinnersAggregator(ApplicationDbContext dbContext,
-            IAppCache appCache,
             IPartiesRepository partiesRepository,
             ITerritoryRepository territoryRepository)
         {
             _dbContext = dbContext;
-            _appCache = appCache;
             _partiesRepository = partiesRepository;
             _territoryRepository = territoryRepository;
         }
@@ -41,7 +40,7 @@ namespace ElectionResults.Core.Elections
                 return dbWinners;
             }
 
-            _appCache.Remove(MemoryCache.CreateWinnersKey(ballotId, countyId, ElectionDivision.Locality));
+            QueryCacheManager.ExpireTag(MemoryCache.CreateWinnersKey(ballotId, countyId, ElectionDivision.Locality));
 
             var localities = await _dbContext
                 .Localities
@@ -93,18 +92,13 @@ namespace ElectionResults.Core.Elections
 
         private async Task<List<Winner>> GetWinners(int ballotId, int? countyId, ElectionDivision division)
         {
-            var query = CreateWinnersQuery()
+            var winners = await CreateWinnersQuery()
                 .Where(w => w.BallotId == ballotId
                             && w.Division == division
                             && w.CountyId == countyId)
-                .ToListAsync();
-
-            var winnersKey = MemoryCache.CreateWinnersKey(ballotId, countyId, division);
-
-            var winners = await _appCache
-                .GetOrAddAsync(winnersKey, async () =>await query, DateTimeOffset.Now.AddMinutes(10));
-
-            return winners;
+                .FromCacheAsync(new MemoryCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(10) }, MemoryCache.CreateWinnersKey(ballotId, countyId, division));
+            
+            return winners.ToList();
         }
 
         public async Task<Result<List<ElectionMapWinner>>> GetLocalityWinnersByCounty(int ballotId, int countyId)
@@ -156,7 +150,7 @@ namespace ElectionResults.Core.Elections
 
             if (dbWinners.Count > 0)
                 return dbWinners.Select(winner => WinnerToElectionMapWinner(winner, parties.ToList())).ToList();
-            _appCache.Remove(MemoryCache.CreateWinnersKey(ballotId, null, ElectionDivision.Diaspora_Country));
+            QueryCacheManager.ExpireTag(MemoryCache.CreateWinnersKey(ballotId, null, ElectionDivision.Diaspora_Country));
             var winners = new List<ElectionMapWinner>();
             var countries = await _territoryRepository.GetCountries(null);
             if (countries.IsFailure)
@@ -183,8 +177,7 @@ namespace ElectionResults.Core.Elections
             {
                 var countryWinner = candidateResultsByCountries
                     .Where(c => c.CountryId == country.Id)
-                    .OrderByDescending(c => c.Votes)
-                    .FirstOrDefault();
+                    .MaxBy(c => c.Votes);
                 var turnoutForCountry = turnouts
                     .FirstOrDefault(c => c.CountryId == country.Id);
                 if (countryWinner == null || turnoutForCountry == null)
@@ -227,16 +220,16 @@ namespace ElectionResults.Core.Elections
                 {
                     var countyWinners = countyGroup
                         .GroupBy(c => c.LocalityId)
-                        .Select(g => g.OrderByDescending(x => x.Votes).FirstOrDefault()).ToList();
+                        .Select(g => g.MaxBy(x => x.Votes)).ToList();
                     var candidateResults = RetrieveWinners(countyWinners, ballot.BallotType);
                     CandidateResult topResult;
                     if (ballot.BallotType == BallotType.Mayor)
                     {
-                        topResult = candidateResults.OrderByDescending(c => c.Votes).FirstOrDefault();
+                        topResult = candidateResults.MaxBy(c => c.Votes);
                     }
                     else
                     {
-                        topResult = candidateResults.OrderByDescending(c => c.TotalSeats).FirstOrDefault();
+                        topResult = candidateResults.MaxBy(c => c.TotalSeats);
                     }
                     list.Add(topResult);
                 }
@@ -254,7 +247,7 @@ namespace ElectionResults.Core.Elections
             var dbWinners = await GetWinners(ballotId, null, ElectionDivision.County);
             if (dbWinners.Count > 0)
                 return dbWinners.Select(winner => WinnerToElectionMapWinner(winner, parties)).ToList();
-            _appCache.Remove(MemoryCache.CreateWinnersKey(ballotId, null, ElectionDivision.Diaspora_Country));
+            QueryCacheManager.ExpireTag(MemoryCache.CreateWinnersKey(ballotId, null, ElectionDivision.Diaspora_Country));
             var winners = await AggregateCountyWinners(ballotId, parties);
             var ids = winners.Select(w => w.Id).ToList();
             winners = await _dbContext.Winners
@@ -266,7 +259,7 @@ namespace ElectionResults.Core.Elections
             return Result.Success(winners.Select(winner => WinnerToElectionMapWinner(winner, parties)).ToList());
         }
 
-        private async Task<List<Winner>> AggregateCountyWinners(int ballotId, IEnumerable<Party> parties)
+        private async Task<List<Winner>> AggregateCountyWinners(int ballotId, List<Party> parties)
         {
             var counties = await _territoryRepository.GetCounties();
             var ballot = await _dbContext.Ballots
@@ -290,8 +283,7 @@ namespace ElectionResults.Core.Elections
             {
                 var countyWinner = candidateResultsByCounties
                     .Where(c => c.CountyId == county.CountyId)
-                    .OrderByDescending(c => c.Votes)
-                    .FirstOrDefault();
+                    .MaxBy(c => c.Votes);
 
                 var turnoutForCounty = turnouts
                     .FirstOrDefault(c => c.CountyId == county.CountyId);
@@ -316,7 +308,9 @@ namespace ElectionResults.Core.Elections
             var dbWinners = await GetWinners(ballotId, null, ElectionDivision.County);
             if (dbWinners.Count > 0)
                 return dbWinners.Select(w => w.Candidate).ToList();
-            _appCache.Remove(MemoryCache.CreateWinnersKey(ballotId, null, ElectionDivision.Diaspora_Country));
+
+            QueryCacheManager.ExpireTag(MemoryCache.CreateWinnersKey(ballotId, null, ElectionDivision.Diaspora_Country));
+
             var winners = await AggregateCountyWinners(ballotId, parties);
             return winners.Select(w => w.Candidate).ToList();
         }

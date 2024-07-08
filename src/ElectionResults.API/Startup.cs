@@ -2,7 +2,6 @@ using System;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using ElectionResults.API.Converters;
-using ElectionResults.API.Options;
 using ElectionResults.Core.Configuration;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Infrastructure;
@@ -51,7 +50,7 @@ namespace ElectionResults.API
                     options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(new SnakeCaseNamingPolicy()));
                 });
-            services.AddLazyCache();
+            
             RegisterDependencies(services, Configuration);
             services.AddSwaggerGen(c =>
             {
@@ -65,7 +64,6 @@ namespace ElectionResults.API
                 options.UseMySQL(connectionString);
             });
 
-            services.AddLazyCache();
             services.AddCors(options =>
             {
                 options.AddPolicy("origins",
@@ -79,6 +77,7 @@ namespace ElectionResults.API
             });
 
             services.AddHealthChecks();
+            services.AddFusionCache();
         }
 
         private static void RegisterDependencies(IServiceCollection services, IConfiguration configuration)
@@ -96,7 +95,6 @@ namespace ElectionResults.API
             services.AddScoped<IPartiesRepository, PartiesRepository>();
             
             services.Configure<AWSS3Settings>(configuration.GetSection(AWSS3Settings.SectionKey));
-            services.Configure<MemoryCacheSettings>(configuration.GetSection(MemoryCacheSettings.SectionKey));
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationDbContext context, ILoggerFactory loggerFactory)

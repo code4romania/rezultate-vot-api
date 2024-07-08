@@ -2,15 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using ElectionResults.API.Options;
+using CSharpFunctionalExtensions;
 using ElectionResults.Core.Elections;
 using ElectionResults.Core.Endpoints.Query;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
-using LazyCache;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace ElectionResults.API.Controllers
 {
@@ -19,27 +18,27 @@ namespace ElectionResults.API.Controllers
     public class BallotsController : ControllerBase
     {
         private readonly IResultsAggregator _resultsAggregator;
-        private readonly IAppCache _appCache;
         private readonly ITerritoryRepository _territoryRepository;
-        private readonly MemoryCacheSettings _cacheSettings;
+        private readonly IFusionCache _fusionCache;
 
         public BallotsController(IResultsAggregator resultsAggregator,
-            IAppCache appCache,
             ITerritoryRepository territoryRepository,
-            IOptions<MemoryCacheSettings> cacheSettings)
+            IFusionCache fusionCache)
         {
             _resultsAggregator = resultsAggregator;
-            _appCache = appCache;
             _territoryRepository = territoryRepository;
-            _cacheSettings = cacheSettings.Value;
+            _fusionCache = fusionCache;
         }
 
         [HttpGet("ballots")]
         public async Task<ActionResult<List<ElectionMeta>>> GetBallots()
         {
-            var result = await _appCache.GetOrAddAsync(
-                "ballots", async () => await _resultsAggregator.GetAllBallots(),
-                DateTimeOffset.Now.AddMinutes(120));
+            var result = await _fusionCache.GetOrSetAsync<Result<List<ElectionMeta>>>("ballots", async (ctx, ct) =>
+            {
+                var result = await _resultsAggregator.GetAllBallots();
+                ctx.Options.Duration = TimeSpan.FromMinutes(result.IsFailure ? 1 : 10);
+                return result;
+            });
 
             if (result.IsSuccess)
             {
@@ -72,15 +71,18 @@ namespace ElectionResults.API.Controllers
                     query.Round = null;
                 }
 
-                var result = await _appCache.GetOrAddAsync(
-                    query.GetCacheKey(), async () => await _resultsAggregator.GetBallotCandidates(query),
-                    DateTimeOffset.Now.AddMinutes(query.GetCacheDurationInMinutes()));
+                var result = await _fusionCache.GetOrSetAsync<Result<List<PartyList>>>(query.GetCacheKey("candidates"),
+                    async (ctx, ct) =>
+                    {
+                        var result = await _resultsAggregator.GetBallotCandidates(query);
+                        ctx.Options.Duration = TimeSpan.FromMinutes(result.IsFailure ? 1 : 10);
+                        return result;
+                    });
 
                 return result.Value;
             }
             catch (Exception e)
             {
-                _appCache.Remove(query.GetCacheKey());
                 Log.LogError(e, "Exception encountered while retrieving voter turnout stats");
                 return StatusCode(500, e.StackTrace);
             }
@@ -106,11 +108,19 @@ namespace ElectionResults.API.Controllers
                     query.Round = null;
                 }
 
-                var expiration = GetExpirationDate(query);
+                var result = await _fusionCache.GetOrSetAsync<Result<ElectionResponse>>(query.GetCacheKey("ballot"),
+                    async (ctx, ct) =>
+                    {
+                        var result = await _resultsAggregator.GetBallotResults(query);
+                        ctx.Options.Duration =
+                            TimeSpan.FromMinutes(result.IsFailure ? 1 : query.BallotId <= 113 ? 1440 : 10);
+                        return result;
+                    });
 
-                var result = await _appCache.GetOrAddAsync(
-                    query.GetCacheKey(), async () => await _resultsAggregator.GetBallotResults(query),
-                    expiration);
+                if (result.IsFailure)
+                {
+                    return StatusCode(500, result.Error);
+                }
 
                 var newsFeed = await _resultsAggregator.GetNewsFeed(query, result.Value.Meta.ElectionId);
                 result.Value.ElectionNews = newsFeed;
@@ -119,7 +129,6 @@ namespace ElectionResults.API.Controllers
             }
             catch (Exception e)
             {
-                _appCache.Remove(query.GetCacheKey());
                 Log.LogError(e, "Exception encountered while retrieving voter turnout stats");
                 return StatusCode(500, e.StackTrace);
             }
@@ -128,81 +137,91 @@ namespace ElectionResults.API.Controllers
         [HttpGet("counties")]
         public async Task<ActionResult<List<LocationData>>> GetCounties()
         {
-            try
-            {
-                var countiesResult = await _territoryRepository.GetCounties();
-                if (countiesResult.IsSuccess)
+            var result = await _fusionCache.GetOrSetAsync<Result<List<LocationData>>>("counties",
+                async (ctx, ct) =>
                 {
+                    var countiesResult = await _territoryRepository.GetCounties();
+                    ctx.Options.Duration = TimeSpan.FromMinutes(countiesResult.IsFailure ? 1 : 1440);
+
+                    if (countiesResult.IsFailure)
+                    {
+                        return Result.Failure<List<LocationData>>(countiesResult.Error);
+                    }
+
                     return countiesResult.Value.Select(c => new LocationData
                     {
                         Id = c.CountyId,
                         Name = c.Name
                     }).ToList();
-                }
+                });
 
-                return StatusCode(500, countiesResult.Error);
-            }
-            catch (Exception e)
+            if (result.IsFailure)
             {
-                return StatusCode(500, e.Message);
+                return StatusCode(500, result.Error);
             }
+
+            return result.Value;
         }
 
         [HttpGet("localities")]
         public async Task<ActionResult<List<LocationData>>> GetLocalities([FromQuery] int? countyId, int? ballotId)
         {
-            try
-            {
-                var result = await _territoryRepository.GetLocalities(countyId, ballotId);
-                if (result.IsSuccess)
+            var result = await _fusionCache.GetOrSetAsync<Result<List<LocationData>>>(
+                $"localities-{ballotId}-{countyId}",
+                async (ctx, ct) =>
                 {
-                    return result.Value.Select(c => new LocationData
+                    var localitiesResult = await _territoryRepository.GetLocalities(countyId, ballotId);
+                    ctx.Options.Duration = TimeSpan.FromMinutes(localitiesResult.IsFailure ? 1 : 1440);
+
+                    if (localitiesResult.IsFailure)
+                    {
+                        return Result.Failure<List<LocationData>>(localitiesResult.Error);
+                    }
+
+                    return localitiesResult.Value.Select(c => new LocationData
                     {
                         Id = c.LocalityId,
                         Name = c.Name,
                         CountyId = c.CountyId
                     }).ToList();
-                }
+                });
 
+            if (result.IsFailure)
+            {
                 return StatusCode(500, result.Error);
             }
-            catch (Exception e)
-            {
-                return StatusCode(500, e.Message);
-            }
+
+            return result.Value;
         }
 
         [HttpGet("countries")]
         public async Task<ActionResult<List<LocationData>>> GetCountries([FromQuery] int? ballotId)
         {
-            try
-            {
-                var result = await _territoryRepository.GetCountries(ballotId);
-                if (result.IsSuccess)
+            var result = await _fusionCache.GetOrSetAsync<Result<List<LocationData>>>(
+                $"countries-{ballotId}",
+                async (ctx, ct) =>
                 {
-                    return result.Value.Select(c => new LocationData
+                    var countriesResult = await _territoryRepository.GetCountries(ballotId);
+                    ctx.Options.Duration = TimeSpan.FromMinutes(countriesResult.IsFailure ? 1 : 1440);
+
+                    if (countriesResult.IsFailure)
+                    {
+                        return Result.Failure<List<LocationData>>(countriesResult.Error);
+                    }
+
+                    return countriesResult.Value.Select(c => new LocationData
                     {
                         Id = c.Id,
                         Name = c.Name
                     }).ToList();
-                }
+                });
 
+            if (result.IsFailure)
+            {
                 return StatusCode(500, result.Error);
             }
-            catch (Exception e)
-            {
-                return StatusCode(500, e.Message);
-            }
-        }
 
-        private DateTimeOffset GetExpirationDate(ElectionResultsQuery electionResultsQuery)
-        {
-            if (electionResultsQuery.BallotId <= 113) // ballot older than parliament elections in 2020
-            {
-                return DateTimeOffset.Now.AddDays(1);
-            }
-
-            return DateTimeOffset.Now.AddMinutes(1);
+            return result.Value;
         }
     }
 }

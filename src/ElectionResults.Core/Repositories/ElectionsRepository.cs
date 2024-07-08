@@ -1,42 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using ElectionResults.Core.Endpoints.Response;
 using ElectionResults.Core.Entities;
-using LazyCache;
 using Microsoft.EntityFrameworkCore;
+using Z.EntityFramework.Plus;
 
 namespace ElectionResults.Core.Repositories
 {
     public class ElectionsRepository : IElectionsRepository
     {
         private readonly ApplicationDbContext _dbContext;
-        private readonly IAppCache _appCache;
         private readonly CacheSettings _cacheSettings;
 
-        public ElectionsRepository(ApplicationDbContext dbContext, IAppCache appCache)
+        public ElectionsRepository(ApplicationDbContext dbContext)
         {
             _dbContext = dbContext;
-            _appCache = appCache;
             _cacheSettings = MemoryCache.Elections;
         }
 
         public async Task<Result<List<Election>>> GetAllElections(bool includeBallots = false)
         {
-            var elections = await _appCache.GetOrAddAsync(
-                _cacheSettings.Key, async () => await CreateQueryable(includeBallots).ToListAsync(),
-                DateTimeOffset.Now.AddMinutes(_cacheSettings.Minutes));
-            return Result.Success(elections);
-        }
+            var elections = (await _dbContext
+                .Elections
+                .AsNoTracking()
+                .Include(b => b.Ballots)
+                .FromCacheAsync()).ToList();
 
-        private IQueryable<Election> CreateQueryable(bool includeBallots)
-        {
-            var query = _dbContext.Elections.AsNoTracking();
-            if (includeBallots)
-                query = query.Include(b => b.Ballots);
-            return query;
+            return Result.Success(elections);
         }
 
         public async Task<Result<List<ElectionBallot>>> GetElectionsForNewsFeed()
