@@ -6,6 +6,6 @@ namespace ElectionResults.Core.Repositories
 {
     public interface IPartiesRepository
     {
-        Task<IEnumerable<Party>> GetAllParties();
+        Task<List<Party>> GetAllParties();
     }
 }

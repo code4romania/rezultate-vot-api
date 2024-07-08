@@ -24,6 +24,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.2" />
+    <PackageReference Include="ZiggyCreatures.FusionCache" Version="1.2.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ElectionResults.Core\ElectionResults.Core.csproj" />
@@ -33,7 +34,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Import\" />
-    <Folder Include="Options\" />
     <Folder Include="wwwroot\lib\" />
     <Folder Include="wwwroot\upload\" />
   </ItemGroup>
