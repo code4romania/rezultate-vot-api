@@ -127,55 +127,46 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                 Dictionary<string, List<VoteModel>> list = new Dictionary<string, List<VoteModel>>();
                 if (ballot.BallotType == BallotType.LocalCouncil)
                 {
-                    list = countyResult.Value[ScopeCode.PRCNCT].Categories[CategoryCode.CL].GetTable().Values
-                        .GroupBy(g => g.UatSiruta, (key, g) => new { Siruta = GetSiruta(county, key, g.First()), Votes = g.SelectMany(x => x.Votes).ToList() })
-                        .ToDictionary(x => x.Siruta, y => y.Votes.GroupBy(x => x.Candidate, (key, g) => new VoteModel()
+                    list = countyResult.Value[ScopeCode.UAT].Categories[CategoryCode.CL].GetTable().Values
+                        .ToDictionary(x => GetSiruta(county, x.UatSiruta, x), y => y.Votes.Select(v => new VoteModel()
                         {
-                            Candidate = key,
-                            Party = g.FirstOrDefault().Party,
-                            Votes = g.Sum(x => x.Votes ?? 0),
-                            Mandates1 = g.Sum(x => x.Mandates1 ?? 0),
-                            Mandates2 = g.Sum(x => x.Mandates2 ?? 0),
+                            Candidate = v.Candidate,
+                            Party = v.Party,
+                            Votes = v.Votes ?? 0,
+                            Mandates1 = v.Mandates1 ?? 0,
+                            Mandates2 = v.Mandates2 ?? 0,
                         }).ToList());
                 }
                 else if (ballot.BallotType == BallotType.Mayor)
                 {
-                    list = countyResult.Value[ScopeCode.PRCNCT].Categories[CategoryCode.P].GetTable().Values
-                     .GroupBy(g => GetUatSiruta(g, county), (key, g) => new { Siruta = GetSiruta(county, key, g.First()), Votes = g.SelectMany(x => x.Votes).ToList() })
-                     .ToDictionary(x => x.Siruta, y => y.Votes.GroupBy(x => x.Candidate, (key, g) => new VoteModel()
+                    list = countyResult.Value[ScopeCode.UAT].Categories[CategoryCode.P].GetTable().Values
+                        .ToDictionary(x => GetSiruta(county, x.UatSiruta, x), y => y.Votes.Select(v => new VoteModel()
                      {
-                         Candidate = key,
-                         Party = g.FirstOrDefault().Party,
-                         Votes = g.Sum(x => x.Votes ?? 0),
-                         Mandates1 = g.Sum(x => x.Mandates1 ?? 0),
-                         Mandates2 = g.Sum(x => x.Mandates2 ?? 0),
+                         Candidate = v.Candidate,
+                         Party = v.Party,
+                         Votes = v.Votes ?? 0
                      }).ToList());
-
                 }
                 else if (ballot.BallotType == BallotType.CountyCouncil)
                 {
-                    list = countyResult.Value[ScopeCode.PRCNCT].Categories[CategoryCode.CJ].GetTable().Values
-                   .GroupBy(g => g.CountyCode, (key, g) => new { CountyCode = key, Votes = g.SelectMany(x => x.Votes).ToList() })
-                   .ToDictionary(x => x.CountyCode, y => y.Votes.GroupBy(x => x.Candidate, (key, g) => new VoteModel()
+                    list = countyResult.Value[ScopeCode.CNTY].Categories[CategoryCode.CJ].GetTable().Values
+                        .ToDictionary(x => x.CountyCode, y => y.Votes.Select(v => new VoteModel()
                    {
-                       Candidate = key,
-                       Party = g.FirstOrDefault().Party,
-                       Votes = g.Sum(x => x.Votes ?? 0),
-                       Mandates1 = g.Sum(x => x.Mandates1 ?? 0),
-                       Mandates2 = g.Sum(x => x.Mandates2 ?? 0),
+                       Candidate = v.Candidate,
+                       Party = v.Party,
+                       Votes = v.Votes ?? 0,
+                       Mandates1 = v.Mandates1 ?? 0,
+                       Mandates2 = v.Mandates2 ?? 0,
                    }).ToList());
                 }
                 else if (ballot.BallotType == BallotType.CountyCouncilPresident)
                 {
-                    list = countyResult.Value[ScopeCode.PRCNCT].Categories[CategoryCode.PCJ].GetTable().Values
-                  .GroupBy(g => g.CountyCode, (key, g) => new { CountyCode = key, Votes = g.SelectMany(x => x.Votes).ToList() })
-                  .ToDictionary(x => x.CountyCode, y => y.Votes.GroupBy(x => x.Candidate, (key, g) => new VoteModel()
+                    list = countyResult.Value[ScopeCode.CNTY].Categories[CategoryCode.PCJ].GetTable().Values
+                  .ToDictionary(x => x.CountyCode, y => y.Votes.Select(v => new VoteModel()
                   {
-                      Candidate = key,
-                      Party = g.FirstOrDefault().Party,
-                      Votes = g.Sum(x => x.Votes ?? 0),
-                      Mandates1 = g.Sum(x => x.Mandates1 ?? 0),
-                      Mandates2 = g.Sum(x => x.Mandates2 ?? 0),
+                      Candidate = v.Candidate,
+                      Party = v.Party,
+                      Votes = v.Votes ?? 0,
                   }).ToList());
                 }
 
@@ -219,7 +210,9 @@ public class DownloadAndProcessTurnoutResultsJob(IRoAepApi roAepApi,
                 DELETE FROM candidateresults WHERE ballotId = {ballot.BallotId};
             ");
             var candidateResults = _candidates.Where(c => c.BallotId == ballot.BallotId).ToList();
+            
             await BulkInsertCandidateResultsAsync(candidateResults);
+            
             await context.Database.ExecuteSqlRawAsync($@"
             INSERT INTO candidateresults (Votes, BallotId, Name, ShortName, PartyName, PartyId, YesVotes, NoVotes, SeatsGained, Division, CountyId, LocalityId, TotalSeats, Seats1, Seats2, OverElectoralThreshold, CountryId, BallotPosition)
             SELECT Votes, BallotId, Name, ShortName, PartyName, PartyId, YesVotes, NoVotes, SeatsGained, Division, CountyId, LocalityId, TotalSeats, Seats1, Seats2, OverElectoralThreshold, CountryId, BallotPosition
