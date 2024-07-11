@@ -34,11 +34,11 @@ public static class Installer
 
         // recurringJobManager.AddOrUpdate<DownloadAndProcessTurnoutResultsJob>($"europarlamentare09062024-data-processor", x => x.Run("europarlamentare09062024", 51, true, StageCode.PROV), "*/5 * * * *");
 
-        var electionRoundIds = crawlerOptions.Value.ElectionRounds.Select(x => x.ElectionRoundId).ToList();
-        var voteMonitorElectionRoundId = crawlerOptions.Value.ElectionRoundId;
-
-        recurringJobManager
-            .AddOrUpdate<DownloadVoteMonitorStatisticsJob>("vote-monitor-statistics", x => x.Run(electionRoundIds, voteMonitorElectionRoundId, CancellationToken.None), "*/15 * * * *");
+        // var electionRoundIds = crawlerOptions.Value.ElectionRounds.Select(x => x.ElectionRoundId).ToList();
+        // var voteMonitorElectionRoundId = crawlerOptions.Value.ElectionRoundId;
+        //
+        // recurringJobManager
+        //     .AddOrUpdate<DownloadVoteMonitorStatisticsJob>("vote-monitor-statistics", x => x.Run(electionRoundIds, voteMonitorElectionRoundId, CancellationToken.None), "*/15 * * * *");
 
         return app;
     }
