@@ -7,8 +7,8 @@ module "ecs_hangfire" {
 
   name         = "rezultatevot-hangfire-${var.env}"
   cluster_name = module.ecs_cluster.cluster_name
-  min_capacity = 1
-  max_capacity = 1
+  min_capacity = 0
+  max_capacity = 0
 
   image_repo = local.images.hangfire.image
   image_tag  = local.images.hangfire.tag

@@ -7,8 +7,8 @@ module "ecs_importer" {
 
   name         = "rezultatevot-importer-${var.env}"
   cluster_name = module.ecs_cluster.cluster_name
-  min_capacity = 1
-  max_capacity = 1
+  min_capacity = 0
+  max_capacity = 0
 
   image_repo = local.images.importer.image
   image_tag  = local.images.importer.tag
