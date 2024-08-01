@@ -65,10 +65,12 @@ namespace ElectionResults.Core.Elections
                 results.Candidates = [];
                 foreach (var candidate in candidates)
                 {
-                    var matchingParty = parties.GetMatchingParty(candidate.ShortName) 
-                        ?? parties.FirstOrDefault(p => p.Name.ContainsString(candidate.Name))
-                        ?? parties.FirstOrDefault(p => p.Alias.ContainsString(candidate.Name));
-
+                    var matchingParty = parties.GetMatchingParty(candidate.ShortName)
+                                        ?? parties.FirstOrDefault(p => p.Alias.GenerateSlug().Equals(candidate.Name.GenerateSlug()))
+                                        ?? parties.FirstOrDefault(p => p.Name.GenerateSlug().Equals(candidate.Name.GenerateSlug()))
+                                        ?? parties.FirstOrDefault(p => p.Alias.GenerateSlug().ContainsString(candidate.Name.GenerateSlug()))
+                                        ?? parties.FirstOrDefault(p => p.Name.GenerateSlug().ContainsString(candidate.Name.GenerateSlug()));
+                    
                     var name = candidate.GetCandidateName(ballot);
                     var shortName = candidate.GetCandidateShortName(ballot);
 
