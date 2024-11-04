@@ -9,7 +9,8 @@ namespace ElectionResults.Core.Extensions
 {
     public static class NameProcessingExtensions
     {
-        public static List<CandidateResponse> OrderForReferendum(this List<CandidateResponse> candidates, Election election)
+        public static List<CandidateResponse> OrderForReferendum(this List<CandidateResponse> candidates,
+            Election election)
         {
             var yesCandidate = candidates.Find(c => c.Name == "DA");
             var noCandidate = candidates.Find(c => c.Name == "NU");
@@ -37,27 +38,38 @@ namespace ElectionResults.Core.Extensions
             return candidates;
         }
 
-        public static string GetCandidateShortName(this CandidateResult c, Ballot ballot)
+        public static string GetCandidateShortName(this CandidateResult candidate, Ballot ballot)
         {
             try
             {
-                if(c.PartyId != null)
+                if (ballot.BallotType == BallotType.President)
                 {
-                    return c.ShortName;
+                    return candidate.Name;
+                }
+
+                if (candidate.PartyId != null)
+                {
+                    return candidate.ShortName;
                 }
 
                 if (ballot.BallotType == BallotType.EuropeanParliament || ballot.BallotType == BallotType.Senate ||
                     ballot.BallotType == BallotType.House)
-                    return c.ShortName;
-                if (c.Name.IsParty() || c.Name.IsEmpty())
-                    return c.ShortName;
-                var processedName = ParseShortName(c.Name);
+                {
+                    return candidate.ShortName;
+                }
+
+                if (candidate.Name.IsParty() || candidate.Name.IsEmpty())
+                {
+                    return candidate.ShortName;
+                }
+
+                var processedName = ParseShortName(candidate.Name);
                 return processedName;
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                return c.ShortName;
+                return candidate.ShortName;
             }
         }
 
