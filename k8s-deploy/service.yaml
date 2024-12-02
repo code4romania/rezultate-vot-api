@@ -1,0 +1,93 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: rezultate-vot
+  namespace: rezultate-vot
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "3"
+    spec:
+      containers:
+        - image: code4romania/rezultate-vot-api:latest
+          resources:
+            requests:
+              cpu: 100m
+              memory: 240M
+            limits:
+              cpu: 1
+              memory: 1Gi
+          ports:
+            - containerPort: 80
+          env:
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: db_connection
+            - name: ASPNETCORE__ENVIRONMENT
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: aspnetcore_environment
+            - name: S3Bucket__BucketName
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: s3_bucket_name
+            - name: S3Bucket__AccessKeyId
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: s3_access_key_id
+            - name: S3Bucket__AccessKeySecret
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: s3_secret_access_key
+            - name: ScheduleTaskEnabled
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: scheduled_task_enabled
+            - name: LiveElectionSettings__ResultsTypes
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: liveelectionsettings_results_type
+            - name: LiveElectionSettings__FtpUser
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: liveelectionsettings_ftp_user
+            - name: LiveElectionSettings__FtpPassword
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: liveelectionsettings_ftp_password
+            - name: LiveElectionSettings__TurnoutUrl
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: liveelectionsettings_turnout_url
+            - name: LiveElectionSettings__TurnoutIntervalInMinutes
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: liveelectionsettings_turnout_interval
+            - name: LiveElectionSettings__ResultsUrl
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: liveelectionsettings_results_url
+            - name: LiveElectionSettings__ResultsCacheInMinutes
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: liveelectionsettings_results_cache_minutes
+            - name: LiveElectionSettings__CsvCacheInMinutes
+              valueFrom:
+                secretKeyRef:
+                  name: rezultate-vot-secret
+                  key: liveelectionsettings_csv_cache_minutes
