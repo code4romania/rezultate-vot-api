@@ -9,7 +9,6 @@ using ElectionResults.Core.Extensions;
 using ElectionResults.Core.Infrastructure;
 using ElectionResults.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Caching.Memory;
 using Z.EntityFramework.Plus;
 using MemoryCache = ElectionResults.Core.Repositories.MemoryCache;
@@ -397,29 +396,57 @@ namespace ElectionResults.Core.Elections
                     candidateResult.Party = new Party { Name = candidateResult.PartyName };
             }
 
-            var groupedWinners = results
-                .GroupBy(w => w.Party?.Name)
-                .OrderByDescending(w => w.Count())
-                .ToList();
             var candidateResults = new List<CandidateResult>();
-            foreach (var candidate in groupedWinners)
+
+            if (ballotType == BallotType.Mayor || ballotType == BallotType.CountyCouncilPresident)
             {
-                var electionMapWinner = candidate.FirstOrDefault();
-                var item = new CandidateResult
+                var resultsPerParty = results
+                    .GroupBy(g => new { g.CountryId, g.CountyId, g.LocalityId }, y => y,
+                        (key, r) => r.MaxBy(x => x.Votes))
+                    .GroupBy(w => w.Party?.Name)
+                    .OrderByDescending(w => w.Count())
+                    .ToList();
+
+                foreach (var candidate in resultsPerParty)
                 {
-                    Name = candidate.Key == null ? "INDEPENDENT" : electionMapWinner?.Party.Name,
-                    Party = electionMapWinner?.Party,
-                    CountyId = electionMapWinner.CountyId
-                };
-                if (ballotType == BallotType.Mayor || ballotType == BallotType.CountyCouncilPresident)
+                    var electionMapWinner = candidate.FirstOrDefault();
+                    var item = ToCandidateResult(candidate, electionMapWinner);
                     item.Votes = candidate.Count();
-                else
+
+                    candidateResults.Add(item);
+                }
+
+                return candidateResults;
+            }
+            else
+            {
+                var groupedWinners = results
+                    .GroupBy(w => w.Party?.Name)
+                    .OrderByDescending(w => w.Count())
+                    .ToList();
+
+                foreach (var candidate in groupedWinners)
+                {
+                    var electionMapWinner = candidate.FirstOrDefault();
+                    var item = ToCandidateResult(candidate, electionMapWinner);
+
                     item.Votes = candidate.Sum(c => c.Votes);
-                item.TotalSeats = item.SeatsGained = candidate.Sum(c => c.Seats1 + c.Seats2);
-                candidateResults.Add(item);
+                    item.TotalSeats = item.SeatsGained = candidate.Sum(c => c.Seats1 + c.Seats2);
+                    candidateResults.Add(item);
+                }
             }
 
             return candidateResults;
+        }
+
+        private static CandidateResult ToCandidateResult(IGrouping<string, CandidateResult> candidate, CandidateResult electionMapWinner)
+        {
+            return new CandidateResult
+            {
+                Name = candidate.Key == null ? "INDEPENDENT" : electionMapWinner?.Party.Name,
+                Party = electionMapWinner?.Party,
+                CountyId = electionMapWinner.CountyId
+            };
         }
     }
 }
