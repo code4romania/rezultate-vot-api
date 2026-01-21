@@ -1,0 +1,10 @@
+apiVersion: serving.knative.dev/v1alpha1
+kind: DomainMapping
+metadata:  
+  name: api.rezultatevot.ro
+  namespace: rezultate-vot
+spec:
+  ref:
+    name: rezultate-vot
+    kind: Service
+    apiVersion: serving.knative.dev/v1
